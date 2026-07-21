@@ -113,6 +113,11 @@ CONCEPTS.md        领域词汇
   cd team-flow && git add -A && git commit -m "..."
   ```
 
+### 升级后必做（强制规则）
+每次升级 team-flow 后，必须完成以下两步：
+1. **子仓库**：升级 plugin 版本号（`npm version <new> --no-git-tag-version`，自动同步所有文件）+ 提交变更
+2. **主项目空间**：更新 `CLAUDE.md`（版本号、skills 数量、SOP、产物结构、命令等）+ 提交变更
+
 ## 目录管理规范
 
 ### docs/external-references/
