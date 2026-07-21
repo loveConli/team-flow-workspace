@@ -5,11 +5,13 @@ Claude 聚合工作空间根目录，由 parent 级独立 Git 仓库维护。存
 ## 工作区结构
 
 - `docs/` - 设计文档目录
-  - `external-references/` - 外部参考资料（架构参考、最佳实践等）
+  - `external-references/` - 外部参考资料
+    - `architecture-design-source/` - 架构设计源文件
+    - `compound-engineering/` - 复合工程参考
+    - `skills/` - GLAF4 技能定义参考
+    - `spec-superflow/` - Superflow 规范参考
   - `plan/` - 实现计划与方案
 - `team-flow/` - 核心工具库（独立 Git 仓库，已被 .gitignore 忽略）
-- `skills/` - GLAF4 技能定义
-- `architecture-design-source/` - 架构设计源文件
 
 ## 规范要求
 
