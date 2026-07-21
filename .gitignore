@@ -1,0 +1,25 @@
+# 子工程为独立 Git 仓库，parent 不跟踪
+team-flow/
+
+# Claude 临时文件
+.claude/
+.claude-plugin/
+.codex-plugin/
+.cursor-plugin/
+.opencode/
+
+# IDE 配置
+.idea/
+
+# Node 依赖
+node_modules/
+package-lock.json
+
+# 临时文件
+*.tmp
+*.log
+.DS_Store
+
+# 构建产物
+dist/
+build/

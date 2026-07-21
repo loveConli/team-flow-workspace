@@ -1,0 +1,288 @@
+=== TOP LEVEL ===
+总计 261
+drwxrwxrwx 1 root root      0  7月19日 07:57 .agents
+-rwxrwxrwx 1 root root  42701  7月19日 00:14 AGENTS.md
+drwxrwxrwx 1 root root      0  7月19日 07:57 .agy
+drwxrwxrwx 1 root root      0  7月19日 07:58 assets
+-rwxrwxrwx 1 root root 108280  7月19日 00:14 bun.lock
+-rwxrwxrwx 1 root root  59393  7月19日 00:14 CHANGELOG.md
+drwxrwxrwx 1 root root      0  7月19日 07:57 .claude
+-rwxrwxrwx 1 root root      9  7月19日 07:58 CLAUDE.md
+drwxrwxrwx 1 root root      0  7月19日 07:57 .claude-plugin
+drwxrwxrwx 1 root root      0  7月19日 07:58 .cline
+drwxrwxrwx 1 root root      0  7月19日 07:58 .codex-plugin
+drwxrwxrwx 1 root root      0  7月19日 07:58 .compound-engineering
+-rwxrwxrwx 1 root root  12240  7月19日 00:14 CONCEPTS.md
+drwxrwxrwx 1 root root      0  7月19日 07:58 .cursor-plugin
+drwxrwxrwx 1 root root      0  7月19日 07:58 .devin-plugin
+drwxrwxrwx 1 root root      0  7月19日 07:58 docs
+-rwxrwxrwx 1 root root   4934  7月19日 00:14 favicon.png
+-rwxrwxrwx 1 root root    419  7月19日 00:14 GEMINI.md
+drwxrwxrwx 1 root root      0  7月19日 07:58 .github
+-rwxrwxrwx 1 root root    140  7月19日 00:14 .gitignore
+drwxrwxrwx 1 root root      0  7月19日 07:58 .grok-plugin
+drwxrwxrwx 1 root root      0  7月19日 07:58 .kimi-plugin
+-rwxrwxrwx 1 root root   1062  7月19日 00:14 LICENSE
+drwxrwxrwx 1 root root      0  7月19日 07:58 .opencode
+-rwxrwxrwx 1 root root   1462  7月19日 00:14 package.json
+drwxrwxrwx 1 root root      0  7月19日 07:58 .pi
+-rwxrwxrwx 1 root root    217  7月19日 00:14 plugin.json
+-rwxrwxrwx 1 root root   1935  7月19日 00:14 PRIVACY.md
+-rwxrwxrwx 1 root root  29018  7月19日 00:14 README.md
+drwxrwxrwx 1 root root      0  7月19日 07:59 scripts
+-rwxrwxrwx 1 root root    909  7月19日 00:14 SECURITY.md
+drwxrwxrwx 1 root root      0  7月19日 07:59 skills
+drwxrwxrwx 1 root root      0  7月19日 08:01 src
+drwxrwxrwx 1 root root      0  7月19日 08:01 tests
+-rwxrwxrwx 1 root root    323  7月19日 00:14 tsconfig.json
+=== TREE (depth 3, exclude node_modules/.git) ===
+compound-engineering
+compound-engineering/.agents
+compound-engineering/AGENTS.md
+compound-engineering/.agents/plugins
+compound-engineering/.agents/plugins/marketplace.json
+compound-engineering/.agy
+compound-engineering/.agy/INSTALL.md
+compound-engineering/.agy/plugin.json
+compound-engineering/.agy/skills
+compound-engineering/assets
+compound-engineering/assets/icon.svg
+compound-engineering/assets/logo.png
+compound-engineering/bun.lock
+compound-engineering/CHANGELOG.md
+compound-engineering/.claude
+compound-engineering/.claude/commands
+compound-engineering/.claude/commands/triage-prs.md
+compound-engineering/CLAUDE.md
+compound-engineering/.claude-plugin
+compound-engineering/.claude-plugin/CHANGELOG.md
+compound-engineering/.claude-plugin/marketplace.json
+compound-engineering/.claude-plugin/plugin.json
+compound-engineering/.cline
+compound-engineering/.cline/INSTALL.md
+compound-engineering/.cline/scripts
+compound-engineering/.cline/scripts/install-skills.sh
+compound-engineering/.codex-plugin
+compound-engineering/.codex-plugin/plugin.json
+compound-engineering/.compound-engineering
+compound-engineering/.compound-engineering/config.local.example.yaml
+compound-engineering/CONCEPTS.md
+compound-engineering/.cursor-plugin
+compound-engineering/.cursor-plugin/CHANGELOG.md
+compound-engineering/.cursor-plugin/marketplace.json
+compound-engineering/.cursor-plugin/plugin.json
+compound-engineering/.devin-plugin
+compound-engineering/.devin-plugin/plugin.json
+compound-engineering/docs
+compound-engineering/docs/brainstorms
+compound-engineering/docs/brainstorms/2026-02-14-copilot-converter-target-brainstorm.md
+compound-engineering/docs/brainstorms/2026-02-17-copilot-skill-naming-brainstorm.md
+compound-engineering/docs/brainstorms/2026-03-14-ce-plan-rewrite-requirements.md
+compound-engineering/docs/brainstorms/2026-03-15-ce-ideate-skill-requirements.md
+compound-engineering/docs/brainstorms/2026-03-16-issue-grounded-ideation-requirements.md
+compound-engineering/docs/brainstorms/2026-03-17-release-automation-requirements.md
+compound-engineering/docs/brainstorms/2026-03-18-auto-memory-integration-requirements.md
+compound-engineering/docs/brainstorms/2026-03-22-frontend-design-skill-improvement.md
+compound-engineering/docs/brainstorms/2026-03-23-plan-review-personas-requirements.md
+compound-engineering/docs/brainstorms/2026-03-25-config-storage-redesign-requirements.md
+compound-engineering/docs/brainstorms/2026-03-25-vonboarding-skill-requirements.md
+compound-engineering/docs/brainstorms/2026-03-26-merge-deepen-into-plan-requirements.md
+compound-engineering/docs/brainstorms/2026-03-27-ce-skill-prefix-rename-requirements.md
+compound-engineering/docs/brainstorms/2026-03-28-ce-review-headless-mode-requirements.md
+compound-engineering/docs/brainstorms/2026-03-29-iterative-optimization-loop-requirements.md
+compound-engineering/docs/brainstorms/2026-03-29-testing-addressed-gate-requirements.md
+compound-engineering/docs/brainstorms/2026-03-30-cli-readiness-review-persona-requirements.md
+compound-engineering/docs/brainstorms/2026-03-31-codex-delegation-requirements.md
+compound-engineering/docs/brainstorms/2026-04-01-cross-invocation-cluster-analysis-requirements.md
+compound-engineering/docs/brainstorms/2026-04-02-slack-analyst-agent-requirements.md
+compound-engineering/docs/brainstorms/2026-04-05-universal-planning-requirements.md
+compound-engineering/docs/brainstorms/2026-04-17-ce-release-notes-skill-requirements.md
+compound-engineering/docs/brainstorms/2026-04-17-ce-review-interactive-judgment-requirements.md
+compound-engineering/docs/brainstorms/2026-04-18-ce-doc-review-autofix-and-interaction-requirements.md
+compound-engineering/docs/brainstorms/2026-04-22-demo-reel-local-save-requirements.md
+compound-engineering/docs/brainstorms/2026-04-24-surface-scope-earlier-requirements.md
+compound-engineering/docs/brainstorms/2026-05-19-vscode-copilot-agent-tool-access-requirements.md
+compound-engineering/docs/brainstorms/2026-06-04-ce-plan-approach-altitude-requirements.md
+compound-engineering/docs/brainstorms/2026-06-19-agentless-plugin-surface-reduction-requirements.md
+compound-engineering/docs/grok-marketplace-submission.md
+compound-engineering/docs/ideation
+compound-engineering/docs/ideation/2026-06-28-ce-pov-skill-proposal.html
+compound-engineering/docs/plans
+compound-engineering/docs/plans/2026-02-08-feat-convert-local-md-settings-for-opencode-codex-plan.md
+compound-engineering/docs/plans/2026-02-08-feat-pr-triage-and-merge-plan.md
+compound-engineering/docs/plans/2026-02-08-feat-simplify-plugin-settings-plan.md
+compound-engineering/docs/plans/2026-02-08-refactor-reduce-plugin-context-token-usage-plan.md
+compound-engineering/docs/plans/2026-02-09-refactor-dspy-ruby-skill-update-plan.md
+compound-engineering/docs/plans/2026-02-12-feat-add-cursor-cli-target-provider-plan.md
+compound-engineering/docs/plans/2026-02-14-feat-add-copilot-converter-target-plan.md
+compound-engineering/docs/plans/2026-02-14-feat-add-gemini-cli-target-provider-plan.md
+compound-engineering/docs/plans/2026-02-14-feat-auto-detect-install-and-gemini-sync-plan.md
+compound-engineering/docs/plans/2026-02-25-feat-windsurf-global-scope-support-plan.md
+compound-engineering/docs/plans/2026-03-01-feat-ce-command-aliases-backwards-compatible-deprecation-plan.md
+compound-engineering/docs/plans/2026-03-01-fix-setup-skill-non-claude-llm-fallback-plan.md
+compound-engineering/docs/plans/2026-03-03-feat-sync-claude-mcp-all-supported-providers-plan.md
+compound-engineering/docs/plans/2026-03-15-001-feat-ce-ideate-skill-plan.md
+compound-engineering/docs/plans/2026-03-16-001-feat-issue-grounded-ideation-plan.md
+compound-engineering/docs/plans/2026-03-17-001-feat-release-automation-migration-beta-plan.md
+compound-engineering/docs/plans/2026-03-18-001-feat-auto-memory-integration-beta-plan.md
+compound-engineering/docs/plans/2026-03-22-001-feat-frontend-design-skill-rewrite-beta-plan.md
+compound-engineering/docs/plans/2026-03-23-001-feat-ce-review-beta-pipeline-mode-beta-plan.md
+compound-engineering/docs/plans/2026-03-23-001-feat-plan-review-personas-beta-plan.md
+compound-engineering/docs/plans/2026-03-23-001-feat-promote-plan-beta-skills-to-stable-plan.md
+compound-engineering/docs/plans/2026-03-25-001-feat-onboarding-skill-plan.md
+compound-engineering/docs/plans/2026-03-25-002-refactor-config-storage-redesign-plan.md
+compound-engineering/docs/plans/2026-03-26-001-feat-adversarial-review-agents-plan.md
+compound-engineering/docs/plans/2026-03-26-001-refactor-merge-deepen-into-plan.md
+compound-engineering/docs/plans/2026-03-27-001-refactor-ce-skill-prefix-rename-plan.md
+compound-engineering/docs/plans/2026-03-28-001-feat-ce-review-headless-mode-plan.md
+compound-engineering/docs/plans/2026-03-29-001-feat-brainstorm-visual-aids-plan.md
+compound-engineering/docs/plans/2026-03-29-001-feat-iterative-optimization-loop-skill-beta-plan.md
+compound-engineering/docs/plans/2026-03-29-001-feat-testing-addressed-gate-plan.md
+compound-engineering/docs/plans/2026-03-29-002-feat-plan-visual-aids-plan.md
+compound-engineering/docs/plans/2026-03-29-002-feat-pr-feedback-clustering-plan.md
+compound-engineering/docs/plans/2026-03-29-003-feat-pr-description-visual-aids-plan.md
+compound-engineering/docs/plans/2026-03-30-001-feat-cli-readiness-review-persona-plan.md
+compound-engineering/docs/plans/2026-03-31-001-feat-codex-delegation-plan.md
+compound-engineering/docs/plans/2026-04-01-001-feat-cross-invocation-cluster-analysis-plan.md
+compound-engineering/docs/plans/2026-04-02-001-feat-slack-analyst-agent-plan.md
+compound-engineering/docs/plans/2026-04-05-001-feat-universal-planning-plan.md
+compound-engineering/docs/plans/2026-04-09-001-feat-ce-work-token-extraction-plan.md
+compound-engineering/docs/plans/2026-04-15-001-feat-ce-polish-skill-plan.md
+compound-engineering/docs/plans/2026-04-16-001-fix-ce-polish-beta-detection-gaps-plan.md
+compound-engineering/docs/plans/2026-04-17-001-feat-ce-ideate-mode-aware-v2-plan.md
+compound-engineering/docs/plans/2026-04-17-001-feat-ce-release-notes-skill-plan.md
+compound-engineering/docs/plans/2026-04-17-002-feat-ce-review-interactive-judgment-plan.md
+compound-engineering/docs/plans/2026-04-18-001-feat-ce-doc-review-autofix-and-interaction-overhaul-plan.md
+compound-engineering/docs/plans/2026-04-18-001-refactor-native-install-cleanup-plan.md
+compound-engineering/docs/plans/2026-04-20-001-feat-codex-native-plugin-manifests-plan.md
+compound-engineering/docs/plans/2026-04-20-001-fix-ce-compound-yaml-safety-plan.md
+compound-engineering/docs/plans/2026-04-21-001-feat-ce-plan-traceability-loop-plan.md
+compound-engineering/docs/plans/2026-04-21-001-refactor-ce-doc-review-anchored-confidence-scoring-plan.md
+compound-engineering/docs/plans/2026-04-21-002-refactor-ce-code-review-precision-and-validation-plan.md
+compound-engineering/docs/plans/2026-04-22-001-feat-demo-reel-local-save-plan.md
+compound-engineering/docs/plans/2026-04-25-001-fix-ce-code-review-lfg-defer-bias-plan.md
+compound-engineering/docs/plans/2026-04-26-feat-surface-scope-earlier-plan.md
+compound-engineering/docs/plans/2026-05-08-001-fix-ce-sessions-orchestration-refactor-plan.md
+compound-engineering/docs/plans/2026-05-11-001-feat-output-html-mode-plan.md
+compound-engineering/docs/plans/2026-06-02-001-feat-ce-code-review-safe-autofix-plan.md
+compound-engineering/docs/plans/2026-06-04-001-feat-ce-plan-approach-altitude-plan.md
+compound-engineering/docs/plans/2026-06-18-001-refactor-unified-plan-doc-artifact-plan.md
+compound-engineering/docs/plans/2026-06-22-001-feat-antigravity-target-remove-gemini-plan.md
+compound-engineering/docs/plans/2026-06-26-001-chore-remove-ce-work-beta-plan.html
+compound-engineering/docs/plans/2026-06-28-001-feat-ce-pov-skill-plan.md
+compound-engineering/docs/plans/2026-06-29-001-feat-shared-repo-grounding-cache-plan.md
+compound-engineering/docs/plans/2026-07-02-001-feat-ce-sweep-skill-plan.md
+compound-engineering/docs/plans/2026-07-02-002-feat-ce-explain-skill-plan.md
+compound-engineering/docs/plans/2026-07-05-001-feat-devin-cli-native-plugin-support-plan.md
+compound-engineering/docs/plans/2026-07-07-001-feat-pr-concept-teaching-plan.md
+compound-engineering/docs/plans/2026-07-08-001-fix-model-alias-map-latest-generations-plan.md
+compound-engineering/docs/plans/2026-07-09-001-feat-grok-plugin-support-plan.md
+compound-engineering/docs/plans/2026-07-09-001-fix-ce-test-browser-native-driver-plan.md
+compound-engineering/docs/plans/2026-07-09-002-feat-claude-code-fable-elevation-plan.md
+compound-engineering/docs/plans/2026-07-09-003-feat-doc-review-cross-model-plan.md
+compound-engineering/docs/plans/2026-07-11-001-feat-babysit-self-initiating-loop-plan.md
+compound-engineering/docs/plans/2026-07-13-001-feat-code-review-line-provenance-plan.md
+compound-engineering/docs/plans/2026-07-13-001-fix-ce-proof-v3-owner-lifecycle-plan.md
+compound-engineering/docs/plans/2026-07-13-002-feat-code-review-cross-model-provider-port-plan.md
+compound-engineering/docs/plans/2026-07-14-001-feat-session-settled-decisions-plan.md
+compound-engineering/docs/plans/2026-07-14-001-fix-detached-peer-job-lifecycle-plan.md
+compound-engineering/docs/plans/2026-07-14-002-feat-ce-pov-cross-model-panel-plan.md
+compound-engineering/docs/plans/2026-07-15-001-docs-readme-install-first-plan.md
+compound-engineering/docs/plans/2026-07-16-001-feat-ce-handoff-session-continuity-plan.md
+compound-engineering/docs/plans/2026-07-17-001-eval-cross-model-peer-model-config.md
+compound-engineering/docs/plans/2026-07-18-001-fix-babysit-moving-base-plan.md
+compound-engineering/docs/plans/2026-07-18-adversarial-peer-benchmark-report.md
+compound-engineering/docs/plans/babysit-non-convergence-detection.md
+compound-engineering/docs/plans/feature_opencode-commands-as-md-and-config-merge.md
+compound-engineering/docs/plans/pipeline-mode-contract-and-lfg-babysit-consolidation.md
+compound-engineering/docs/residual-review-findings
+compound-engineering/docs/residual-review-findings/feat-ce-explain-skill.md
+compound-engineering/docs/skills
+compound-engineering/docs/skills/ce-babysit-pr.md
+compound-engineering/docs/skills/ce-brainstorm.md
+compound-engineering/docs/skills/ce-code-review.md
+compound-engineering/docs/skills/ce-commit.md
+compound-engineering/docs/skills/ce-commit-push-pr.md
+compound-engineering/docs/skills/ce-compound.md
+compound-engineering/docs/skills/ce-compound-refresh.md
+compound-engineering/docs/skills/ce-debug.md
+compound-engineering/docs/skills/ce-doc-review.md
+compound-engineering/docs/skills/ce-dogfood.md
+compound-engineering/docs/skills/ce-explain.md
+compound-engineering/docs/skills/ce-handoff.md
+compound-engineering/docs/skills/ce-ideate.md
+compound-engineering/docs/skills/ce-optimize.md
+compound-engineering/docs/skills/ce-plan.md
+compound-engineering/docs/skills/ce-polish.md
+compound-engineering/docs/skills/ce-pov.md
+compound-engineering/docs/skills/ce-product-pulse.md
+compound-engineering/docs/skills/ce-promote.md
+compound-engineering/docs/skills/ce-proof.md
+compound-engineering/docs/skills/ce-resolve-pr-feedback.md
+compound-engineering/docs/skills/ce-riffrec-feedback-analysis.md
+compound-engineering/docs/skills/ce-setup.md
+compound-engineering/docs/skills/ce-simplify-code.md
+compound-engineering/docs/skills/ce-strategy.md
+compound-engineering/docs/skills/ce-sweep.md
+compound-engineering/docs/skills/ce-test-browser.md
+compound-engineering/docs/skills/ce-test-xcode.md
+compound-engineering/docs/skills/ce-work.md
+compound-engineering/docs/skills/ce-worktree.md
+compound-engineering/docs/skills/lfg.md
+compound-engineering/docs/skills/README.md
+compound-engineering/docs/solutions
+compound-engineering/docs/solutions/adding-converter-target-providers.md
+compound-engineering/docs/solutions/agent-friendly-cli-principles.md
+compound-engineering/docs/solutions/architecture-patterns
+compound-engineering/docs/solutions/best-practices
+compound-engineering/docs/solutions/codex-skill-prompt-entrypoints.md
+compound-engineering/docs/solutions/conventions
+compound-engineering/docs/solutions/developer-experience
+compound-engineering/docs/solutions/integration-issues
+compound-engineering/docs/solutions/integrations
+compound-engineering/docs/solutions/plugin-versioning-requirements.md
+compound-engineering/docs/solutions/skill-design
+compound-engineering/docs/solutions/workflow
+compound-engineering/docs/specs
+compound-engineering/docs/specs/antigravity.md
+compound-engineering/docs/specs/claude-code.md
+compound-engineering/docs/specs/cline.md
+compound-engineering/docs/specs/codex.md
+compound-engineering/docs/specs/copilot.md
+compound-engineering/docs/specs/cursor.md
+compound-engineering/docs/specs/devin.md
+compound-engineering/docs/specs/kimi.md
+compound-engineering/docs/specs/kiro.md
+compound-engineering/docs/specs/opencode.md
+compound-engineering/favicon.png
+compound-engineering/GEMINI.md
+compound-engineering/.github
+compound-engineering/.github/release-please-config.json
+compound-engineering/.github/.release-please-manifest.json
+compound-engineering/.github/workflows
+compound-engineering/.github/workflows/ci.yml
+compound-engineering/.github/workflows/release-preview.yml
+compound-engineering/.github/workflows/release-pr.yml
+compound-engineering/.gitignore
+compound-engineering/.grok-plugin
+compound-engineering/.grok-plugin/marketplace.json
+compound-engineering/.grok-plugin/plugin.json
+compound-engineering/.kimi-plugin
+compound-engineering/.kimi-plugin/marketplace.json
+compound-engineering/.kimi-plugin/plugin.json
+compound-engineering/LICENSE
+compound-engineering/.opencode
+compound-engineering/.opencode/INSTALL.md
+compound-engineering/.opencode/plugins
+compound-engineering/.opencode/plugins/compound-engineering.js
+compound-engineering/package.json
+compound-engineering/.pi
+compound-engineering/.pi/extensions
+compound-engineering/.pi/extensions/compound-engineering.ts
+compound-engineering/plugin.json
+compound-engineering/PRIVACY.md
+compound-engineering/README.md
+compound-engineering/scripts
+compound-engineering/scripts/codex-dev.ts
+compound-engineering/scripts/release
+compound-engineering/scripts/release/preview.ts

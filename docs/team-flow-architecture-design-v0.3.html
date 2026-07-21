@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>架构 / API / DB 设计增强方案 v0.3 · 可视化速览</title>
+<style>
+  :root{
+    --bg:#f6f8fb; --surface:#ffffff; --surface-2:#f1f5f9; --border:#e2e8f0;
+    --text:#0f172a; --muted:#64748b; --faint:#94a3b8;
+    --primary:#4f46e5; --primary-soft:#eef2ff; --primary-ink:#4338ca;
+    --accent:#0d9488; --accent-soft:#ccfbf1;
+    --amber:#d97706; --amber-soft:#fef3c7;
+    --rose:#e11d48; --rose-soft:#ffe4e6;
+    --sky:#0284c7; --sky-soft:#e0f2fe;
+    --green:#16a34a; --green-soft:#dcfce7;
+    --radius:14px; --shadow:0 1px 3px rgba(15,23,42,.06),0 8px 24px rgba(15,23,42,.05);
+    --mono:"SF Mono",ui-monospace,"JetBrains Mono",Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:var(--sans);background:var(--bg);color:var(--text);line-height:1.7;font-size:15px;-webkit-font-smoothing:antialiased}
+  a{color:var(--primary);text-decoration:none}
+  a:hover{text-decoration:underline}
+
+  /* ---------- Layout ---------- */
+  .layout{display:flex;max-width:1280px;margin:0 auto;gap:0}
+  .sidebar{width:288px;flex:none;position:sticky;top:0;height:100vh;overflow-y:auto;
+    border-right:1px solid var(--border);background:var(--surface);padding:22px 16px}
+  .main{flex:1;min-width:0;padding:0 40px 120px}
+
+  /* ---------- Sidebar ---------- */
+  .brand{font-weight:700;font-size:15px;color:var(--primary-ink);margin-bottom:4px;letter-spacing:.2px}
+  .brand small{display:block;font-weight:500;color:var(--faint);font-size:11px;letter-spacing:.5px;margin-top:2px}
+  .nav-group{margin-top:18px;font-size:11px;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:1px}
+  .nav a{display:block;padding:6px 10px;border-radius:8px;color:var(--muted);font-size:13.5px;margin-top:2px;border-left:2px solid transparent}
+  .nav a:hover{background:var(--surface-2);text-decoration:none;color:var(--text)}
+  .nav a.active{background:var(--primary-soft);color:var(--primary-ink);border-left-color:var(--primary);font-weight:600}
+  .nav a .n{color:var(--faint);font-family:var(--mono);font-size:11px;margin-right:6px}
+
+  /* ---------- Hero ---------- */
+  .hero{padding:46px 0 26px;border-bottom:1px solid var(--border);margin-bottom:30px}
+  .hero h1{font-size:30px;line-height:1.25;letter-spacing:-.3px;font-weight:800}
+  .hero .sub{color:var(--muted);margin-top:10px;font-size:15px;max-width:760px}
+  .badges{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+  .badge{font-size:12px;padding:5px 11px;border-radius:999px;background:var(--surface-2);color:var(--muted);border:1px solid var(--border)}
+  .badge.v{background:var(--primary-soft);color:var(--primary-ink);border-color:#c7d2fe}
+  .badge.off{background:var(--accent-soft);color:#0f766e;border-color:#99f6e4}
+  .badge.team{background:var(--amber-soft);color:#b45309;border-color:#fde68a}
+
+  /* ---------- Quick cards ---------- */
+  .quick{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:26px 0 8px}
+  .qcard{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);
+    transition:transform .15s ease,box-shadow .15s ease;display:block;color:inherit}
+  .qcard:hover{transform:translateY(-3px);box-shadow:0 10px 30px rgba(15,23,42,.10);text-decoration:none}
+  .qcard .ico{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;font-size:19px;margin-bottom:10px}
+  .qcard h3{font-size:15px;margin-bottom:4px}
+  .qcard p{font-size:12.5px;color:var(--muted);line-height:1.5}
+  .q-1 .ico{background:var(--primary-soft);color:var(--primary)}
+  .q-2 .ico{background:var(--accent-soft);color:#0f766e}
+  .q-3 .ico{background:var(--amber-soft);color:#b45309}
+  .q-4 .ico{background:var(--sky-soft);color:#0369a1}
+
+  /* ---------- Sections ---------- */
+  section{margin-bottom:46px;scroll-margin-top:18px}
+  h2{font-size:22px;font-weight:750;letter-spacing:-.2px;margin-bottom:6px;display:flex;align-items:baseline;gap:10px}
+  h2 .num{font-family:var(--mono);font-size:14px;color:var(--primary);background:var(--primary-soft);padding:3px 9px;border-radius:8px;font-weight:700}
+  h3{font-size:17px;font-weight:700;margin:26px 0 10px;color:var(--text)}
+  h3 .tag{font-size:11px;font-weight:700;color:var(--accent);font-family:var(--mono);margin-left:6px}
+  p{margin:10px 0;color:#1e293b}
+  .lead{color:var(--muted);font-size:14.5px;margin-top:2px}
+  ul,ol{margin:10px 0 10px 22px}
+  li{margin:5px 0}
+  strong{color:var(--text);font-weight:700}
+  code{font-family:var(--mono);font-size:13px;background:var(--surface-2);padding:1.5px 6px;border-radius:6px;color:var(--primary-ink)}
+
+  /* ---------- Cards grid ---------- */
+  .grid{display:grid;gap:14px;margin:16px 0}
+  .g2{grid-template-columns:repeat(2,1fr)}
+  .g3{grid-template-columns:repeat(3,1fr)}
+  .g4{grid-template-columns:repeat(4,1fr)}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow)}
+  .card h4{font-size:14.5px;margin-bottom:6px;display:flex;align-items:center;gap:8px}
+  .card p{font-size:13px;color:var(--muted);margin:0}
+  .fn{font-family:var(--mono);font-size:11px;font-weight:700;background:var(--primary);color:#fff;width:24px;height:24px;border-radius:7px;display:grid;place-items:center;flex:none}
+
+  /* ---------- Callouts ---------- */
+  .note{border-left:4px solid var(--primary);background:var(--primary-soft);padding:12px 16px;border-radius:0 10px 10px 0;margin:14px 0;font-size:13.5px;color:#312e81}
+  .note.warn{border-color:var(--amber);background:var(--amber-soft);color:#7c2d12}
+  .note.ok{border-color:var(--green);background:var(--green-soft);color:#14532d}
+  .note.soft{border-color:var(--sky);background:var(--sky-soft);color:#0c4a6e}
+  .note b{font-weight:700}
+
+  /* ---------- Tables ---------- */
+  .tbl-wrap{overflow-x:auto;margin:16px 0;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}
+  table{width:100%;border-collapse:collapse;font-size:13.5px;background:var(--surface)}
+  th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--border);vertical-align:top}
+  th{background:var(--surface-2);font-weight:700;color:var(--text);font-size:13px;white-space:nowrap}
+  tr:last-child td{border-bottom:none}
+  tr:hover td{background:#fafbff}
+  td code{font-size:12px}
+
+  /* ---------- Code ---------- */
+  pre{background:#0f172a;color:#e2e8f0;border-radius:12px;padding:16px 18px;overflow-x:auto;font-family:var(--mono);font-size:12.5px;line-height:1.65;margin:14px 0;box-shadow:var(--shadow)}
+  pre .c{color:#94a3b8}
+  pre .k{color:#c4b5fd}
+  pre .s{color:#86efac}
+
+  /* ---------- Flow diagram ---------- */
+  .flow{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:22px;box-shadow:var(--shadow);margin:18px 0}
+  .fnode{background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:11px 16px;text-align:center;font-weight:600;font-size:14px;max-width:560px;margin:0 auto}
+  .fnode.start{background:linear-gradient(135deg,#eef2ff,#e0e7ff);border-color:#c7d2fe;color:var(--primary-ink)}
+  .fnode.hl{background:#fff7ed;border-color:#fed7aa;color:#9a3412}
+  .fnode.cmp{background:#ecfdf5;border-color:#a7f3d0;color:#065f46}
+  .fnode.loop{background:#faf5ff;border-color:#e9d5ff;color:#6b21a8}
+  .arrow{text-align:center;color:var(--faint);font-size:18px;margin:6px 0;line-height:1}
+  .arrow.loop{color:#a855f7}
+  .split{display:grid;grid-template-columns:1fr 1.6fr;gap:14px;margin:8px 0}
+  .fcol{border:1px dashed var(--border);border-radius:12px;padding:14px;background:#fbfdff}
+  .fcol.global{background:#fffbeb;border-color:#fde68a}
+  .fcol .ct{font-weight:700;font-size:13px;margin-bottom:8px}
+  .fcol.global .ct{color:#b45309}
+  .fcol.change .ct{color:var(--primary-ink)}
+  .stepper{display:flex;flex-wrap:wrap;align-items:center;gap:5px;font-size:12px;font-family:var(--mono);margin:6px 0 12px}
+  .stepper span{background:var(--primary-soft);color:var(--primary-ink);padding:4px 9px;border-radius:7px;white-space:nowrap}
+  .stepper .ar{color:var(--faint)}
+  ol.substeps{counter-reset:s;list-style:none;margin:0;padding:0}
+  ol.substeps li{position:relative;padding:7px 0 7px 30px;font-size:12.5px;color:#334155;border-bottom:1px dashed var(--border)}
+  ol.substeps li:before{counter-increment:s;content:counter(s);position:absolute;left:0;top:7px;width:20px;height:20px;background:var(--primary);color:#fff;border-radius:6px;display:grid;place-items:center;font-size:11px;font-weight:700;font-family:var(--mono)}
+  .col-note{font-size:11.5px;color:var(--amber);font-family:var(--mono)}
+
+  /* ---------- Tree ---------- */
+  .tree{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;box-shadow:var(--shadow);font-family:var(--mono);font-size:13px;line-height:1.9;overflow-x:auto}
+  .tree .lvl{margin-left:0}
+  .tree .node{white-space:nowrap}
+  .tree .dir{color:var(--primary-ink);font-weight:700}
+  .tree .file{color:#334155}
+  .tree .cm{color:var(--faint)}
+  .tree .ind1{margin-left:22px}
+  .tree .ind2{margin-left:44px}
+  .tree .ind3{margin-left:66px}
+
+  /* ---------- Two-layer ---------- */
+  .layers{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:16px 0}
+  .layer{border:1px solid var(--border);border-radius:var(--radius);padding:16px;background:var(--surface);box-shadow:var(--shadow)}
+  .layer.global{background:linear-gradient(180deg,#fffbeb,#fffdf5);border-color:#fde68a}
+  .layer.change{background:linear-gradient(180deg,#eef2ff,#fafaff);border-color:#c7d2fe}
+  .layer h4{font-size:14px;margin-bottom:4px}
+  .layer.global h4{color:#b45309}
+  .layer.change h4{color:var(--primary-ink)}
+  .layer .lv{font-size:11px;font-weight:700;font-family:var(--mono);padding:2px 8px;border-radius:6px;display:inline-block;margin-bottom:10px}
+  .layer.global .lv{background:var(--amber-soft);color:#b45309}
+  .layer.change .lv{background:var(--primary-soft);color:var(--primary-ink)}
+  .layer ul{margin:0 0 0 18px;font-size:12.5px;color:#334155}
+  .chain{text-align:center;font-family:var(--mono);font-size:12.5px;color:var(--muted);background:var(--surface-2);border-radius:10px;padding:12px;margin-top:12px}
+
+  /* ---------- Status pills ---------- */
+  .pill{font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px;font-family:var(--mono)}
+  .pill.y{background:var(--green-soft);color:#15803d}
+  .pill.n{background:var(--surface-2);color:var(--faint)}
+  .pill.w{background:var(--amber-soft);color:#b45309}
+
+  /* ---------- Footer ---------- */
+  footer{margin-top:60px;padding-top:24px;border-top:1px solid var(--border);color:var(--faint);font-size:12.5px;text-align:center}
+
+  /* ---------- Search ---------- */
+  .search{margin:14px 0 4px;position:relative}
+  .search input{width:100%;padding:9px 12px 9px 32px;border:1px solid var(--border);border-radius:10px;font-size:13px;background:var(--surface-2);font-family:var(--sans)}
+  .search input:focus{outline:none;border-color:var(--primary);background:#fff}
+  .search svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:15px;height:15px;color:var(--faint)}
+
+  /* ---------- Mobile ---------- */
+  .menu-btn{display:none;position:fixed;top:14px;left:14px;z-index:50;background:var(--primary);color:#fff;border:none;border-radius:10px;padding:9px 12px;font-size:13px;font-weight:600;box-shadow:var(--shadow);cursor:pointer}
+  @media(max-width:980px){
+    .sidebar{position:fixed;left:0;top:0;z-index:40;transform:translateX(-100%);transition:transform .2s;box-shadow:var(--shadow)}
+    .sidebar.open{transform:translateX(0)}
+    .main{padding:0 20px 90px}
+    .menu-btn{display:block}
+    .quick{grid-template-columns:repeat(2,1fr)}
+    .g2,.g3,.g4,.layers{grid-template-columns:1fr}
+    .split{grid-template-columns:1fr}
+    .hero{padding-top:60px}
+  }
+</style>
+</head>
+<body>
+<button class="menu-btn" onclick="document.querySelector('.sidebar').classList.toggle('open')">☰ 目录</button>
+<div class="layout">
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar">
+    <div class="brand">架构 / API / DB 设计增强方案<small>v0.3 · team-flow 统一插件</small></div>
+    <div class="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input id="q" placeholder="搜索章节 / 关键词…" oninput="filterNav(this.value)">
+    </div>
+    <div class="nav-group">快速认识</div>
+    <nav class="nav" id="nav">
+      <a href="#overview"><span class="n">·</span>总览速览</a>
+      <a href="#flow"><span class="n">▶</span>流程（SOP 闭环）</a>
+      <a href="#design"><span class="n">◆</span>设计（F1–F8 方法论）</a>
+      <a href="#usage"><span class="n">⚙</span>使用（上手指南）</a>
+      <a href="#scenarios"><span class="n">◎</span>场景（适用 / 不适用）</a>
+    </nav>
+    <div class="nav-group">全文章节</div>
+    <nav class="nav">
+      <a href="#goals"><span class="n">一</span>设计目标</a>
+      <a href="#method"><span class="n">二</span>方法论底座</a>
+      <a href="#sop"><span class="n">三</span>总体闭环 SOP</a>
+      <a href="#artifacts"><span class="n">四</span>产物结构</a>
+      <a href="#templates"><span class="n">五</span>每变更增量模板</a>
+      <a href="#global-doc"><span class="n">六</span>全局架构 / DB 文档</a>
+      <a href="#compound-back"><span class="n">七</span>复利回写机制</a>
+      <a href="#org"><span class="n">八</span>全局文档组织</a>
+      <a href="#compound-exp"><span class="n">九</span>compound 经验借鉴</a>
+      <a href="#integration"><span class="n">十</span>与 spec-superflow 集成</a>
+      <a href="#sop-scripts"><span class="n">十一</span>SOP 化（LLM+脚本）</a>
+      <a href="#second-brain"><span class="n">十二</span>第二大脑整合（ima）</a>
+      <a href="#review"><span class="n">十三</span>四方专家会审</a>
+      <a href="#roadmap"><span class="n">十四</span>落地路线</a>
+      <a href="#prototype"><span class="n">十五</span>原型设计能力</a>
+      <a href="#e2e"><span class="n">十六</span>E2E 测试集成</a>
+      <a href="#decisions"><span class="n">十七</span>决策落实状态</a>
+    </nav>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <main class="main">
+    <!-- HERO -->
+    <div class="hero" id="overview">
+      <h1>架构 / API / DB 设计增强方案 · v0.3</h1>
+      <p class="sub">全量修订版 + 原型设计能力。底座为 <code>architecture-design</code> skill（蒸馏自 LT 知识库 4A/DDD 培训材料，含 F1–F8 框架），并入 <strong>team-flow</strong> 统一插件——把 <strong>spec-superflow</strong>（spec 驱动开发）+ <strong>compound-engineering 核心子集</strong>（全局复利）+ <strong>architecture-design</strong>（4A+DDD 增量设计）+ <strong>prototype</strong>（本地 HTML 原型）合为一套协同工作流。</p>
+      <div class="badges">
+        <span class="badge v">版本 v0.3</span>
+        <span class="badge team">统一插件 team-flow</span>
+        <span class="badge off">⚡ 零外部依赖 · 可离线</span>
+        <span class="badge">17 → 18 skills</span>
+        <span class="badge">DDD + 4A</span>
+        <span class="badge">增量 + 复利回写闭环</span>
+      </div>
+
+      <div class="quick">
+        <a class="qcard q-1" href="#flow">
+          <div class="ico">▶</div>
+          <h3>流程</h3>
+          <p>从模糊需求到复利回写的端到端 SOP，8 态变更机一键路由。</p>
+        </a>
+        <a class="qcard q-2" href="#design">
+          <div class="ico">◆</div>
+          <h3>设计</h3>
+          <p>F1–F8 方法论底座：4A 分叉、DDD 聚合、CQRS、增量+复利闭环。</p>
+        </a>
+        <a class="qcard q-3" href="#usage">
+          <div class="ico">⚙</div>
+          <h3>使用</h3>
+          <p>如何安装启用、配置注入、命令流与 6 个关键脚本。</p>
+        </a>
+        <a class="qcard q-4" href="#scenarios">
+          <div class="ico">◎</div>
+          <h3>场景</h3>
+          <p>何时用架构/DB/API 增量与原型，适用与不适用边界。</p>
+        </a>
+      </div>
+    </div>
+
+    <!-- ===== QUICK: FLOW ===== -->
+    <section id="flow">
+      <h2><span class="num">▶</span>流程 · 总体闭环 SOP</h2>
+      <p class="lead">需求以"增量设计 + 复利回写"方式闭环：每次变更都在全局真相源上做增强，再回写回去成为下一变更的基线。</p>
+      <div class="flow">
+        <div class="fnode start">模糊需求</div>
+        <div class="arrow">▼</div>
+        <div class="fnode hl">ce-brainstorm → ce-plan（就地 enrich，产出 requirements-only → implementation-ready）</div>
+        <div class="arrow">▼</div>
+        <div class="fnode hl">prd/vN（PRD 有版本 v1→v2→v3，升版→新 git 分支）</div>
+        <div class="arrow">▼</div>
+        <div class="split">
+          <div class="fcol global">
+            <div class="ct">全局层 · prototype/</div>
+            <div class="col-note">◀── 增量回写 ──┐</div>
+            <p style="font-size:12.5px;color:#92400e;margin:8px 0 0">UI 契约真相源，全局一份，与 PRD 同级，git 分支隔离版本。</p>
+          </div>
+          <div class="fcol change">
+            <div class="ct">spec-superflow change（一份 PRD 可拆多 change）</div>
+            <div class="stepper">
+              <span>exploring</span><span class="ar">→</span><span>specifying</span><span class="ar">→</span><span>bridging</span><span class="ar">→</span><span>approved-for-build</span><span class="ar">→</span><span>executing</span><span class="ar">→</span><span>closing</span>
+            </div>
+            <ol class="substeps">
+              <li>读全局 ARCHITECTURE.md grounding → 活动对象矩阵识别聚合/上下文</li>
+              <li>To-Be：聚合 + Context Map + CQRS + 4A 跨域对齐</li>
+              <li>【As-Is 冻结】复制全局相关章节当前原文 + 版本锚点，变更内不可变</li>
+              <li>脚本：填 frontmatter + advisory 校验</li>
+              <li>写 ADR；api.md 标 Command/Read/Query + 阻断测试归属</li>
+              <li>引用全局 prototype/ 作 UI 契约 → 写 execution-contract.md</li>
+              <li>脚本：回写全局 architecture.md/database.md/api.md + 原型 UX 增量 → prototype/</li>
+            </ol>
+          </div>
+        </div>
+        <div class="arrow">▼</div>
+        <div class="fnode cmp">复利环节（独立 arch-compound overlay，不进状态机硬矩阵）<br>delta 合并进 docs/architecture/ARCHITECTURE.md + DATABASE.md；UX 增量合并回 prototype/ + design-system.md</div>
+        <div class="arrow loop">↺</div>
+        <div class="fnode loop">全局作为下一 change 的 grounding → 闭环</div>
+      </div>
+      <div class="note ok"><b>原型合规路径（v0.3 修正）：</b>原型是<strong>全局产物</strong>，由「本地 HTML 原型 skill」产出进 <code>prototype/</code>；spec-superflow 的 <code>handoff --type prototype</code> 仅作可选可行性草图旁路，<strong>不复用</strong>其 per-change overlay 作为主机制。原型 UX 增量经 change 完成后回写全局 <code>prototype/</code> 与 <code>design-system.md</code>，并流入 <code>execution-contract.md</code> 驱动开发；<code>design.md</code> 保持不可变。</div>
+    </section>
+
+    <!-- ===== QUICK: DESIGN ===== -->
+    <section id="design">
+      <h2><span class="num">◆</span>设计 · 方法论底座（F1–F8）</h2>
+      <p class="lead">architecture-design skill 的八条框架原则，是全部增量设计与复利回写的纪律基础。</p>
+      <div class="grid g2" id="method">
+        <div class="card"><h4><span class="fn">F1</span>4A 分叉依赖</h4><p><code>BA→(IA∥AA)→TA</code>：BA 先行，IA/AA 并行双向对齐，TA 最后。</p></div>
+        <div class="card"><h4><span class="fn">F2</span>跨域一致性</h4><p>AA 功能≥1 IA 实体支撑，IA 实体≥1 AA 功能消费；结构+语义双对齐（发布门禁）。</p></div>
+        <div class="card"><h4><span class="fn">F3</span>变更分叉级联</h4><p>直接 / 间接 / 隐式三层次必覆盖。</p></div>
+        <div class="card"><h4><span class="fn">F4</span>DDD 聚合四要素</h4><p>实体 + 值对象 + 聚合根 + 事务边界；仅业务服务有聚合。</p></div>
+        <div class="card"><h4><span class="fn">F5</span>限界上下文 / Context Map</h4><p>语义边界 = L3 应用服务；映射 Shared Kernel / ACL / OHS。</p></div>
+        <div class="card"><h4><span class="fn">F6</span>CQRS 写读模型</h4><p>事务型→写模型，分析型→读模型；Command/Read→写模型，Query 经阻断测试分流。</p></div>
+        <div class="card"><h4><span class="fn">F7</span>三维判定</h4><p>失忆(归属) + 阻断(类型) + 孤岛(层级)。</p></div>
+        <div class="card"><h4><span class="fn">F8</span>增量 + 复利回写闭环</h4><p>As-Is 冻结 + 版本锚点 → To-Be → 全局锚点复利。</p></div>
+      </div>
+    </section>
+
+    <!-- ===== QUICK: USAGE ===== -->
+    <section id="usage">
+      <h2><span class="num">⚙</span>使用 · 上手指南（综合）</h2>
+      <p class="lead">以下步骤由文档第十、十一、十四、十五章综合提炼，便于新用户直接照做。</p>
+
+      <h3>1 · 安装与启用</h3>
+      <div class="note soft">team-flow 提供单一 <code>plugin.json</code>，一次安装即加载全部 17（v0.4 起 18）个 skills，支持 9 个安装面：Claude Code、Cursor、OpenAI Codex CLI/App、GitHub Copilot CLI、Gemini CLI、OpenCode、WorkBuddy、Trae、ima-copilot。</div>
+
+      <h3>2 · 配置注入（项目级 spec-superflow.config.json）</h3>
+      <div class="tbl-wrap">
+        <table>
+          <tr><th>字段</th><th>作用</th><th>说明</th></tr>
+          <tr><td><code>prd.template</code></td><td>项目独特 PRD 模板路径</td><td rowspan="3">插件层扩展字段（非 spec-superflow 原生 schema；原生仅 <code>artifacts.order</code>/<code>artifacts.skip</code>），由 <code>ssf runtime config --get &lt;key&gt;</code> 读取，字段命名须避开原生 key 冲突。</td></tr>
+          <tr><td><code>prototype.designSystem</code></td><td>项目 <code>design-system.md</code> 路径（9 段 schema + 5 方向调色板）</td></tr>
+          <tr><td><code>prototype.entry</code></td><td>原型入口（默认 <code>prototype/index.html</code>）</td></tr>
+        </table>
+      </div>
+
+      <h3>3 · 典型命令流（端到端）</h3>
+      <pre><span class="c"># 需求探索与规划（compound 核心子集）</span>
+ce-brainstorm <span class="s">"模糊需求描述"</span>   <span class="c">→</span> ce-plan
+
+<span class="c"># 进入 spec-superflow 8 态变更机</span>
+用 workflow-start 开始          <span class="c"># 内容级状态检测 + 路由</span>
+need-explorer                   <span class="c"># 需求探索（一次一问 + 方案对比）</span>
+spec-writer                     <span class="c"># 写 spec（Schema 引擎实时验证）</span>
+contract-builder                <span class="c"># 构建 execution-contract.md</span>
+build-executor                  <span class="c"># TDD + SDD + Review Gate 实现</span>
+code-reviewer                   <span class="c"># 结构化审查</span>
+release-archivist               <span class="c"># 验证 + 归档（含 E2E 验收 gate）</span>
+spec-merger                     <span class="c"># delta spec → 主规范</span>
+
+<span class="c"># 增量设计 + 全局复利</span>
+architecture-design             <span class="c"># 4A+DDD 增量设计</span>
+prototype                       <span class="c"># 本地 HTML 原型</span>
+ce-compound                     <span class="c"># 全局复利回写 STRATEGY.md / CONCEPTS.md</span></pre>
+
+      <h3>4 · 关键脚本（零 / 低 LLM，4+1 个）</h3>
+      <div class="grid g3">
+        <div class="card"><h4>validate-frontmatter</h4><p>校验三份增量 frontmatter 字段完整性（advisory，不引第三方 YAML 依赖）。</p></div>
+        <div class="card"><h4>arch-merge</h4><p>delta 以 append + 版本锚点合入全局，one change per run。</p></div>
+        <div class="card"><h4>discovery-check</h4><p>扫描重复/冲突 BC/聚合（机械查重；语义冲突归 LLM）。</p></div>
+        <div class="card"><h4>api-index-gen</h4><p>扫描所有 <code>specs/*/api.md</code> 生成 <code>API-INDEX.md</code>。</p></div>
+        <div class="card"><h4>asis-extract</h4><p>按版本锚点从全局抽取相关章节填入增量 As-Is（防漂移）。</p></div>
+        <div class="card"><h4>prototype-sync</h4><p>change 完成 → UX 增量 + design-system 迭代回写全局 <code>prototype/</code> 与 <code>design-system.md</code>。</p></div>
+      </div>
+      <div class="note warn"><b>回写顺序（closing 期）：</b><code>arch-merge</code> → <code>prototype-sync</code> <strong>顺序提交</strong>（同一 change closing 内），避免全局 <code>docs/architecture/</code> 与 <code>prototype/</code> 半更新态被下一 change grounding。</div>
+    </section>
+
+    <!-- ===== QUICK: SCENARIOS ===== -->
+    <section id="scenarios">
+      <h2><span class="num">◎</span>场景 · 适用与不适用</h2>
+      <p class="lead">本方案回答"何时做架构/DB/API 增量设计与原型"，以及哪些项目最适合采用。</p>
+      <div class="grid g2">
+        <div class="card">
+          <h4 style="color:var(--green)">✅ 推荐采用</h4>
+          <ul style="margin:8px 0 0 18px;font-size:13px;color:#334155">
+            <li><b>架构设计</b>：每需求做"增强"——对当前现状 + 需求对应架构变更做设计，并复利回写全局。</li>
+            <li><b>DB 设计</b>：与架构同模式（每变更增量 + 复利回写全局）。</li>
+            <li><b>API 设计</b>：主要在每变更需求内设计（不进全局层），经 <code>execution-contract.md</code> 被 build-executor <b>硬消费</b>。</li>
+            <li><b>原型设计</b>：无应用、纯 CLI 插件，需零依赖、可离线的本地 HTML 原型。</li>
+            <li><b>项目类型</b>：大型功能开发、多人协作、长期维护、需 TDD + Review Gate 的棕地项目。</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4 style="color:var(--rose)">⛔ 不推荐 / 不适用</h4>
+          <ul style="margin:8px 0 0 18px;font-size:13px;color:#334155">
+            <li>一次性脚本 / 工具（无持续架构演进价值）。</li>
+            <li>纯咨询 / 问答类任务（无实现闭环）。</li>
+            <li>强依赖 GUI 设计软件的原型（Claude Design / Trae / Open Design 均<strong>不安装</strong>）。</li>
+            <li>原型不放入 per-change overlay，错误归属会破坏两层产物层级模型。</li>
+            <li>不要在未暴露 <code>docs/architecture/</code> 与 <code>prototype/</code> 的项目里直接套用（先补 Discoverability）。</li>
+          </ul>
+        </div>
+      </div>
+      <div class="note"><b>核心准则：</b>原型是全局一份、与 PRD 同级；版本演进靠 git 分支，不靠 change 内 v1/v2 目录。change 是实施工作单位，不是产品基线。</div>
+    </section>
+
+    <!-- ===== 一、设计目标 ===== -->
+    <section id="goals">
+      <h2><span class="num">一</span>设计目标（用户原话落地）</h2>
+      <div class="grid g2">
+        <div class="card"><h4>① 架构设计</h4><p>每需求做"增强"——对当前现状 + 需求对应架构变更做设计；复利环节回写全局架构设计。</p></div>
+        <div class="card"><h4>② DB 设计</h4><p>与架构同样模式（每变更增量 + 复利回写全局）。</p></div>
+        <div class="card"><h4>③ API 设计</h4><p>主要在每变更需求内设计（不进全局层）。</p></div>
+        <div class="card"><h4>④ 架构方法</h4><p>DDD（领域驱动设计）。</p></div>
+        <div class="card"><h4>⑤ 借鉴经验</h4><p>借鉴 compound-engineering（复利工程）可补充本块的好经验。</p></div>
+        <div class="card"><h4>⑥ 原型设计 <span style="font-size:11px;color:var(--accent)">v0.3 新增</span></h4><p>全局一份、与 PRD 同级、随 PRD 版本 git 分支演进；change 引用全局原型作 UI 契约；设计系统由项目 config 注入、复利回写。</p></div>
+      </div>
+    </section>
+
+    <!-- ===== 三、SOP 原文 ===== -->
+    <section id="sop">
+      <h2><span class="num">三</span>总体闭环（SOP 步骤 · 原文）</h2>
+      <p class="lead">以下为文档原始 SOP 表述，便于核对可视化图的每处细节。</p>
+      <pre><span class="k">模糊需求</span>
+ └─[ce-brainstorm→ce-plan 就地 enrich]→ prd/vN（PRD 有版本，requirements-only → implementation-ready）
+       │  注：演进是 ce-brainstorm→ce-plan 的"就地 enrich"，PRD 完备态在 enrich 之后
+       │       PRD 升版→新 git 分支；原型/代码各一份，git 分支隔离版本
+       ▼
+<span class="k">全局 prototype/</span>（一份，与 PRD 同级，UI 契约真相源）◀── 增量回写 ──┐
+       │                                                       │
+<span class="k">spec-superflow change</span>（一份 PRD 可拆多 change）：
+  exploring→specifying→bridging→approved-for-build→executing→closing
+  每变更 specs/&lt;cap&gt;/ 内：
+   ①(LLM) 读全局 ARCHITECTURE.md grounding → 活动对象矩阵识别聚合/上下文
+   ②(LLM) To-Be: 聚合+Context Map+CQRS+4A 跨域对齐
+   ③【As-Is 冻结】复制全局相关章节当前原文 + 版本锚点，变更内不可变
+   ④(脚本) 填 frontmatter + advisory 校验
+   ⑤(LLM) 写 ADR；api.md 标 Command/Read/Query + 阻断测试归属
+   ⑥(LLM) 引用全局 prototype/ 作 UI 契约 → 写 execution-contract.md
+   ⑦(脚本) 回写全局 architecture.md/database.md/api.md + 原型 UX 增量 → prototype/
+       ▼
+<span class="k">[复利环节 · 独立 arch-compound skill/overlay]</span>
+   把每变更 architecture.md/database.md 的 delta 合并进 docs/architecture/ARCHITECTURE.md + DATABASE.md
+   把每变更 prototype/ UX 增量 + design-system.md 迭代合并回全局 prototype/ + design-system.md
+       ▼
+<span class="k">全局作为下一 change 的 grounding</span> → 闭环</pre>
+    </section>
+
+    <!-- ===== 四、产物结构 ===== -->
+    <section id="artifacts">
+      <h2><span class="num">四</span>产物结构（全量）</h2>
+      <div class="tree">
+        <div class="node"><span class="dir">项目根/</span></div>
+        <div class="node ind1"><span class="dir">prd/</span> <span class="cm"># 【全局层】PRD，有版本 v1→v2→v3（git 分支隔离）</span></div>
+        <div class="node ind2"><span class="file">vN/prd.md</span></div>
+        <div class="node ind1"><span class="dir">prototype/</span> <span class="cm"># 【全局层】原型系统（一份，git 分支隔离）</span></div>
+        <div class="node ind2"><span class="file">index.html · pages/ · components/ · assets/ · design-system.md · flow.md</span></div>
+        <div class="node ind1"><span class="file">STRATEGY.md</span> <span class="cm"># 产品/BA 锚点（compound，不动）</span></div>
+        <div class="node ind1"><span class="file">CONCEPTS.md</span> <span class="cm"># 领域词汇（追加 DDD 术语，复利累积）</span></div>
+        <div class="node ind1"><span class="dir">docs/architecture/</span> <span class="cm"># 【技术锚点层】按 bounded context 分目录</span></div>
+        <div class="node ind2"><span class="file">ARCHITECTURE.md</span> <span class="cm"># 瘦锚点总览：Context Map + 各 bc 链接 + 关键决策</span></div>
+        <div class="node ind2"><span class="file">DATABASE.md</span> <span class="cm"># 全局 DB 总览</span></div>
+        <div class="node ind2"><span class="dir">&lt;bc&gt;/</span> <span class="cm"># 每个限界上下文一目录</span></div>
+        <div class="node ind3"><span class="file">context.md · evolution.md</span></div>
+        <div class="node ind2"><span class="file">API-INDEX.md</span> <span class="cm"># 脚本生成（扫所有 specs/*/api.md）</span></div>
+        <div class="node ind1"><span class="dir">specs/&lt;cap&gt;/</span> <span class="cm"># 【变更层】一份 PRD 可拆多 change</span></div>
+        <div class="node ind2"><span class="file">spec.md · design.md · tasks.md · execution-contract.md</span> <span class="cm"># spec-superflow 原产物</span></div>
+        <div class="node ind2"><span class="file">architecture.md · database.md · api.md</span> <span class="cm"># 每变更 DDD / DB / API 增量</span></div>
+      </div>
+      <div class="note"><b>两层归属说明：</b><code>prd/</code> 与 <code>prototype/</code> 在<strong>全局层</strong>（产品级，与 PRD 同级），各一份，版本演进靠 git 分支/标签隔离；<code>specs/&lt;cap&gt;/</code> 在<strong>变更层</strong>，一份 PRD（某版本）可拆多个 change，change 是 spec-superflow 实施单位，引用全局 <code>prototype/</code> 作 UI 契约。</div>
+    </section>
+
+    <!-- ===== 五、模板 ===== -->
+    <section id="templates">
+      <h2><span class="num">五</span>每变更增量模板</h2>
+      <h3>5.1 architecture.md</h3>
+      <pre><span class="k">---</span>
+cap_id: &lt;cap&gt;
+date: YYYY-MM-DD
+change_type: new | modify
+bounded_contexts: [&lt;上下文&gt;]
+aggregates_affected: [&lt;聚合&gt;]
+cqrs: [write:&lt;x&gt;, read_model:&lt;y&gt;]   <span class="c"># read_model 承载 Read 指令与 Query</span>
+tags: [ddd, &lt;领域&gt;]
+<span class="k">---</span></pre>
+      <ul>
+        <li><b>## 现状快照(As-Is，冻结基线)</b>：复制 <code>docs/architecture/ARCHITECTURE.md</code> 相关章节当前原文，记录来源锚点 <code>ARCHITECTURE.md@&lt;change_id&gt;#&lt;章节&gt;</code>。本变更内不可变，不得用"见全局第 X 节"活引用。</li>
+        <li><b>## 本次架构变更(To-Be)</b>：新增/调整限界上下文与 Context Map；聚合(实体+值对象+聚合根+事务边界)；CQRS 写读模型；4A 跨域对齐。</li>
+        <li><b>## 架构决策(ADR)</b>：决策与理由。</li>
+        <li><b>硬规则</b>：聚合仅存业务服务（数据/技术服务无聚合）；Query 经阻断测试分流。</li>
+      </ul>
+      <h3>5.2 database.md</h3>
+      <pre><span class="k">---</span>
+cap_id: &lt;cap&gt;
+date: YYYY-MM-DD
+change_type: new | modify
+entities_affected: [&lt;实体&gt;]
+cqrs: [write:&lt;x&gt;, read_model:&lt;y&gt;]
+oltp_olap: [oltp:&lt;t&gt;, olap:&lt;a&gt;]
+tags: [db, &lt;领域&gt;]
+<span class="k">---</span></pre>
+      <ul>
+        <li>现状快照(As-Is，冻结)：同上机制。</li>
+        <li>本次 DB 变更(To-Be)：实体+生命周期；聚合对应表/事务边界；写模型(OLTP) vs 读模型(OLAP，派生自写模型)。</li>
+        <li>迁移策略：前向兼容 / 双写 / 回填。</li>
+      </ul>
+      <h3>5.3 api.md（仅每变更）</h3>
+      <ul>
+        <li><b>API 清单</b>：端点/方法/职责。</li>
+        <li><b>指令映射(L6)</b>：每端点标 Command/Read/Query；Query 标阻断测试归属(业务/数据服务)。</li>
+        <li><b>契约</b>：请求/响应 schema、错误码、幂等。</li>
+        <li><b>硬消费钉死（v0.3）</b>：api.md 经 <code>execution-contract.md</code> 被 build-executor <b>硬消费</b>（TDD 实现），不得仅作参考；跨 change 一致性由 <code>API-INDEX.md</code> 脚本兜底。</li>
+      </ul>
+    </section>
+
+    <!-- ===== 六、全局文档 ===== -->
+    <section id="global-doc">
+      <h2><span class="num">六</span>全局架构 / DB 文档（分目录 + 瘦锚点 + 双视图）</h2>
+      <ul>
+        <li><b>总览层（覆盖式当前态）</b>：<code>ARCHITECTURE.md</code> 瘦锚点总览 = Context Map + 各 bc 链接 + 关键决策；<code>DATABASE.md</code> = 全局 DB 总览（实体+读写模型+OLTP/OLAP）。</li>
+        <li><b>每上下文层（分目录，起步即建）</b>：<code>&lt;bc&gt;/context.md</code> 承载聚合/实体/服务/读写模型/事务边界；<code>&lt;bc&gt;/evolution.md</code> 承载演进日志（append-only，含 change_id+来源）。</li>
+        <li><b>三层内容（F 产出三层）</b>：元素层（BA/IA/AA/TA 四域一等元素）→ 制品层（Context Map、业务流程图、CQRS 读写模型）→ 交付件层（架构评审文档，生成视图非手写巨著）。</li>
+        <li><b>双视图</b>：总览覆盖式当前态 + 各 bc 演进日志 append-only，防多版本矛盾。</li>
+      </ul>
+      <h3>6.1 技术锚点定性的设计影响与高质量可拓展保障 <span class="tag">决策 3</span></h3>
+      <div class="grid g2">
+        <div class="card"><h4>两份独立文档</h4><p>STRATEGY.md 答"做什么/为什么"(BA)，ARCHITECTURE.md 答"怎么建"(IA/AA/TA)；改业务不重写技术，改技术不污染策略（compound "Anchor not plan" 延伸到技术域）。</p></div>
+        <div class="card"><h4>分目录 = 天然扩展点</h4><p>每新增限界上下文 = 新增 <code>docs/architecture/&lt;bc&gt;/</code> 目录，不膨胀单文件，检索粒度随规模线性可控。</p></div>
+        <div class="card"><h4>命名注册表防语义漂移</h4><p>元素层标准化命名（用户/客户/consumer 不并存），是跨上下文可拓展的术语基础。</p></div>
+        <div class="card"><h4>双视图保证当前真相清晰</h4><p>总览覆盖式当前态 + 各 bc 演进日志 append-only，扩展时不丢失历史。</p></div>
+        <div class="card"><h4>跨域一致性门禁</h4><p>每次回写跑 AA≥1 IA 实体（结构+语义双对齐），新 bc 接入不破坏既有对齐。</p></div>
+        <div class="card"><h4>瘦锚点保障可持续</h4><p>避免评审交付巨著，单人也能维护，架构资产随项目长期复利而非一次性文档。</p></div>
+      </div>
+    </section>
+
+    <!-- ===== 七、复利回写 ===== -->
+    <section id="compound-back">
+      <h2><span class="num">七</span>复利回写机制（借 ce-compound，已正名）</h2>
+      <ol>
+        <li><b>结构化 frontmatter</b>：架构专用 schema（cap_id/date/change_type/bounded_contexts/aggregates/cqrs），非直接复用 schema.yaml。</li>
+        <li><b>one change per run</b>：一次回写一个变更 delta（变更可追溯、不混杂多变更）。</li>
+        <li><b>双视图回写</b>：当前态覆盖 + 演进日志追加。</li>
+        <li><b>架构一致性/漂移检查（独立机制）</b>：①结构冲突（重复 BC/聚合 key）②语义冲突（同义异名，按命名注册表）③跨域一致性门禁（AA≥1 IA 实体，反之亦然）。</li>
+        <li><b>Discoverability 正名</b>：在 AGENTS.md/CLAUDE.md 暴露 <code>docs/architecture/</code> 与 <code>prototype/</code>（存在/结构/何时检索），使代理设计前"发现并查阅"。</li>
+        <li><b>下游检索复用</b>：下一 change 设计前从 <code>docs/architecture/</code> 检索相关上下文/聚合，grounding 用 CONCEPTS.md。</li>
+        <li><b>设计系统复利（v0.3 新增）</b>：UX 增量若涉及设计系统迭代（新组件/新 token/新 anti-pattern），合并进全局 <code>prototype/design-system.md</code>，作项目级风格唯一真相源复利累积。</li>
+      </ol>
+    </section>
+
+    <!-- ===== 八、组织 ===== -->
+    <section id="org">
+      <h2><span class="num">八</span>全局文档组织（已定：起步即分目录）</h2>
+      <div class="note ok"><b>用户决策：</b>起步即按 bounded context 分目录 <code>docs/architecture/&lt;bc&gt;/</code>（非单文件分节）。这是 compound <code>problem_type→directory</code> 的真类比，也是高质量可拓展基础——每新增限界上下文 = 新增目录，不膨胀单文件，检索粒度与一致性检查随规模线性可控。</div>
+    </section>
+
+    <!-- ===== 九、compound 借鉴 ===== -->
+    <section id="compound-exp">
+      <h2><span class="num">九</span>compound-engineering 经验借鉴（修正后清单）</h2>
+      <div class="tbl-wrap">
+        <table>
+          <tr><th>#</th><th>经验</th><th>本方案映射（修正）</th></tr>
+          <tr><td>1</td><td>全局锚点（STRATEGY.md, Anchor not plan）</td><td>→ <code>docs/architecture/</code> 作技术架构单一事实源；业务策略与技术架构两份独立文档、互相链接不混写；ARCHITECTURE.md 是瘦锚点，非评审交付巨著。</td></tr>
+          <tr><td>2</td><td>结构化复利回写</td><td>→ 架构专用 frontmatter + 双视图回写（原则借鉴，非套用 schema.yaml）。</td></tr>
+          <tr><td>3</td><td>requirements-only→implementation-ready</td><td>→ ce-brainstorm→ce-plan 就地 enrich 演进（PRD 完备态在 enrich 后）。</td></tr>
+          <tr><td>4</td><td>one learning per run + 并行</td><td>→ 一次一变更 delta 回写。</td></tr>
+          <tr><td>5</td><td>pulse 大环</td><td>→（增强项）架构健康度脉冲，后续。</td></tr>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===== 十、集成 ===== -->
+    <section id="integration">
+      <h2><span class="num">十</span>与 spec-superflow 集成（软集成，保全零依赖）</h2>
+      <ul>
+        <li><b>状态机</b>：8 态不变；三份增量文档为推荐产出、软提示、非阻断（复用 <code>config.artifacts.skip</code>，不改 core guard）。</li>
+        <li><b>guard 扩展</b>：frontmatter 校验降级为独立 advisory 脚本（正则提取 key，warning 级，不引第三方 YAML 依赖）；全局回写经独立 <code>arch-compound</code> skill/overlay，不进状态机硬矩阵。</li>
+        <li><b>原型机制（v0.3 修正）</b>：原型为全局产物，由「本地 HTML 原型 skill」产出维护进 <code>prototype/</code>，不复用 spec-superflow <code>handoff --type prototype</code> 的 per-change overlay 作为主机制。</li>
+        <li><b>术语正名</b>：IA/AA 非"技术架构"（仅 TA 是）；4A 是四域非三层；全局回写 ≠ spec-merger（后者只合并 delta spec 进 main spec base）。</li>
+      </ul>
+    </section>
+
+    <!-- ===== 十一、SOP 化 ===== -->
+    <section id="sop-scripts">
+      <h2><span class="num">十一</span>SOP 化（LLM 块 + 明确脚本）</h2>
+      <div class="grid g2">
+        <div class="card">
+          <h4 style="color:var(--primary)">🤖 LLM 负责（人守深度思考）</h4>
+          <ul style="margin:6px 0 0 18px;font-size:12.5px;color:#334155">
+            <li>限界上下文/聚合识别</li>
+            <li>Context Map 关系选型</li>
+            <li>4A 跨域对齐推理</li>
+            <li>CQRS 划分、API 指令映射</li>
+            <li>ADR 理由、架构一致性语义判定</li>
+            <li>原型 UX 流向全局 prototype/ 与 design-system.md 的决策</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4 style="color:var(--accent)">⚙ 明确脚本（零 / 低 LLM）</h4>
+          <ul style="margin:6px 0 0 18px;font-size:12.5px;color:#334155">
+            <li><code>validate-frontmatter</code>：校验三份增量 frontmatter</li>
+            <li><code>arch-merge</code>：delta append + 版本锚点合入全局</li>
+            <li><code>discovery-check</code>：扫描重复/冲突 BC/聚合</li>
+            <li><code>api-index-gen</code>：生成 API-INDEX.md</li>
+            <li><code>asis-extract</code>：按版本锚点抽取 As-Is</li>
+            <li><code>prototype-sync</code>：UX 增量回写全局 prototype/</li>
+          </ul>
+        </div>
+      </div>
+      <div class="note warn"><b>回写顺序（closing 期，评审修正 B）：</b><code>arch-merge</code> → <code>prototype-sync</code> <strong>顺序提交</strong>（同一 change closing 内），避免全局 <code>docs/architecture/</code> 与 <code>prototype/</code> 半更新态被下一 change grounding。</div>
+    </section>
+
+    <!-- ===== 十二、第二大脑 ===== -->
+    <section id="second-brain">
+      <h2><span class="num">十二</span>第二大脑整合（ima「LT的知识库」）</h2>
+      <ul>
+        <li><b>方法层(kb)</b>：存 <code>architecture-design</code> skill + <code>prototype</code> skill + 每限界上下文一个 <code>architecture-anchor</code> 资产（frontmatter: tags/bounded_contexts/aggregates 作索引键）。</li>
+        <li><b>项目层(repo)</b>：<code>docs/architecture/</code> 为权威源；<code>prototype/</code> 为 UI 契约权威源。设计前检索 kb skill + 读全局 ARCHITECTURE.md 与全局 prototype/ 作 grounding；回写后批量同步 Context Map 索引入 kb（避免每 delta 双写）。</li>
+        <li><b>人机协同闸点</b>：每变更设计末尾设 human gate——ADR 批准 + Context Map 关系确认 + 原型 UX 评审（LLM 出 draft，人守深度思考）。</li>
+      </ul>
+    </section>
+
+    <!-- ===== 十三、会审 ===== -->
+    <section id="review">
+      <h2><span class="num">十三</span>四方专家会审结论摘要（已吸收，v0.2）</h2>
+      <div class="tbl-wrap">
+        <table>
+          <tr><th>专家</th><th>核心修正点</th></tr>
+          <tr><td>DDD / 4A</td><td>As-Is 漂移、IA/AA 误称技术架构、4A 误称三层、Discoverability 仅查重名；聚合仅业务服务 / Query 阻断测试 / Read 与读模型术语消歧；元素层补 BA 活动与 AA 功能。</td></tr>
+          <tr><td>spec-superflow</td><td>原型直接改 design.md 违规（须 handoff→delta）、guard YAML 校验破零依赖（降级 advisory）、全局回写硬 gate 扭曲同步闭包（改 overlay）、design.md 已是架构一等公民（职责需划清）。</td></tr>
+          <tr><td>compound</td><td>Discoverability 误读（正名为 AGENTS.md 暴露）、problem_type→directory 未实例化（改分目录）、"技术架构折叠进 STRATEGY"误述（实为缺位）、Anchor not plan 应延伸到技术锚点、ARCHITECTURE.md 瘦锚点非评审巨著。</td></tr>
+          <tr><td>知识管理</td><td>草稿是设计稿非可执行 SOP（已补十一章）、一人创业成本（已补 MVP 章节）、第二大脑整合（已补十二章）、API 留债（已补脚本化索引）、As-Is 版本锚点（已补第五章）。</td></tr>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===== 十四、落地 ===== -->
+    <section id="roadmap">
+      <h2><span class="num">十四</span>落地路线（用户决策：初期即全量铺开）</h2>
+      <div class="note ok"><b>用户决策：</b>不缓步 MVP，初期即按全量蓝图落地（决策 2）。以下 MVP-0..4 作为全量骨架的内部结构分期参考——骨架一次性建好、后续持续复利，而非"先验证再补"。</div>
+      <h3>全量骨架一次性建立（初期即启用）</h3>
+      <ul>
+        <li><code>architecture-design</code> skill 已蒸馏（底座）。</li>
+        <li><code>prototype</code> skill（v0.3 新增）：本地 HTML 原型内核（零外部依赖）+ 配置驱动读取项目 design-system.md。</li>
+        <li><code>docs/architecture/</code> 分目录建好（ARCHITECTURE.md + DATABASE.md + 每个已知 bc 的 <code>&lt;bc&gt;/context.md</code>+<code>evolution.md</code>）。</li>
+        <li><code>specs/&lt;cap&gt;/</code> 三份增量（architecture/database/api）全量启用。</li>
+        <li>全局 <code>prd/</code>(v1 基线) + 全局 <code>prototype/</code>(随 PRD v1 初始化，含 design-system.md 由项目 config 注入) 建好。</li>
+        <li>4+1 脚本落地：validate-frontmatter / arch-merge / discovery-check / api-index-gen（+ asis-extract）+ prototype-sync（v0.3）。</li>
+        <li>AGENTS.md 暴露 <code>docs/architecture/</code> 与 <code>prototype/</code>（Discoverability）。</li>
+      </ul>
+    </section>
+
+    <!-- ===== 十五、原型 ===== -->
+    <section id="prototype">
+      <h2><span class="num">十五</span>原型设计能力（新增，第 13–16 轮调研）</h2>
+
+      <h3>15.0 五方案对比结论</h3>
+      <div class="tbl-wrap">
+        <table>
+          <tr><th>方案</th><th>形态</th><th>对"纯 CLI 插件"可用性</th><th>结论</th></tr>
+          <tr><td>Claude Design</td><td>对话生成设计/交互原型/幻灯片</td><td>强依赖 web/desktop 画布，无纯 CLI</td><td>不适合内嵌</td></tr>
+          <tr><td>Open Design</td><td>本地优先开源替代；DESIGN.md + 调色板</td><td>需本地 daemon + Vite React，非纯 CLI</td><td>不内嵌；DESIGN.md 概念值得借鉴</td></tr>
+          <tr><td>Trae Work Design</td><td>生成/迭代界面设计，导出 HTML/ZIP</td><td>强依赖 GUI 画布</td><td>不适合内嵌</td></tr>
+          <tr><td>spec-superflow handoff --type prototype</td><td>验证变更设计可行性的 overlay</td><td>纯 CLI 但仅草图，无设计系统、无闭环</td><td>仅作可选草图旁路</td></tr>
+          <tr><td><b>本地 HTML 原型 skill（本方案）</b></td><td>自包含 HTML 原型 + 内嵌 Tweaks + 设计系统板</td><td>纯 CLI 产出、零外部依赖、可离线</td><td><b>最优</b></td></tr>
+        </table>
+      </div>
+      <div class="note warn"><b>硬约束：</b>不安装/不调用任何 GUI 设计软件（Claude Design / Open Design / Trae 均不安装）。spec-superflow 的 <code>handoff --type prototype</code> 仅作可选可行性草图旁路，不复用其 per-change overlay 作为主机制。</div>
+
+      <h3>15.1 两层产物层级模型（全局层 vs 变更层）</h3>
+      <div class="layers">
+        <div class="layer global">
+          <span class="lv">全局层 · 产品级</span>
+          <h4>与 PRD 同级</h4>
+          <ul>
+            <li><code>prd/</code>：PRD，有版本 v1→v2→v3</li>
+            <li><code>prototype/</code>：原型，全局一份</li>
+            <li><code>design-system.md</code>：全局一份，config 注入</li>
+            <li><code>architecture.md</code>（docs/architecture/）：全局架构</li>
+            <li><code>api.md</code>（API-INDEX.md 聚合）：全局 API 索引</li>
+            <li><code>src/</code>：代码，全局一份</li>
+          </ul>
+        </div>
+        <div class="layer change">
+          <span class="lv">变更层 · spec-superflow change</span>
+          <h4>从 PRD 拆解</h4>
+          <ul>
+            <li><code>specs/&lt;cap&gt;/</code>：spec/design/tasks/execution-contract/architecture/database/api</li>
+            <li>每个 change 走 8 状态机</li>
+            <li>一份 PRD（某版本）可拆多个 change</li>
+            <li>change 是实施工作单位，非产品基线</li>
+          </ul>
+        </div>
+      </div>
+      <div class="chain">PRD(vN) ──拆解──┬─▶ change-1 ─▶ spec-superflow（exploring→…→closing）<br>├─▶ change-2 ─▶ spec-superflow　　└─▶ change-3 ─▶ spec-superflow<br>全局 prototype/ ──（UI 契约参考）──▶ 各 change 的 build-executor<br>各 change 完成 ──（增量合并）──▶ 全局 architecture.md / api.md / prototype / src</div>
+
+      <h3>15.2 原型迭代模型（全局一份，随 PRD 版本 git 分支演进）</h3>
+      <ul>
+        <li>原型是<strong>全局产物</strong>（与 PRD 同级），<strong>物理一份</strong>，不是某个 change 的子目录。</li>
+        <li><strong>版本演进靠 git 分支</strong>：PRD 升版（v1→v2）时，原型在对应分支上演进（如 <code>prd-v2</code> 分支上的 <code>prototype/</code> = v2 产品原型）。</li>
+        <li>PRD 有版本，原型/代码无多份；历史版本由 git 分支/标签保留。</li>
+        <li>change 引用全局原型（进 execution-contract.md）；change 不直接拥有原型文件。</li>
+      </ul>
+
+      <h3>15.3 产物维护（完整原型系统，全局一份）</h3>
+      <div class="tree">
+        <div class="node"><span class="dir">prototype/</span> <span class="cm"># 全局，一份，git 分支隔离版本</span></div>
+        <div class="node ind1"><span class="file">index.html</span> <span class="cm"># 入口 / 全局导航</span></div>
+        <div class="node ind1"><span class="dir">pages/</span> <span class="cm"># 多页面（首页/列表/详情/设置…）</span></div>
+        <div class="node ind1"><span class="dir">components/</span> <span class="cm"># 可复用组件，统一设计系统</span></div>
+        <div class="node ind1"><span class="dir">assets/</span> <span class="cm"># style.js / design-tokens.css</span></div>
+        <div class="node ind1"><span class="file">design-system.md</span> <span class="cm"># 本项目设计系统（config 注入，9 段 schema）</span></div>
+        <div class="node ind1"><span class="file">flow.md</span> <span class="cm"># 页面跳转 / 用户流</span></div>
+      </div>
+      <div class="note warn"><b>原型膨胀防控 / 分支约定（评审修正 C）：</b><code>components/</code> 必须复用 <code>design-system.md</code> 定义的组件，<strong>禁止页面内联样式漂移</strong>；原型随 PRD 当前版本分支维护，change 引用其所在 PRD 版本分支的 <code>prototype/</code>，避免原型领先/落后于未合并代码分支。</div>
+
+      <h3>15.4 配置驱动（插件通用 + 项目注入）</h3>
+      <ul>
+        <li><b>插件通用</b>：原型 skill 不固化任何公司/产品风格；PRD 模板与设计系统由项目级配置注入。</li>
+        <li><b>项目注入点</b>：<code>prd.template</code> / <code>prototype.designSystem</code>（9 段 schema：color/typography/spacing/layout/components/motion/voice/brand/anti-patterns + 5 方向确定性调色板）/ <code>prototype.entry</code>。</li>
+        <li><b>⚠ 配置字段边界（评审修正 A）</b>：三者为插件层扩展字段，非 spec-superflow 原生 schema；建插件时需实测 <code>ssf runtime config --get prototype.designSystem</code> 验证读取路径可用。</li>
+      </ul>
+
+      <h3>15.5 本地 HTML 原型 skill（零外部依赖内核）</h3>
+      <ul>
+        <li><b>内核形态</b>：自包含 HTML（CSS 进 <code>&lt;style&gt;</code>、JS 进 <code>&lt;script&gt;</code>，页面内 <code>&lt;div&gt;</code> Tweaks 控件替代云端工具栏），avoid remote dependencies，可完全离线。</li>
+        <li><b>设计系统渲染</b>：读取项目 <code>design-system.md</code> 渲染 token，保证风格与品牌一致。</li>
+        <li><b>产出</b>：<code>prototype/</code> 完整系统，纯 CLI 产出，不依赖任何 GUI 设计产品。</li>
+      </ul>
+
+      <h3>15.6 与实施阶段衔接（闭环，两层）</h3>
+      <pre>PRD(vN) ──拆解──┬─▶ change-1 ─┐
+                ├─▶ change-2 ─┼─▶ spec-superflow: spec-writer → contract-builder → build-executor
+                └─▶ change-3 ─┘         （各 change 引用全局 prototype/ 作 UI 契约）
+                                              │
+        全局 prototype/ ◀── 增量合并 ────────┘（change 完成回写 UX / 架构 / API）
+        compound 复利回写: design-system.md / architecture.md / api.md</pre>
+      <ul>
+        <li>原型（全局）→ 架构：原型确认的 UX 流向全局 ARCHITECTURE.md 限界上下文映射（DDD）。</li>
+        <li>原型 → API：原型交互 → 端点设计 → 流入 execution-contract.md + build-executor。</li>
+        <li>原型 → 开发：全局原型作 UI 契约参考进 execution-contract.md，build-executor 按契约 + TDD 实现。</li>
+      </ul>
+
+      <h3>15.7 I/O 钉死（补全前 12 轮三处未定义）</h3>
+      <ul>
+        <li><b>I/O-1：design.md ↔ architecture.md 关系</b>：design.md 是每变更架构一等公民（随 change 状态机走，不可变）；全局 ARCHITECTURE.md 是跨 change 技术锚点（复利回写目标）。change 完成 → 其 design.md/增量 architecture.md 的 delta 增量回写全局，design.md 本身保持不可变。</li>
+        <li><b>I/O-2：api.md 硬消费</b>：每变更 api.md 经 execution-contract.md 被 build-executor <b>硬消费</b>（TDD 实现），不得仅作参考；跨 change 一致性由 api-index-gen 脚本兜底。</li>
+        <li><b>I/O-3：tasks.md 引用架构/API</b>：tasks.md 显式引用本 change 的 architecture.md/api.md 章节锚点，不得活引用全局；build-executor 按 tasks + execution-contract + 全局 prototype/ 实现。</li>
+      </ul>
+
+      <h3>15.8 复利回写设计系统</h3>
+      <ul>
+        <li>设计系统由项目 config 注入的 <code>design-system.md</code>（9 段 schema + 5 方向调色板，项目资产）。</li>
+        <li>change 完成 → UX 增量若涉及设计系统迭代 → 经 <code>prototype-sync</code> 合并回全局 <code>prototype/design-system.md</code>，作项目级风格唯一真相源复利累积。</li>
+        <li>design-system.md 回写发生在项目内，插件保持通用、不固化任何风格。</li>
+      </ul>
+    </section>
+
+    <!-- ===== 十六、E2E ===== -->
+    <section id="e2e">
+      <h2><span class="num">十六</span>E2E 测试集成（v0.4 设计修订）</h2>
+      <div class="note soft">设计修订号 v0.4（打包版本 0.10.0）。来源：gtmc <code>acceptance-test</code> SKILL.md v3.0.0 + <code>test-verifier.md</code>；spoko.space《AI & Playwright E2E Testing 2026》。</div>
+
+      <h3>16.1 决策记录</h3>
+      <div class="tbl-wrap">
+        <table>
+          <tr><th>维度</th><th>决策</th></tr>
+          <tr><td>原型框架</td><td>维持 HTML 自包含 + 强化 <code>data-testid</code> 契约（守 v0.3 零依赖/可离线）</td></tr>
+          <tr><td>E2E 挂载</td><td>独立 <code>e2e</code> skill（17→18；可选 overlay，不进核心状态机）</td></tr>
+          <tr><td>data-testid 规范</td><td>搬 gtmc 命名；选择器优先级统一 spoko；元素级仅关键锚点</td></tr>
+          <tr><td>覆盖率门禁</td><td>分级：原型期放宽 / 集成期严格照搬 gtmc</td></tr>
+          <tr><td>AC 提取</td><td>门禁按维度条件触发 + 关键字回退</td></tr>
+          <tr><td>验收证据归属</td><td><code>release-archivist</code>（非 <code>ce-proof</code>）</td></tr>
+        </table>
+      </div>
+
+      <h3>16.3 核心约束</h3>
+      <ul>
+        <li><b>零依赖/可离线</b>：<code>data-testid</code> 为纯 HTML 属性，不引入 JS/CSS/构建/Playwright；Playwright 仅进用户项目，不进插件。</li>
+        <li><b>通用不固化框架</b>：E2E 靠 <code>data-testid</code> 契约跨框架复用，不假设 Vue/React。</li>
+      </ul>
+
+      <h3>16.4 data-testid 契约</h3>
+      <ul>
+        <li><b>命名层级</b>：场景级 <code>S-{nn}-{slug}</code>、页面级 <code>P-{xx}-{slug}</code>、元素级 <code>{语义名}</code>（如 create-btn）。</li>
+        <li><b>选择器优先级</b>：getByRole > data-testid > id > getByLabel > CSS/XPath（禁用于新测试）；禁止 waitForTimeout。</li>
+        <li><b>打标纪律</b>：场景/页面级必带；元素级仅关键交互锚点带，内部优先 getByRole/getByText。</li>
+        <li><b>可选开启</b>：项目 config <code>prototype.e2e: true</code> 时强制。</li>
+      </ul>
+
+      <h3>16.5 spec → Playwright 映射</h3>
+      <ul>
+        <li><b>提取源</b>：<code>#### Scenario:</code>（→HP）/ <code>##### Exception:</code>（→EX）/ <code>##### State:</code>（→ST）/ <code>##### Boundary:</code>（→BND）。</li>
+        <li><b>解除"可选→强制"陷阱</b>：维度条件触发（仅含某维度标签才考核）+ 关键字回退（未打标签时从文本提取）。</li>
+        <li><b>AC 公式</b>：<code>Total = HP×1 + EX×2 + ST×2 + BND×1</code>。</li>
+      </ul>
+
+      <h3>16.6 门禁分级</h3>
+      <div class="tbl-wrap">
+        <table>
+          <tr><th>指标</th><th>原型期（静态 mock）</th><th>集成期（实际代码）</th></tr>
+          <tr><td>AC 覆盖率</td><td>≥ 80%（HP 必测）</td><td>≥ 95%</td></tr>
+          <tr><td>异常 EX</td><td>有则测、无则带说明</td><td>≥ 80%</td></tr>
+          <tr><td>状态 ST</td><td>有则测、无则带说明</td><td>≥ 90%</td></tr>
+          <tr><td>边界 BND</td><td>有则测、无则带说明</td><td>≥ 75%</td></tr>
+          <tr><td>阻断级别</td><td>AC&lt;80% = BLOCKER</td><td>AC/EX&lt;门槛 = BLOCKER；ST/BND = WARNING</td></tr>
+        </table>
+      </div>
+
+      <h3>16.9 对现有 skill 影响面</h3>
+      <div class="tbl-wrap">
+        <table>
+          <tr><th>Skill</th><th>改动</th></tr>
+          <tr><td><code>prototype</code></td><td>补 data-testid 产出（场景/页面级必带 + 关键锚点；config 可选开启）</td></tr>
+          <tr><td><code>build-executor</code></td><td>不改（TDD 管单测；E2E 独立）</td></tr>
+          <tr><td><code>ce-proof</code></td><td>不改（Proof 编辑器，与验证无关）</td></tr>
+          <tr><td><code>release-archivist</code></td><td>接入 e2e 报告 + 4 级制品比对（closing 验收 gate）</td></tr>
+          <tr><td><code>architecture-design</code></td><td>API/DB 设计文档供制品比对使用</td></tr>
+          <tr><td><code>spec-writer</code></td><td>specs 规则补可选子标签说明；补回归用例</td></tr>
+        </table>
+      </div>
+
+      <h3>16.10 实施状态（v0.4）</h3>
+      <p>
+        <span class="pill y">✅ 新建 skills/e2e/SKILL.md</span>
+        <span class="pill y">✅ 改 prototype/SKILL.md</span>
+        <span class="pill y">✅ 改 spec-writer/SKILL.md</span>
+        <span class="pill y">✅ 改 release-archivist/SKILL.md</span>
+        <span class="pill y">✅ plugin.json 17→18 skills</span>
+        <span class="pill w">⏳ 待用户跑 npm test / npm run validate 验证</span>
+      </p>
+    </section>
+
+    <!-- ===== 十七、决策 ===== -->
+    <section id="decisions">
+      <h2><span class="num">十七</span>决策落实状态</h2>
+      <div class="tbl-wrap">
+        <table>
+          <tr><th>#</th><th>决策</th><th>状态</th></tr>
+          <tr><td>1</td><td>全局文档组织：起步即按 bounded context 分目录</td><td><span class="pill y">✅ 已定</span></td></tr>
+          <tr><td>2</td><td>落地节奏：初期即全量铺开</td><td><span class="pill y">✅ 已定</span></td></tr>
+          <tr><td>3</td><td>技术锚点定性：瘦锚点、与 STRATEGY.md 分离补位</td><td><span class="pill y">✅ 已定</span></td></tr>
+          <tr><td>4</td><td>注册 skill：architecture-design（id 7484551995606787）</td><td><span class="pill y">✅ 已注册</span></td></tr>
+          <tr><td>5</td><td>原型设计能力（v0.3 新增）：内核选型 / 配置驱动 / 产物层级 / 并入流程 / 插件名 team-flow</td><td><span class="pill y">✅ 已认可·执行中</span></td></tr>
+        </table>
+      </div>
+      <div class="note"><b>插件名已定：</b>team-flow（v0.3 定稿后拍板）；compound 范围已定：<strong>核心子集</strong>（非全量 33）。本地 HTML 原型 skill 蒸馏与并入统一插件（team-flow）执行中。</div>
+    </section>
+
+    <footer>
+      由 copilot(阿通) 基于 architecture-design skill + 四方专家会审（v0.2）+ 第 13–16 轮原型调研，全量修订为 v0.3。<br>
+      本页为设计文档的可视化速览（自包含、可离线），对应源文件：<code>team-flow/docs/architecture-api-db-design-enhancement-v0.3.md</code>。
+    </footer>
+  </main>
+</div>
+
+<script>
+  // ---- Scrollspy ----
+  const links = [...document.querySelectorAll('#nav a, .nav a')];
+  const map = {};
+  links.forEach(a=>{const id=a.getAttribute('href').slice(1); if(id) map[id]=a;});
+  const obs = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{
+      if(e.isIntersecting){
+        links.forEach(l=>l.classList.remove('active'));
+        const a = map[e.target.id]; if(a) a.classList.add('active');
+      }
+    });
+  },{rootMargin:'-10% 0px -75% 0px',threshold:0});
+  document.querySelectorAll('section[id], div[id="overview"]').forEach(s=>obs.observe(s));
+
+  // ---- Search filter ----
+  function filterNav(v){
+    v=v.trim().toLowerCase();
+    document.querySelectorAll('#nav a, .nav a').forEach(a=>{
+      const t=a.textContent.toLowerCase();
+      a.style.display = (!v || t.includes(v)) ? '' : 'none';
+    });
+  }
+  // close sidebar on mobile after click
+  document.querySelectorAll('.sidebar a').forEach(a=>a.addEventListener('click',()=>{
+    if(window.innerWidth<=980) document.querySelector('.sidebar').classList.remove('open');
+  }));
+</script>
+</body>
+</html>

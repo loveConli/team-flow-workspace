@@ -1,0 +1,81 @@
+=== docs/specs ===
+总计 56
+-rwxrwxrwx 1 root root 7220  7月19日 00:14 antigravity.md
+-rwxrwxrwx 1 root root 4671  7月19日 00:14 claude-code.md
+-rwxrwxrwx 1 root root 4502  7月19日 00:14 cline.md
+-rwxrwxrwx 1 root root 6322  7月19日 00:14 codex.md
+-rwxrwxrwx 1 root root 7850  7月19日 00:14 copilot.md
+-rwxrwxrwx 1 root root 3677  7月19日 00:14 cursor.md
+-rwxrwxrwx 1 root root 5596  7月19日 00:14 devin.md
+-rwxrwxrwx 1 root root 3174  7月19日 00:14 kimi.md
+-rwxrwxrwx 1 root root 6092  7月19日 00:14 kiro.md
+-rwxrwxrwx 1 root root 5591  7月19日 00:14 opencode.md
+=== ce-plan references/scripts ===
+skills/ce-plan:
+references
+SKILL.md
+
+skills/ce-plan/references:
+agents
+approach-altitude.md
+deepening-workflow.md
+html-rendering.md
+markdown-rendering.md
+plan-handoff.md
+plan-sections.md
+reasoning-elevation.md
+settled-decisions.md
+synthesis-summary.md
+universal-planning.md
+
+skills/ce-plan/references/agents:
+agent-native-planning-strategist.md
+architecture-strategist.md
+best-practices-researcher.md
+data-integrity-guardian.md
+data-migration-reviewer.md
+deployment-verification-agent.md
+framework-docs-researcher.md
+git-history-analyzer.md
+learnings-researcher.md
+pattern-recognition-specialist.md
+performance-oracle.md
+repo-research-analyst.md
+security-sentinel.md
+slack-researcher.md
+spec-flow-analyzer.md
+web-researcher.md
+=== grep artifact_readiness defs ===
+skills/ce-plan/SKILL.md:113:**A requirements-only unified plan is not a resume target.** A `docs/plans/` file with `artifact_readiness: requirements-only` is an *enrichment input*, not an existing plan to resume — do **not** fire the update-or-create confirm for it. Fall through to Phase 0.2, which enriches it in place to `implementation-ready`. This matters most for the hands-off `ce-brainstorm` -> `lfg` flow: `lfg` hands `ce-plan` the requirements-only path in `disable-model-invocation` pipeline mode, where no user is present to answer a resume prompt. More generally, in pipeline mode the resume choice is made automatically (default to in-place update of the referenced plan) and never prompted.
+skills/ce-plan/SKILL.md:166:1. **Explicit path from the user.** If it points to a unified plan with `artifact_contract: ce-unified-plan/v1` and `artifact_readiness: requirements-only`, this run enriches that same file in place. If it is already `artifact_readiness: implementation-ready`, treat it as a resume/deepening target. If it is a legacy `docs/brainstorms/*-requirements.{md,html}` file, use it as a legacy origin and write a new unified plan in `docs/plans/`.
+skills/ce-plan/SKILL.md:167:2. **Recent requirements-only unified plans.** Search `docs/plans/*.{md,html}` for visible/frontmatter metadata containing `artifact_contract: ce-unified-plan/v1`, `artifact_readiness: requirements-only`, and `product_contract_source: ce-brainstorm`. **Skip a superseded sibling:** if a requirements-only candidate has a same-basename file in the other format (`<basename>.md` / `<basename>.html`) that is already `implementation-ready`, a format conversion superseded it — the implementation-ready sibling is canonical; do not re-enrich the stale requirements-only copy.
+skills/ce-plan/SKILL.md:183:2. Announce that `ce-plan` will enrich that same file to `artifact_readiness: implementation-ready`.
+skills/ce-plan/SKILL.md:705:- Set `artifact_contract: ce-unified-plan/v1`, `artifact_readiness: implementation-ready`, and `execution: code` for software implementation plans.
+skills/ce-plan/SKILL.md:793:- **Start `/ce-work`** — Offered only when the artifact is `artifact_readiness: implementation-ready` and `execution: code` (not for requirements-only, universal-planning, answer-seeking, or approach-plan outputs). Invoke the `ce-work` skill under the cross-skill invocation rule, passing the plan path as the skill argument; `ce-work` owns engine selection and the tail. If `ce-work` cannot be invoked, print the `ce-work` fallback prompt for the user to run. Do not merely tell the user to type `/ce-work` when the host can invoke it directly.
+skills/ce-plan/references/html-rendering.md:66:  `artifact_readiness`, `product_contract_source`, or `execution`, render
+skills/ce-plan/references/plan-handoff.md:69:1. **Start `/ce-work`** - Build and ship the plan in this session — subagent-driven development with simplification, code review, and commits. Show only for `artifact_readiness: implementation-ready` plus `execution: code`; universal-planning, answer-seeking, approach-plan, and requirements-only artifacts keep their own handoff/checkpoint behavior.
+skills/ce-plan/references/plan-handoff.md:70:2. **Run it as a `/goal`** - Choose this if you'd rather run the plan through your harness's autonomous goal mode instead of ce-work's build-and-ship flow. The alternative to option 1, not an add-on — pick one. Show only when (a) the artifact is `artifact_readiness: implementation-ready` plus `execution: code` AND (b) the host has goal capability at all — Codex `create_goal` in the available tool list, or a user-typed `/goal` in Claude Code; omit it where neither exists. Where the host can start a goal directly the session begins it immediately; where it cannot, it hands over a copyable `/goal` prompt. See the routing below.
+skills/ce-plan/references/plan-handoff.md:89:- **Start `/ce-work`** -> Classify the artifact first. If it is not `artifact_readiness: implementation-ready` plus `execution: code`, do not execute it; route requirements-only artifacts back to `ce-plan` enrichment and non-code artifacts to their own workflow. If it is executable, invoke the `ce-work` skill under the cross-skill invocation rule, passing the plan path as the skill argument; `ce-work` then owns engine selection (inline/subagent vs goal-mode vs dynamic-workflow) and the implementation tail. If `ce-work` cannot be invoked, print the existing `ce-work` fallback prompt for the user to run; in that prompt, tell the executor to read Goal Capsule, Verification Contract, Definition of Done, and active U-IDs (scanning headings to find them) rather than the whole document first. Do not merely tell the user to type `/ce-work` when the host can invoke it directly.
+skills/ce-plan/references/plan-sections.md:32:- **`artifact_readiness`** — document completeness, not work progress. Valid
+skills/ce-plan/references/plan-sections.md:57:Do **not** use `artifact_readiness: approach-plan`. Approach-plans,
+skills/ce-brainstorm/SKILL.md:13:The durable output of this workflow is a **requirements-only unified plan**. In other workflows this might be called a lightweight PRD or feature brief. In compound engineering, keep the workflow name `brainstorm`, but write the first version of the plan artifact under `docs/plans/` with `artifact_readiness: requirements-only` so planning does not need to invent product behavior, scope boundaries, or success criteria.
+skills/ce-brainstorm/SKILL.md:84:If the user references an existing brainstorm topic or document, or there is an obvious recent matching unified plan in `docs/plans/` with `artifact_contract: ce-unified-plan/v1`, `artifact_readiness: requirements-only`, and `product_contract_source: ce-brainstorm`:
+skills/ce-brainstorm/SKILL.md:106:**If non-software brainstorming is detected:** Read `references/universal-brainstorming.md` now and follow it — it replaces Phases 0.2–4 entirely. Scope assessment, exploration moves, convergence, and the wrap-up menu for this route live there, not in this main body; improvising them produces an unstructured chat with no synthesis and no handoff. The non-software route does **not** write `artifact_contract: ce-unified-plan/v1` or `artifact_readiness: requirements-only`; those fields are reserved for software Product Contracts that can later become implementation-ready code plans. The **Core Principles and Interaction Rules above still apply unchanged** — including one-question-per-turn and the default to the platform's blocking question tool — and are the only part of this file that survives the route.
+skills/ce-brainstorm/SKILL.md:309:Write to `docs/plans/YYYY-MM-DD-NNN-<type>-<topic>-plan.<md|html>` — extension follows `OUTPUT_FORMAT`. Include `artifact_contract: ce-unified-plan/v1`, `artifact_readiness: requirements-only`, and `product_contract_source: ce-brainstorm`. Title is `<Name> - Plan` (matching the H1; no conventional-commit prefix). Keep the doc light and standalone-readable: a Goal Capsule (objective, product authority, open blockers) and the Product Contract. Do **not** emit a Goal Launch Block or Reader Index. See `references/brainstorm-sections.md` — which owns the artifact content rules, including repo-relative file paths inside the doc. When confirming in chat, report the written artifact with its absolute path so the reference is clickable.
+skills/ce-brainstorm/references/brainstorm-sections.md:30:- **`artifact_readiness: requirements-only`**.
+skills/ce-brainstorm/references/brainstorm-sections.md:300:- **`artifact_readiness`** — always `requirements-only` for new
+skills/ce-brainstorm/references/brainstorm-sections.md:308:lifecycle. `artifact_readiness` is document completeness, not execution
+skills/ce-brainstorm/references/html-rendering.md:66:  `artifact_readiness`, `product_contract_source`, or `execution`, render
+=== docs/solutions subcats ===
+adding-converter-target-providers.md
+agent-friendly-cli-principles.md
+architecture-patterns
+best-practices
+codex-skill-prompt-entrypoints.md
+conventions
+developer-experience
+integration-issues
+integrations
+plugin-versioning-requirements.md
+skill-design
+workflow

@@ -1,0 +1,67 @@
+# required-checks.yml — CI required status checks 骨架 (GitHub Actions 风格)
+# 报告引用: §8 Pipeline / §10.4 硬门禁边界表 / §10.4 gtmc 强制门禁
+# 形态: CI required status checks（pre-push / eco-gate / 合并回主干 的最终 backstop）
+# 标签: 【来源已核验✅·落地待验证⚠️】
+#
+# 重要: 本 yaml 仅"定义检查"。要成为硬门禁，须在仓库 Branch Protection 中
+#       将上述 job 注册为 "required status checks"（防止被 push 绕过）。
+#       Git 无 pre-merge hook，合并守卫靠站外 CI。
+#
+# 🔴 评审 P0-A / P1 注记（已更新 2026-07-12）: 本文件引用的 5 个脚本已落地**最小可用框架**
+#    （位于 ./scripts/：check-coverage.sh / eco-evidence-check.sh / audit-closure-check.sh /
+#    gtmc-phase35-check.sh / gtmc-a516-check.sh）。框架含「硬依赖缺失即非零退出」反绕过，
+#    但**覆盖率解析 / 闭合对账 / 审计 hash 链 / gtmc 内容校验**仍属 TODO 占位，须按真实项目
+#    格式补全解析器后才真正生效。
+#    仍须将这些 job 在仓库 Branch Protection 注册为 required status checks，并设置
+#    SAFE_MODE=0，本地 Hook 被绕过时的 CI backstop 方能真正「兜得住」——否则仍近似空壳。
+#    真实环境须置 SAFE_MODE=0（fail-closed），不可长期 warn-only。
+
+name: required-checks
+
+on:
+  push:
+    branches: [main, master, release]
+  pull_request:
+    branches: [main, master, release]
+
+jobs:
+  # 通用门禁①: 等同 pre-push 确定性检查（静态分析 + 覆盖率）
+  deterministic-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 静态分析 (PMD)
+        run: ${PMD_CMD}            # 需项目提供，例: pmd check -d src -R ruleset.xml
+      - name: 单元测试 + 覆盖率
+        run: ${COVERAGE_CMD}       # 例: ./mvnw test jacoco:report
+      - name: 覆盖率门禁
+        run: ./scripts/check-coverage.sh ${COVERAGE_MIN}
+
+  # 通用门禁②: 读 ECO 证据（等同 eco-gate 的 CI backstop）
+  eco-gate-evidence:
+    needs: deterministic-checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 校验 变更包副作用清单 ↔ 审计事件日志 闭合
+        run: ./scripts/eco-evidence-check.sh   # 比对 last_event_id/ci_id 与日志 idempotency_key
+
+  # 通用门禁③: 审计日志存在性（PostToolUse 落盘校验，append-only 闭合）
+  audit-log-present:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 校验审计日志 append-only 闭合
+        run: ./scripts/audit-closure-check.sh
+
+  # 项目级叠加 (gtmc 专属, 不进通用默认清单): gtmc 强制门禁（H1, 不降级）
+  # 范围边界: 仅 gtmc 项目按需挂载，通用 Pipeline 默认不含
+  gtmc-overlay:
+    if: ${{ vars.GTMC_PROJECT == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: gtmc Phase3.5 业务流程校准证据
+        run: ./scripts/gtmc-phase35-check.sh
+      - name: gtmc A-5.16 用户手册终验签署件
+        run: ./scripts/gtmc-a516-check.sh
