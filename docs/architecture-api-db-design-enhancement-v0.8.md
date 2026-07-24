@@ -1,0 +1,296 @@
+# 架构 / API / DB 设计增强方案 · v0.8（subagent 编排下沉 + 状态治理 + PRD/Plan 规范修复）
+
+> 版本：v0.8 · 重大修订（增量式，承袭 v0.7）
+> 目标插件版本：**v0.15.0**（专题版「subagent 编排 + 状态治理」）
+> 修订依据：v0.7 全量内容**继续有效**；v0.8 仅记录 v0.15.0 增量修订。
+> 触发来源：LT 跑通一轮真实需求（Session `29d058e5-30b5-45bd-981d-bb6513d3bfbf`，VRM 管理驾驶舱）后的实证复盘 + 第 20 轮设计讨论。
+>
+> **v0.8 修订摘要（相较 v0.7）**：
+> - **横展主线**：新增 §18.1「subagent 结构化交接协议」——主代理只编排、执行下沉子代理；阻断/非阻断疑问统一用返回结构表达（不依赖 agent team，保跨平台健壮性）。修订 §17.8。
+> - **状态模型重构**：`.workflow-orchestrator.yaml` 从「单需求单文件」升级为「每需求一份 + 注册表索引」，支持多需求并行。修订 §17.9.1。
+> - **状态文件治理**：所有状态文件收敛到 `.team-flow/` 目录（P1-6 第一阶段，仅状态文件；npm 包名/CLI/npx 全量重命名仍按 v1.0.0）。
+> - **workflow-bootstrap**：B1 侦察改为并行子代理 + 确定性脚本（`ssf recon`），可复现可横展对比。
+> - **ce-brainstorm**：新增 `prd-completeness-reviewer` 子代理（PRD 完整性评审）；修复冻结措辞 BUG（`frozen_downstream` 误写为升版语义）；新增 PRD 版本格式规范。
+> - **prototype**：SKILL.md 重构为「内部编排器」，绘制/探查/评审下沉子代理（新增 `prototype-builder`、`design-system-architect` 子代理），主代理只编排；新增设计系统生命周期。
+> - **ce-plan**：模式强制询问（pipeline 下由 orchestrator 问定后显式传参）；一人公司模式收窄到「高阶设计」（删接口清单）；钉死产品级/变更级作用边界。
+> - 第二十章决策落实状态补 v0.8 决策。
+
+---
+
+## 十八、v0.15.0 增量设计
+
+### 18.0 修订背景（会话实证）
+
+LT 在 VRM 项目跑通完整一轮（bootstrap → orchestrator S1-S4 → brainstorm → prototype → plan），动作时间线还原暴露的系统性问题：
+
+| 阶段 | 实证现象 | 根因归类 |
+|------|---------|---------|
+| bootstrap B1 | 主代理直跑 ~12 条 ad-hoc Bash 侦察 | 缺子代理下沉 + 缺确定性脚本 |
+| orchestrator S1 | `.workflow-orchestrator.yaml` 落在项目根目录 | 状态文件未治理 |
+| brainstorm S2 | PRD 写完无完整性评审，仅 claim verifier | 缺 PRD 完整性评审子代理 |
+| prototype S2 | 主代理亲自 Write + Edit index.html 16 次 | 主代理既编排又实施 |
+| plan S3 | `mode: 一人公司模式` 自行假设；plan.md 含「接口清单」 | 模式未问 + 越界做变更级设计 |
+| PRD 冻结 | 措辞写「升版 v2」 | `frozen_downstream`/`frozen_absolute` 混淆（BUG） |
+| 状态结构 | yaml 单需求结构 | 无多需求并行设计 |
+
+**贯穿主线**：除头脑风暴（需多轮人机交互）外，执行步骤普遍未下沉子代理，主代理上下文被实施细节占满。本版以「主代理瘦身 + 执行下沉 + 状态规范化」为专题。
+
+### 18.1 subagent 结构化交接协议（横展主线，修订 §17.8）
+
+> **设计原则（承 §17.8）**：编排层只负责编排（状态判断、路由决策、阶段转换、用户确认），执行委托 subagent。**硬约束**：Claude Code subagent 在独立上下文运行，**不能调用 AskUserQuestion**。
+
+**18.1.1 交互疑问的工程化表达**
+
+LT 原则：「子代理有疑问——无阻断则继续，完成后将遗留问题返回主代理；有阻断则马上反馈主代理。」因 subagent 不能 AskUserQuestion，「马上反馈」的工程实现 = subagent 提前结束并以结构化返回 `status: blocked`，由主代理裁决。统一返回契约：
+
+```
+subagent final response 结构契约（所有新/改 sub-agent 强制遵守）：
+{
+  status: "done" | "done_with_questions" | "blocked",
+  deliverable: <产物绝对路径或内容>,
+  blockers: [ { question, why_blocking, options[] } ],          # 阻断项：主代理必须裁决才能继续
+  outstanding_questions: [ { question, default_assumption } ],  # 非阻断：已按默认假设继续，回主代理批量确认
+  summary: <3-5 行 gist>
+}
+```
+
+| 情形 | subagent 行为 | 主代理行为 |
+|------|--------------|-----------|
+| 无疑问 | `done` + deliverable | 接收产物，推进 |
+| 非阻断疑问 | 按 `default_assumption` 继续跑完，记入 `outstanding_questions`，`done_with_questions` | 批量确认遗留项（可一次 AskUserQuestion 合并） |
+| 阻断疑问 | **立即停止**，返回 `blocked` + `blockers[]`（不强行猜测） | 裁决后重启/续跑该 subagent |
+
+**18.1.2 为何不用 agent team**
+
+claude agent team（SendMessage 多代理常驻）交互更灵活，但**通用性/健壮性不足**：绑死 Claude Code、依赖常驻 teammate、Codex/Antigravity/Pi 等 harness 无对等原语。本协议坚持 **Task 一次性子代理 + 结构化返回**，把「阻断反馈」用返回结构而非实时消息实现，全平台可降级运行（对齐 §17.8 model-tiers 降级规则）。**结论：不引入 agent team。**
+
+**18.1.3 会话级 skill 内部编排（A4 第 3 点落地）**
+
+ce-brainstorm / ce-plan / prototype 因需多轮交互**永远不能变 subagent**，但其**内部非交互子步骤**应自行派发 subagent（ce-plan 已有此模式）。本版将 bootstrap、prototype 也改造为此模式（见 §18.4 / §18.6）。
+
+### 18.2 多需求并行状态模型（修订 §17.9.1）
+
+> **决策（LT 确认 2026-07-25）**：每需求一份状态文件 + 注册表索引。
+
+**18.2.1 结构**
+
+```
+.team-flow/
+├── registry.yaml                        # 需求注册表（索引 + 活跃指针）
+└── requirements/
+    ├── <req-id>/                        # 每个需求独立目录（req-id = prd 迭代主题短码）
+    │   ├── orchestrator.yaml            # 该需求的产品级编排状态（原 .workflow-orchestrator.yaml）
+    │   └── ...                          # 该需求其他产品级状态
+```
+
+**registry.yaml schema**：
+```yaml
+schema_version: 1
+active_requirement: <req-id>          # 当前活跃需求（orchestrator 默认操作对象）
+requirements:
+  - id: <req-id>
+    title: <需求标题>
+    prd_version: v1
+    phase: S3                          # 冗余快照，真相源仍是各 orchestrator.yaml
+    orchestrator_state: .team-flow/requirements/<req-id>/orchestrator.yaml
+    created_at: "..."
+    updated_at: "..."
+```
+
+**18.2.2 并发与单写者**
+
+- 每个需求的 `orchestrator.yaml` 只由该需求的 orchestrator 实例单写——多需求并行时**天然隔离**，无写冲突（原「单写者」约束自动成立）。
+- `registry.yaml` 只在需求创建/切换/状态快照时由 orchestrator 写，写入频率低。
+- 各 change 仍只写自己的 `.team-flow/<change>/.team-flow.yaml`（变更级状态，见 §18.3）。
+
+**18.2.3 S1 入口需求选择**
+
+orchestrator S1 路径路由器新增「需求选择」：读 `registry.yaml`，若有多个需求则询问 LT 操作哪个（或新建）；`active_requirement` 决定后续阶段读写哪份 `orchestrator.yaml`。幂等恢复仍走「yaml + 制品存在性」双重校验。
+
+### 18.3 状态文件治理：统一 `.team-flow/`（P1-6 第一阶段）
+
+> **决策（LT 确认 2026-07-25）**：本版本先做**产品级**状态文件迁移；npm 包名/CLI 前缀/74 处 npx 全量重命名仍按 v1.0.0（P1-6 第二阶段）。
+
+| 文件 | 旧位置 | 新位置 | 版本 |
+|------|-------|-------|------|
+| 产品级编排状态 | `<root>/.workflow-orchestrator.yaml` | `.team-flow/requirements/<req-id>/orchestrator.yaml` | **v0.15.0** |
+| 需求注册表 | （无） | `.team-flow/registry.yaml` | **v0.15.0** |
+| 变更级状态 | `<change>/.spec-superflow.yaml` | `<change>/.team-flow.yaml` | **P1-6 第二阶段（v1.0.0）** |
+
+- **产品级迁移（v0.15.0 落地）**：检测旧 `<root>/.workflow-orchestrator.yaml` 存在时，自动迁移到 `.team-flow/requirements/<req-id>/orchestrator.yaml` 并登记 registry（一次性，提示用户）。orchestrator skill 全链路引用已更新。
+- **变更级改名（P1-6 第二阶段，v1.0.0）**：`.spec-superflow.yaml` → `.team-flow.yaml` 与 npm 包名/CLI 前缀同批改造。**原因**：变更级状态文件由 npm `ssf` CLI（`ssf state init` 等）创建，单独改名会与现行 CLI 失配，必须与 npm 包重命名同步。v0.15.0 保持 `.spec-superflow.yaml` 不变，检测逻辑不动。
+- **范围边界**：本阶段**不改** npm 包名（spec-superflow）、CLI 前缀（ssf）、SKILL.md 中的 npx 引用、变更级 `.spec-superflow.yaml`——这些属 P1-6 第二阶段（v1.0.0）。
+
+### 18.4 workflow-bootstrap：侦察子代理 + 脚本化探查
+
+> **决策（LT 确认 2026-07-25）**：B1 侦察下沉并行子代理；新增确定性脚本固定化代码质量探查。
+
+**18.4.1 B1 改造为子代理编排**
+
+主代理（bootstrap）只做编排：派发 → 汇总 → 写 baseline.md。新增 `references/agents/codebase-recon-analyst.md`（种子提示形态，按 §18.1 协议返回）。**并行派发**以下侦察子代理（按 Quick/Deep 模式裁剪）：
+
+| 子代理任务 | Quick | Deep | 产出 |
+|-----------|:---:|:---:|------|
+| 技术栈识别（语言/框架/构建/DB） | ✓ | ✓ | 技术栈摘要 |
+| 模块结构（分层/边界） | ✓ | ✓ | 模块树 |
+| 已有架构模式（DDD/MVC/微服务） | ✓ | ✓ | 模式判断 |
+| 数据模型（实体/迁移/聚合根候选） | — | ✓ | 数据模型摘要 |
+| API 表面（REST/gRPC/CLI） | — | ✓ | API 清单 |
+| 测试现状 + 已有文档 | ✓ | ✓ | 测试/文档摘要 |
+
+每个子代理消费 §18.4.2 脚本的结构化输出 + 按需补读源码，按 §18.1 协议返回。主代理汇总后写 `docs/architecture/baseline.md`。
+
+**18.4.2 确定性脚本 `ssf recon`（新增 CLI）**
+
+固定化采集，**可复现、可横展对比**（同项目两次接入结果一致）：
+
+```bash
+ssf recon [--root <path>] [--out <json>]
+# 固定采集：目录树（限深）、依赖清单（pom/package.json/requirements/go.mod）、
+#          LOC 与文件类型分布、测试文件计数、DB 迁移文件清单、README/docs 探测
+# 输出：结构化 JSON（供侦察子代理消费）+ 人类可读摘要
+```
+
+- 脚本只做**确定性机械采集**（§17.8 第四类载体），语义判断（架构模式/聚合根推断）仍由子代理 LLM 完成。
+- 与子代理协作：脚本先跑出 JSON 基底 → 子代理在基底上做语义增强 → 主代理汇总。
+
+### 18.5 ce-brainstorm：PRD 完整性评审 + 冻结修复 + 版本格式
+
+**18.5.1 新增 `prd-completeness-reviewer` 子代理（2.4）**
+
+> 与现有 Phase 2.6 `claim verifier` 分工明确：claim verifier 管「说得**对不对**」（核查事实声明），completeness reviewer 管「说得**全不全、能否落地**」。
+
+- **形态**：插件 agent（只读，对齐 prototype-reviewer 模式：tools = Read/Bash/Grep/Glob，无 Write，报告写在 response，编排层落盘到 `prd/vN/prd-completeness-review.md`）。
+- **触发**：PRD 写入后、冻结前（orchestrated 模式由 orchestrator S2 派发；standalone 模式由 ce-brainstorm Phase 3 后派发）。
+- **评审维度**（按「能否支撑 plan/spec 实施」）：
+  | 维度 | 检查 | 级别 |
+  |------|------|------|
+  | 用户故事完整性 | 每个功能是否有明确 actors/流程/结果 | Critical |
+  | 验收标准 | 是否有可验证的 AC/成功信号 | Critical |
+  | 边界与非功能 | 空/错/异常状态、性能/兼容约束 | Important |
+  | 术语一致性 | 与 CONCEPTS.md / §6 业务术语一致 | Minor |
+  | 范围闭环 | in/out scope 明确，无悬空功能 | Important |
+- **判定**：对齐 prototype-reviewer 柔性判定（PASS / PASS_WITH_WARNINGS / FAIL，仅 Critical>0 触发 FAIL）。FAIL → 回 Phase 1.3 补充。
+
+**18.5.2 冻结措辞 BUG 修复（2.5）**
+
+> **BUG 定性**：ce-brainstorm §3.5.5 第 400 行「需升版 vN+1 走完整内循环」把 `frozen_downstream` 误写成 `frozen_absolute` 语义，违反 §17.9 feedback-loops「迭代内变更不升版」与双层冻结设计。
+
+- **正确措辞**（写入 PRD frontmatter 之后的正文冻结声明 + ce-brainstorm §3.5.5 + PRD 模板）：
+  > 本文档已冻结（`frozen_downstream`）。下游阶段（plan/spec/build）**不可直接修改**；如 plan 或实施暴露 scope 问题，经 **S3→S2 回退在 vN 内修订**并记录「决策与变更履历」（不升版）。仅当**启动新迭代 vN+1** 或**用户显式绝对冻结**（`frozen_absolute`）时，才需升版。
+- **横展排查**：同步修复 ce-brainstorm SKILL.md §3.5.5、`templates/prd.md` 模板、`prd-mapping.md` 冻结段、prototype-sync 相关冻结引用。
+
+**18.5.3 PRD 版本格式规范（2.3）**
+
+> **BUG 定性**：生成的 PRD frontmatter `iteration_version: v1`/`frozen: true`，正文却写「产品版本 v1.0」「文档状态 编辑中」——格式不统一且状态自相矛盾。根因：`prd-mapping.md` 未定义版本格式规范。
+
+`prd-mapping.md` 新增「版本格式规范」：
+- **迭代版本**（frontmatter `iteration_version`）：`vN`（v1/v2/...），表示产品迭代。
+- **文档修订次版本**（正文 §1 版本信息）：`vN.M`（v1.0/v1.1/...），vN 内修订递增 M（呼应反馈环路 vN 内修订）。
+- **文档状态枚举**：`编辑中` / `已冻结-下游(frozen_downstream)` / `已冻结-绝对(frozen_absolute)`。
+- **一致性硬约束**：正文文档状态**必须与 frontmatter `frozen` 字段一致**——`frozen: true` 时文档状态不得为「编辑中」。PRD 写入时自检，不一致即修正。
+
+### 18.6 prototype：内部子代理编排 + 设计系统生命周期
+
+> **决策（LT 确认 2026-07-25）**：prototype SKILL.md 重构为内部编排器，主代理只编排不实施；支持设计系统的设计与更新。
+
+**18.6.1 内部编排流程（主代理只编排）**
+
+```
+prototype skill（主代理 = 编排器，严禁 Write 原型文件）
+  ① 环境探查（sub: prototype-env-scout）
+       → 设计系统现状/原型仓库分支/PRD 版本/已有页面，产出环境简报 + 原型方案设计
+  ② 方案评审（主代理）→ 人工评审（主代理 AskUserQuestion）
+  ③ 原型绘制（sub: prototype-builder）
+       → 按已确认的设计系统/分支/版本绘制 prototype/（Write 权在此 agent）
+  ④ 原型评审（sub: prototype-reviewer，复用，对照 PRD 6 维度）
+  ⑤ 循环编排（主代理）：FAIL→回③修正（≤3轮，收敛检测）；PASS→⑥
+  ⑥ 人工评审路由（主代理 AskUserQuestion）：
+       → PRD 有问题 → 回 orchestrator S2 修订 PRD（vN 内修订）→ 再更新原型
+       → 原型需调整 → 回 ③ 派 prototype-builder 实施
+       → 通过 → 冻结
+```
+
+| 步骤 | 载体 | 写文件权 |
+|------|------|---------|
+| ①环境探查+方案设计 | sub `prototype-env-scout`（新增） | 仅写简报到 scratch |
+| ②方案/人工评审 | 主代理 | 无 |
+| ③绘制 | sub `prototype-builder`（新增，对齐 code-reviewer 反向：有 Write） | prototype/ 全部 |
+| ④评审 | sub `prototype-reviewer`（复用，只读） | 无（报告写 response） |
+| ⑤循环编排 | 主代理 | 落盘评审报告 |
+| ⑥人工路由 | 主代理 | 无 |
+
+- **主代理只编排不实施**：prototype skill 加载进主上下文后，主代理**禁止直接 Write/Edit 原型 HTML**，所有绘制经 prototype-builder。这是 §17.8「主代理瘦身」在 prototype 的落地。
+- **新增 agent**：`prototype-builder`（绘制，有 Write，按 §18.1 协议返回，阻断如「设计系统缺失」时返回 blocked）、`prototype-env-scout`（环境探查，种子提示）。
+
+**18.6.2 设计系统生命周期（3.2）**
+
+```
+首次创建 → 引用 → 增量更新（变更履历）
+```
+- **首次创建**：项目无 `design-system.md` 时，派 `design-system-architect` 子代理（新增，种子提示）按 9 段 schema + 5 方向确定性调色板产出，主代理评审 + 人工确认后落盘。
+- **引用**：prototype-builder 绘制时强制读 `design-system.md` 渲染 token，禁止内联样式漂移（承现有膨胀防控）。
+- **增量更新**：prototype-sync 回写时若涉及新组件/token/anti-pattern，合并进 `design-system.md` 并记**变更履历**（时间/变更内容/来源 change）。
+- **设计系统也走「主代理只编排」**：architect 子代理产出，主代理不直接写 design-system.md。
+
+### 18.7 ce-plan：模式询问 + 收窄高阶设计 + 作用边界
+
+**18.7.1 模式强制询问（4.1）**
+
+> **决策（LT 确认 2026-07-25）**：pipeline 下由 orchestrator 问定后显式传参；ce-plan 独立调用时永远自问。
+
+- 删除 `planning-modes.md` 第 15 行「Auto-detect from context... default to 一人公司模式」的隐式默认。
+- **standalone**：ce-plan Phase 0.2 **强制 AskUserQuestion** 选模式（业务模式 / 一人公司模式），不得静默默认。
+- **pipeline**（orchestrator 调用）：orchestrator 在 S3 入口一次性问定模式，**显式传参** `plan_mode: business | solo`（对齐 B6 显式入参规约）。ce-plan 收到 `plan_mode` 即不再询问；未收到（异常）则回退到强制询问。
+
+**18.7.2 一人公司模式收窄到高阶设计（4.2）**
+
+> **定性**：plan.md 出现「### 4.3 接口清单」是 ce-plan **违反自身 v0.5 scope 契约**（SKILL.md 第 15 行：不产出 file-level，属 spec-writer）。根因：`planning-modes.md` 第 9/64 行「API design」表述与 scope 契约矛盾。
+
+- `planning-modes.md` / `plan-structure.md`：一人公司模式的技术方案段从「tech stack + architecture + data model + **API design**」改为「tech stack + architecture + data model + **高阶技术设计**」。
+- **删除「接口清单」段**；高阶设计仅含：模块边界、技术选型、数据流方向、关键聚合/上下文划分。
+- **明确禁止**：接口签名、字段定义、请求/响应 schema 等**变更级详细设计**不进 plan.md，属各 change 的 spec-writer / architecture-design。
+
+**18.7.3 作用边界声明（4.3）**
+
+ce-plan SKILL.md 顶部新增「作用边界」硬声明：
+> **ce-plan = 产品级策略**：change 拆分（scope+依赖+优先级+复杂度）、change 依赖 DAG、技术方向决策、风险与里程碑。
+> **ce-plan ≠ 变更级详细设计**：接口清单、字段定义、方法签名、文件级 Implementation Unit 一律属各 change 的 spec-writer / architecture-design，不进 plan.md。
+
+### 18.8 新增/改造组件清单（v0.15.0）
+
+| 组件 | 类型 | 动作 | 优先级 |
+|------|------|------|--------|
+| subagent 结构化交接协议 | 设计规范（§18.1） | 新增，写进 §17.8 | 必做 |
+| 多需求状态模型 + registry | state-model 重构 | 改 §17.9.1 + orchestrator | 必做 |
+| `.team-flow/` 状态治理 | 横展改造 | 迁移 + 检测逻辑改造 | 必做 |
+| `ssf recon` | CLI 脚本 | 新增 | 必做 |
+| `codebase-recon-analyst` | bootstrap 种子代理 | 新增 | 必做 |
+| `prd-completeness-reviewer` | 插件 agent（只读） | 新增 | 必做 |
+| `prototype-builder` | 插件 agent（有 Write） | 新增 | 必做 |
+| `prototype-env-scout` | 种子代理 | 新增 | 必做 |
+| `design-system-architect` | 种子代理 | 新增 | 必做 |
+| prototype SKILL.md | skill | 重构为内部编排器 | 必做 |
+| ce-plan SKILL.md + planning-modes + plan-structure | skill + reference | 模式询问 + 收窄 + 边界 | 必做 |
+| ce-brainstorm §3.5.5 + prd-mapping + templates/prd.md | skill + reference + 模板 | 冻结修复 + 版本格式 + 完整性评审接入 | 必做 |
+
+---
+
+## 二十、决策落实状态（v0.8 增补）
+
+12. **v0.15.0 subagent 编排 + 状态治理（v0.8 新增）**：
+    - subagent 结构化交接协议（主代理只编排，阻断/非阻断用返回结构，不上 agent team）：✅ LT 确认（2026-07-25）。
+    - 多需求并行状态模型（每需求一份 + 注册表索引）：✅ LT 确认（2026-07-25）。
+    - `.team-flow/` 状态治理（本版本仅状态文件，P1-6 全量重命名仍 v1.0.0）：✅ LT 确认（2026-07-25）。
+    - ce-plan 模式 pipeline 下 orchestrator 问定后显式传参：✅ LT 确认（2026-07-25）。
+    - 版本打包为 v0.15.0 专题版，新增设计文档 v0.8：✅ LT 确认（2026-07-25）。
+    - bootstrap 侦察子代理 + `ssf recon` 脚本：✅ 已实施（v0.15.0，2026-07-25）。
+    - prd-completeness-reviewer（PRD 完整性评审）：✅ 已实施（v0.15.0，2026-07-25）。
+    - 冻结措辞 BUG 修复（frozen_downstream vs absolute）：✅ 已实施（v0.15.0，2026-07-25）。
+    - PRD 版本格式规范（vN / vN.M / 状态枚举一致性）：✅ 已实施（v0.15.0，2026-07-25）。
+    - prototype 内部子代理编排 + 设计系统生命周期：✅ 已实施（v0.15.0，2026-07-25）。
+    - ce-plan 收窄高阶设计（删接口清单）+ 作用边界声明：✅ 已实施（v0.15.0，2026-07-25）。
+
+---
+
+*v0.8 由 CC 基于 LT 第 20 轮实证复盘（VRM 管理驾驶舱 Session 29d058e5 全链路动作还原）+ 4 项架构决策（多需求状态模型 / ce-plan 模式传参 / .team-flow 治理节奏 / v0.15.0 打包），增量修订。承袭 v0.7 全量内容，仅记录 v0.15.0 增量。*
