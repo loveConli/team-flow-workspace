@@ -13,7 +13,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **既有项目接入**：workflow-bootstrap（1 skill）
 - **E2E 测试**：e2e（1 skill）
 
-当前版本：`v0.11.0`
+当前版本：`v0.14.0`
 
 ## 工作区结构
 
@@ -23,7 +23,8 @@ team-flow-workspace/
 │   ├── architecture-api-db-design-enhancement.md       # 设计增强方案 v1（初版，历史参考）
 │   ├── architecture-api-db-design-enhancement-v0.2.md  # 设计增强方案 v0.2（四方专家会审，历史参考）
 │   ├── architecture-api-db-design-enhancement-v0.3.md  # 设计增强方案 v0.3（原型能力并入，历史参考）
-│   ├── architecture-api-db-design-enhancement-v0.5.md  # 设计增强方案 v0.5/v0.6（★ 当前权威版本）
+│   ├── architecture-api-db-design-enhancement-v0.5.md  # 设计增强方案 v0.5/v0.6（历史参考）
+│   ├── architecture-api-db-design-enhancement-v0.7.md  # 设计增强方案 v0.7（★ 当前权威版本，orchestrator v2）
 │   ├── prototype-design-research.md                    # 原型方案选型调研（已吸收，历史参考）
 │   ├── team-flow-architecture-design-v0.3.html         # 架构设计可视化（v0.3 配套）
 │   ├── external-references/                            # 外部参考资料
@@ -67,13 +68,13 @@ team-flow-workspace/
 
 ### 当前版本说明
 
-- **设计增强方案当前权威版本**：`docs/architecture-api-db-design-enhancement-v0.5.md`（文件名 v0.5，内部标注 v0.6，含 20 章 + 决策落实状态）
-- **插件版本**：`v0.11.0`（20 skills）
+- **设计增强方案当前权威版本**：`docs/architecture-api-db-design-enhancement-v0.7.md`（orchestrator v2 重设计 + 触发域分层 + 身份统一规划，§17.8/§17.9/§17.10 待调研填充）
+- **插件版本**：`v0.14.0`（20 skills + 5 agents）
 - 设计增强方案的历史版本（v1 / v0.2 / v0.3）保留在 `docs/` 下，仅供追溯，不作为实施依据
 
 ## team-flow 工作流核心
 
-### 六套能力（20 skills）
+### 七套能力（20 skills）
 
 | 模块 | Skills | 职责 |
 |------|--------|------|
@@ -85,19 +86,18 @@ team-flow-workspace/
 | 既有项目接入（v0.11.0 新增） | workflow-bootstrap | 既有项目一次性侦察+基线建立（代码库侦察→架构基线→领域词汇→目录初始化） |
 | E2E（v0.10.0 新增） | e2e | AC 驱动 Playwright E2E 测试 |
 
-### 工作流 SOP（v0.11.0 修订，对应设计增强方案 v0.6 第三节）
+### 工作流 SOP（v0.7 修订，对应设计增强方案 v0.7 第三节）
 
 ```
 模糊需求
   → [既有项目接入层 workflow-bootstrap]（一次性，已有 baseline.md 则跳过）
        B1 代码库侦察 → B2 架构基线文档化 → B3 领域词汇提取 → B4 目录初始化
-  → [产品级编排层 workflow-orchestrator]
-  → S1 ce-brainstorm → PRD(vN) 草稿
-       ├─ 原型内循环（可选）：prototype skill → 原型审查 → 修正 → PRD+原型冻结
-       └─ 不需要原型 → PRD 直接冻结
-  → S2 ce-plan → plan(vN)（产品级策略：change拆分+依赖+技术方向）
-  → S3 拆 change → change-1, change-2, ...
-  → S4 分发 → 各 change 进入 spec-superflow（workflow-start 8态状态机）
+  → [产品级编排层 workflow-orchestrator]（v0.7 重设计）
+  → S1 路径路由器 → 判断入口路径（全新/续版/重新计划/继续执行/快速通道/Hotfix）
+  → S2 PRD + 原型阶段 → ce-brainstorm + 原型循环上提（prototype → 自动评审 → 人工评审 → 冻结）
+  → S3 计划阶段 → ce-plan（pipeline 快速路径）→ plan.md（change 拆分+依赖+技术方向）
+  → S4 拆分验证与分发 → change-split-auditor 审计 → 创建 change → 进入 spec-superflow
+  → S5 全局监控（change≥2 必选）→ 跨 change 一致性 + 复利晋升 + 动态重规划
   → [复利贯穿层] 每个阶段转换点：检测→捕获→索引→注入
   → change 完成：arch-merge → prototype-sync（顺序提交）+ 复利晋升
 ```
@@ -136,6 +136,7 @@ prd/               PRD + 实施方案 + 原型审查记录（v1→v2，分支隔
       ├── prd.md              # 业务要件（ce-brainstorm 产出）
       ├── plan.md             # 实施方案（ce-plan 产出，产品级策略）
       └── prototype-review.md # 原型审查记录（PRD 内循环产出）
+      ├── prototype-auto-review.md # 原型自动评审报告（prototype-reviewer agent 产出，编排层落盘，v0.7 新增）
 prototype/         全局原型（UI 契约真相源，git 分支隔离）
 docs/
   ├── architecture/  全局架构锚点（ARCHITECTURE.md / DATABASE.md / <bc>/）
@@ -265,7 +266,7 @@ P1 设计 → P2 实施 → P3 验证 → P4 同步 → P5 提交
 |------|--------|---------|------|
 | v0.12.0 | **治理债务清理** | ① 身份命名统一（team-flow vs spec-superflow） ② AGENTS.md 同步到 v0.11.0 ③ 版本号硬编码修复（74 处 npx 引用） ④ skill 计数全链路一致 ⑤ check-versions 扩展（计数 + npx 引用校验） | ✅ 2026-07-24 完成 |
 | v0.13.0 | **渐进式披露 + Agent 化** | ① ce-compound / ce-plan SKILL.md 拆分到 references/（控制在 150 行内） ② code-reviewer / bug-investigator 改为 agent ③ 13 个无 references/ 的 skill 补充支撑文件 | ✅ 2026-07-24 完成 |
-| v1.0.0 | **成熟版** | ① 触发词去重（orchestrator 作唯一入口，内部路由） ② PreToolUse hook 执行期状态守护 ③ "ce-" 前缀统一（或在 README 中明确命名来源） ④ 设计增强方案 v1.0 全量定稿 | 🔲 进行中（②已完成） |
+| v1.0.0 | **成熟版** | ① 触发词去重（分层触发域，方案C） ② PreToolUse hook 执行期状态守护 ③ "ce-" 前缀正名（保留+文档化，方案C） ④ 设计增强方案 v1.0 全量定稿 ⑤ 身份统一 spec-superflow→team-flow（P1-6） ⑥ orchestrator 设计优化（反馈环路+增量入口） | 🔲 进行中（①②③已完成，④⑤⑥待实施） |
 
 ## 待办列表
 
@@ -290,17 +291,22 @@ P1 设计 → P2 实施 → P3 验证 → P4 同步 → P5 提交
 | P1-3 | code-reviewer agent 创建（只读审查员，tools: Read/Bash/Grep/Glob，171行） | ✅ 2026-07-24 | v0.13.0 | 来源：v0.11.0 设计评审 W2 |
 | P1-4 | bug-investigator agent 创建（自主调查员，tools: Read/Bash/Grep/Glob/Write，180行） | ✅ 2026-07-24 | v0.13.0 | 来源：v0.11.0 设计评审 W2 |
 | P1-5 | README.md 同步：七套能力 20 skills + SOP + 产物结构 | ✅ 2026-07-24 | v0.12.0 | 来源：v0.11.0 设计评审 |
+| P1-6 | 身份统一：`spec-superflow` 全部改为 `team-flow`（含 npm 包名、CLI 前缀 `ssf`→`tf`、`.spec-superflow.yaml`→`.team-flow.yaml`、所有 SKILL.md/脚本中的 npx 引用及底层命令） | 🔲 待实施 | v1.0.0 | 来源：LT 指示（2026-07-24），与 P3-1 ce-前缀统一可合并推进 |
+| P1-7 | orchestrator v2 设计优化：① 反馈环路（vN 内修订+变更履历，非升版） ② 增量入口（S1 路径路由器） ③ 原型循环上提到 orchestrator（思路B） ④ 原型自动评审（PRD 一致性检查→人工评审） ⑤ S4 拆分质量自检 ⑥ S5 多 change 必选化 ⑦ description 从"列举步骤"改为"描述能力" | ✅ 2026-07-24 | v1.0.0 | 来源：LT 设计讨论（2026-07-24），v0.7 设计+四方会审+P2 实施+P3 review 全流程完成 |
+| P1-8 | subagent 拆分规划：明确各阶段子代理分工（哪些执行步骤由 subagent 实施），编排层只负责编排 | 🔲 待实施 | v1.0.0 | 来源：LT 指示（2026-07-24），与 P1-7 orchestrator v2 配套 |
+| P1-9 | ce-brainstorm SKILL.md 拆分到 references/（405行→≤150行），与 P1-1/P1-2 同类项 | 🔲 待实施 | v1.0.0 | 来源：v0.7 实施横展发现（P1-1/P1-2 拆了 ce-compound/ce-plan，ce-brainstorm 遗漏） |
 
 ### P2（改善，按节奏推进）
 
 | ID | 待办 | 状态 | 目标版本 | 备注 |
 |----|------|------|---------|------|
-| P2-1 | 触发词去重：workflow-orchestrator 作为唯一产品级入口，内部路由 | 🔲 待实施 | v1.0.0 | 来源：v0.11.0 设计评审 W3 |
+| P2-1 | 触发词去重：分层触发域（方案C），改 4 个 description + AGENTS.md 触发域分层表 | ✅ 2026-07-24 | v1.0.0 | 来源：v0.11.0 设计评审 W3，方案C：产品级收敛到orchestrator，步骤级保留受限独立触发 |
 | P2-2 | PreToolUse hook 执行期状态守护（14/14 测试通过，~22ms，防御性优先） | ✅ 2026-07-24 | v1.0.0 | 来源：v0.11.0 设计评审 W5 |
 | P2-3 | 13 个 skill 补 references/：3 个已填充内容（workflow-start/build-executor/release-archivist），10 个目录已就绪 | ✅ 2026-07-24 | v0.13.0 | 来源：v0.11.0 设计评审 W1 |
+| P2-4 | 动态重规划机制调研：① 运行时提问动态重组工作流（突破固定闸点限制） ② 复利回写工作流自身（harness 自改进，不止回写知识） | ✅ 调研完成 2026-07-24 | v1.0.0+ | 来源：外部反馈，设计已写入 v0.7 §17.9，实施分 Phase 0-5（v0.14.0-v0.17.0+） |
 
 ### P3（低优先级，时机成熟再做）
 
 | ID | 待办 | 状态 | 目标版本 | 备注 |
 |----|------|------|---------|------|
-| P3-1 | "ce-" 前缀统一：改为 "tf-" 或在 README 中明确命名来源（compound-engineering 遗产） | 🔲 待实施 | v1.0.0 | 来源：v0.11.0 设计评审 W4，涉及破坏性重命名 |
+| P3-1 | "ce-" 前缀正名：保留 ce- + README 命名约定文档化（方案C，零破坏性） | ✅ 2026-07-24 | v1.0.0 | 来源：v0.11.0 设计评审 W4，结论：改 tf- 是伪统一（14个仍无前缀），文档说明即可 |

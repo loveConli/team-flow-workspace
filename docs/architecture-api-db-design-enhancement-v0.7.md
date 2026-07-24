@@ -1,10 +1,23 @@
-# 架构 / API / DB 设计增强方案 · v0.6（全量修订版 + 原型内循环 + 产品级编排 + 复利贯穿 + 既有项目接入）
+# 架构 / API / DB 设计增强方案 · v0.7（orchestrator v2 + 触发域分层 + 身份统一规划）
 
-> 版本：v0.6 · 全量修订
+> 版本：v0.7 · 重大修订
 > 底座：**architecture-design skill**（book-to-skill 蒸馏自 LT 知识库 4A/DDD 培训材料，含 F1–F8 框架）
-> 修订依据：v0.3 全量内容保留；v0.5 新增四项核心修订——① 原型从 PRD 后独立阶段改为 **PRD 内循环验证手段**；② 新增**产品级工作流编排层**（workflow-orchestrator）；③ ce-plan 职责收窄为**产品级策略**（change 拆分 + 依赖 + 技术方向）；④ 复利从被动触发升级为**复利贯穿机制**（三层索引 + 阶段感知注入 + 主动捕获 + 晋升）。
-> **v0.6 新增**：⑤ 既有项目接入层（workflow-bootstrap）——大部分应用场景是既有项目而非全新项目，需要"侦察 + 基线建立"前置阶段；⑥ SOP 图补 bootstrap 层；⑦ 产物结构补 `docs/architecture/baseline.md`；⑧ workflow-orchestrator S1 补 baseline 检查；⑨ 新增第十九章既有项目接入。
-> 相较 v0.3 的关键修正：① 第三节 SOP 图重画（原型内循环 + 产品级编排 + 复利贯穿层 + **bootstrap 层**）；② 第四节产物结构补 `docs/solutions/` 三层索引 + `prd/vN/prototype-review.md` + **`docs/architecture/baseline.md`**；③ 第七节复利回写升级为复利贯穿（新增 8-12 条）；④ 第十节补产品级编排层 + spec-writer 读原型 + 复利不阻断 + **bootstrap 集成**；⑤ 第十一节补 prototype-sync CLI + 复利脚本；⑥ 第十五章 §15.1 重写（原型内循环）+ §15.2 新增（内循环 SOP）+ §15.3 新增（制品链真相来源）；⑦ 新增第十七章产品级工作流编排；⑧ 新增第十八章复利贯穿机制；⑨ 决策落实状态补 v0.5 + **v0.6** 决策。
+> 修订依据：v0.6 全量内容保留；v0.7 核心修订——
+> ① **workflow-orchestrator v2 重设计**：反馈环路（vN 内修订+变更履历）、增量入口（S1 路径路由器）、原型循环上提到 orchestrator（思路B）、原型自动评审（PRD 一致性检查→人工评审）、S4 拆分质量自检、S5 多 change 必选化、ce-plan pipeline 快速路径、description 能力化；
+> ② **触发域分层**：四层触发域（接入层/产品级/变更级/步骤级），消除 8 组触发词冲突；
+> ③ **身份统一规划**：spec-superflow→team-flow 全链路重命名方案（P1-6）；
+> ④ **ce- 前缀正名**：保留 ce- 前缀 + 文档化命名来源（方案C，零破坏性）；
+> ⑤ **动态重规划机制（已完成初版设计，待实施）**：运行时提问重组工作流 + 工作流模式复利 L2；
+> ⑥ **subagent 拆分规划（已完成初版设计，待实施）**：编排层只编排，执行委托 subagent；
+> ⑦ **原型自动评审机制（已完成初版设计，待实施）**：PRD vs 原型一致性检查 agent 设计。
+>
+> **v0.7 修订摘要（相较 v0.6）**：
+> - 第三节 SOP 图重画（orchestrator v2 流程：S1 路径路由 → S2 PRD+原型循环上提 → S3 pipeline 快速路径 → S4 拆分验证+分发 → S5 必选监控）
+> - 第十七章全面重写（orchestrator v2 设计：12 项改动）
+> - 新增第十七章 §17.6 触发域分层
+> - 新增第十七章 §17.7 身份统一规划
+> - 第二十章决策落实状态补 v0.7 决策
+> - 待调研章节（动态重规划/subagent拆分/原型自动评审）留占位，调研完成后填充
 
 ---
 
@@ -29,7 +42,7 @@
 - **F7 三维判定**：失忆(归属)+阻断(类型)+孤岛(层级)。
 - **F8 增量设计+复利回写闭环**：As-Is 冻结+版本锚点 → To-Be → 全局锚点复利。
 
-## 三、总体闭环（SOP 步骤，v0.6 重画）
+## 三、总体闭环（SOP 步骤，v0.7 重画）
 ```
 模糊需求
   │
@@ -49,32 +62,31 @@
   └─ B5 路径判断 ──→ 进入 workflow-orchestrator S1（注入 baseline 上下文）
        │
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  产品级编排层（workflow-orchestrator，v0.5 新增）
+  产品级编排层（workflow-orchestrator，v0.7 重设计）
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   │
-  ├─ S1 ce-brainstorm ──→ PRD(vN) 草稿 ◀──┐
-  │     │                                  │ 原型内循环（v0.5 修正，可选）
-  │     ├─ 判断是否需要原型 ────────────────┤
-  │     │     │                            │
-  │     │     ▼                            │
-  │     │   prototype skill ──→ 原型       │
-  │     │     │                            │
-  │     │     ▼                            │
-  │     │   原型审查（对照 PRD 功能点）─────┘
-  │     │     │  发现问题 → 回到 brainstorm 修正（最多 3 次）
-  │     │     │  审查通过 ↓
-  │     │     ▼
-  │     │   PRD + 原型 冻结（需求基线 vN）
-  │     │     产出 prd/vN/prototype-review.md（审查记录）
-  │     │
-  ├─ S2 ce-plan ──→ plan(vN)（v0.5 收窄）
-  │     │  产品级策略：change 拆分方案 + 依赖 + 技术方向
-  │     │  细粒度任务留给 spec-writer（不在 ce-plan 内展开）
-  │     │
-  ├─ S3 拆 change ──→ change-1, change-2, ...
-  │     │  每 change 定义：scope + 依赖 + 优先级
-  │     │
-  └─ S4 分发 ──→ 各 change 进入 spec-superflow（workflow-start）
+  ├─ S1 路径路由器 ──→ 判断入口路径（全新/续版/重新计划/继续执行/快速通道/Hotfix）
+  │    检查 baseline.md / CONCEPTS.md → 注入上下文
+  │    复利注入（solutions/INDEX.md top-5）
+  │
+  ├─ S2 PRD + 原型阶段 ──→ 调用 ce-brainstorm 产出 PRD
+  │    原型循环由 orchestrator 直接编排（思路B，v0.7 上提）：
+  │    prototype skill → 自动评审（prototype-reviewer agent）→ 人工评审 → 冻结
+  │    PRD vN 内修订 + 变更履历（不升版）
+  │    反馈环路检查点：scope 问题可回退修订
+  │
+  ├─ S3 计划阶段 ──→ 调用 ce-plan（pipeline_mode: orchestrator，快速路径）
+  │    产出 plan.md：change 拆分 + 依赖 DAG + 技术方向
+  │    反馈环路检查点：plan 暴露 PRD 问题可回退 S2
+  │
+  ├─ S4 拆分验证与分发 ──→ 拆分质量自检（change-split-auditor agent）
+  │    创建 change 目录 + 初始化 .spec-superflow.yaml
+  │    并行策略建议 + 验收标准预分配
+  │    反馈环路检查点：依赖图不可执行可回退 S3
+  │
+  └─ S5 全局监控（change≥2 时必选）──→ 跨 change 一致性检测
+       复利晋升（change closing 时）
+       动态重规划（state 评估 + DP-R 确认）
        │
   [复利贯穿层（v0.5 新增）] ← 每个阶段转换点自动检测
        │  检测可复利时刻 → 捕获 → 写入索引 → 下阶段注入
@@ -301,6 +313,8 @@ tags: [db, <领域>]
 ## 十五、原型设计能力（v0.3 新增，v0.5 修正）
 
 > 本章为 v0.3 新增原型章，v0.5 修正核心定位：原型从"PRD 后的独立阶段"改为"PRD 的内循环验证手段"。调研原文见 `prototype-design-research.md`。
+
+> **v0.7 修订说明**：原型循环已从 ce-brainstorm 内部上提到 workflow-orchestrator 层（思路B）。当 ce-brainstorm 被 orchestrator 调用时（orchestrated 模式），Phase 3.5 原型循环跳过，由 orchestrator 直接编排 prototype skill → prototype-reviewer agent（自动评审）→ 人工评审。直接调用 ce-brainstorm 时（standalone 模式），Phase 3.5 保留不变。原型审查拆分为两阶段：3.5.3a 自动评审（PRD vs 原型 6 维度一致性检查，详见 §17.10）+ 3.5.3b 人工评审（聚焦美观/体验/品牌）。
 
 ### 15.0 五方案对比结论（调研事实）
 | 方案 | 形态 | 对"纯 CLI 插件"可用性 | 结论 |
@@ -561,55 +575,413 @@ PRD(vN) ──拆解──┬─▶ change-1 ─┐
 
 ---
 
-## 十七、产品级工作流编排（v0.5 新增）
+## 十七、产品级工作流编排（v0.5 新增，v0.7 重设计）
 
-### 17.1 编排层定位
+### 17.1 编排层定位（v0.7 修订）
 
 | 层级 | 编排器 | 管辖范围 |
 |------|--------|---------|
-| 产品级 | **workflow-orchestrator**（v0.5 新增） | ce-brainstorm → 原型内循环 → ce-plan → 拆 change → 分发 |
+| 产品级 | **workflow-orchestrator**（v0.7 重设计） | 路径路由 → PRD+原型循环 → 计划 → 拆分验证 → 分发 → 监控 |
 | 变更级 | workflow-start（不变） | exploring → ... → closing（8 态状态机） |
 
-**分层原则**：workflow-orchestrator 管"做什么、什么顺序"（产品级策略），workflow-start 管"怎么做"（变更级执行）。二者通过 change 目录 + `.spec-superflow.yaml` 衔接，orchestrator 创建 change，workflow-start 执行 change。
+**分层原则**：workflow-orchestrator 管"做什么、什么顺序"（产品级策略），workflow-start 管"怎么做"（变更级执行）。二者通过 change 目录 + `.spec-superflow.yaml` 衔接。
 
-### 17.2 workflow-orchestrator 职责
+**v0.7 设计哲学变更**：
+- 编排层**只编排**（状态判断、路由决策、阶段转换、用户确认），执行委托 subagent（→ 详见 §17.8）
+- 从"固定管道"升级为"默认路径 + 任意时刻可重规划"（→ 详见 §17.9）
+- PRD vN = 一次迭代版本，**迭代内变更不升版**，通过修订主文档 + 记录决策/变更履历方式管理
+
+### 17.2 workflow-orchestrator v2 流程（v0.7 重写）
 
 ```
-S1 需求接收
-  - 接收模糊需求
-  - 【v0.6 新增】检查 docs/architecture/baseline.md 是否存在
-    → 存在：注入为架构上下文（技术栈/模块/数据模型），替代"从零侦察"
-    → 不存在：提示用户"建议先运行 /workflow-bootstrap 建立项目基线"（advisory，不阻断）
-  - 【v0.6 新增】检查 CONCEPTS.md 是否存在
-    → 存在：注入领域词汇表
-  - 判断路径：需要头脑风暴？直接计划？需要原型？
-  - 复利注入：读取 docs/solutions/INDEX.md，注入 prd/cross-phase 经验
+S1 路径路由器（v0.7 重写，原"需求接收"）
+  - 接收用户输入，判断入口路径：
+    ┌─ 全新需求（无现有 PRD，需求模糊）      → S2（完整流程）
+    ├─ 续版需求（有 PRD vN，用户要加功能）   → S2（PRD vN+1）
+    ├─ 重新计划（PRD 已冻结，plan 需调整）   → S3
+    ├─ 继续执行（changes 已拆分，继续下一个） → S4/S5
+    └─ 单 change 快速通道（需求极清晰）     → 直接创建 change → workflow-start
+  - 检查项目基线（docs/architecture/baseline.md）
+    → 存在：注入为架构上下文
+    → 不存在：advisory 提示运行 /workflow-bootstrap
+  - 检查 CONCEPTS.md → 存在则注入领域词汇表
+  - 复利注入：读取 docs/solutions/INDEX.md，过滤 prd/cross-phase 经验（top-5）
 
-S2 PRD 阶段（含原型内循环）
+S2 PRD + 原型阶段（v0.7 重写，原型循环上提）
   - 调用 ce-brainstorm 产出 PRD 草稿
-  - 执行原型内循环（§15.2）
-  - PRD + 原型冻结
-  - 复利捕获：检测可复利时刻
+  - 【v0.7 变更】原型循环由 orchestrator 直接编排（思路B，非 ce-brainstorm 内部）：
+    ├─ 判断是否需要原型
+    ├─ 需要 → 调用 prototype skill 产出原型
+    │   → 自动评审（系统，PRD vs 原型一致性检查，→ 详见 §17.10）
+    │     → 不通过 → 标注不一致项 → 修正 → 重新自动评审
+    │     → 通过 → 人工评审
+    │   → 人工评审通过 → 冻结
+    │   → 人工评审不通过 → 修正 → 重新自动评审
+    └─ 不需要 → PRD 直接冻结
+  - PRD 冻结后，迭代内变更不升版，在 vN 内修订 + 记录决策/变更履历
+  - 复利捕获：检测可复利时刻（需求矛盾、原型返工等）
+  - 【v0.7 新增】反馈环路检查点：
+    → PRD scope 是否合理？是否有明显遗漏？
+    → 如果 S3 发现 scope 问题，可回退到 S2 修订（vN 内修订，非升版）
 
-S3 计划阶段
-  - 调用 ce-plan 产出 plan(vN)
-  - ce-plan 聚焦：change 拆分方案 + 依赖 + 技术方向
+S3 计划阶段（v0.7 修订，pipeline 快速路径）
+  - 调用 ce-plan（pipeline_mode: orchestrator）：
+    → 跳过 output format 解析（强制 md）
+    → 跳过 handoff 菜单（直接返回 plan.md 路径）
+    → confidence check 降级为 Lightweight
+    → 保留核心价值：repo research + change splitting + 依赖 DAG + 技术方向
   - 复利注入：读取 plan/cross-phase 经验
   - 复利捕获：检测可复利时刻
+  - 【v0.7 新增】反馈环路检查点：
+    → plan 是否暴露了 PRD 的范围问题？
+    → 是：回退 S2，触发 PRD vN 内修订（记录变更原因）
+    → 否：进 S4
 
-S4 拆分与分发
+S4 拆分验证与分发（v0.7 重写，原"拆分与分发"）
   - 按 plan 中的 change 拆分方案，创建各 change 目录
   - 每 change 初始化 .spec-superflow.yaml
-  - 记录 change 间依赖和优先级
-  - 各 change 进入 spec-superflow（workflow-start）
+  - 【v0.7 新增】拆分质量自检：
+    → change 粒度是否合理（太大→实施困难；太小→管理开销）
+    → 依赖 DAG 是否有环、关键路径是否过长
+    → 并行策略建议：哪些 change 可并行、哪些必须串行
+    → 验收标准预分配：从 PRD 功能清单映射到每个 change 的 AC
+  - 【v0.7 新增】反馈环路检查点：
+    → 依赖图是否可执行？粒度是否合理？
+    → 否：回退 S3 调整拆分策略
+    → 是：分发
+  - 按依赖顺序建议执行顺序，告知用户各 change 已就绪
 
-S5 全局监控（可选）
+S5 全局监控（v0.7 修订，多 change 时必选）
+  - change 数量 = 1：S5 自然跳过
+  - change 数量 ≥ 2：S5 必选（v0.7 变更，原为"可选"）
   - 跟踪各 change 进度（通过 .spec-superflow.yaml 状态）
   - 检测跨 change 一致性（共享聚合/实体/API 的变更冲突）
   - 复利晋升：change closing 时检查经验晋升
 ```
 
-### 17.3 与 workflow-start 的边界
+### 17.3 反馈环路设计（v0.7 新增）
+
+**核心原则**：PRD vN = 一次迭代版本。迭代内的调整通过 vN 内修订 + 变更履历管理，**不升版**。只有新的用户故事/迭代才触发 vN+1。
+
+**回退规则**（保守策略：只允许相邻回退）：
+
+| 回退路径 | 触发条件 | 操作 | 制品处置 |
+|---------|---------|------|---------|
+| S3 → S2 | plan 暴露 PRD scope 问题 | PRD vN 内修订 + 记录变更履历（临时解除 frozen_downstream） | plan.md → plan.md.revN（归档），S3 重入时从零产出 |
+| S4 → S3 | 依赖图不可执行/粒度不合理 | 调整拆分策略 | 已创建的 change 目录保留，重新拆分后增量调整 |
+| S5 → S4 | 跨 change 冲突需要重新拆分 | 重新评估拆分方案 | **前置条件**：所有 change 未 executing→绿区；有 executing→灰区（逐个确认：暂停/废弃/保持）；已 closing/closed→红区（只能新 change 修正） |
+
+> **v0.7 会审修订**：
+> - **振荡上限**（A11）：S2↔S3 回退 ≤2 次。超过后升级为人工介入（用户选择：继续修订 / 强制 vN+1 升版 / 放弃）。
+> - **制品处置规则**（A10）：回退时受影响制品重命名为 `.revN`（保留审计轨迹），重新进入阶段**不读取上一轮制品**，只读取修订后的上游制品，避免旧内容锚定。
+> - **在途 change 处置**（A3）：S5→S4 回退时，在途 change 的处置决策记入 replan_log。已 closing/closed 的 change 其 delta 已合并，只能通过新 change 修正（hotfix 路径）。
+
+**变更履历格式**（记录在 PRD 文档的"决策与变更履历"章节）：
+
+```markdown
+### 决策与变更履历
+| 时间 | 触发阶段 | 变更内容 | 原因 | 影响范围 |
+|------|---------|---------|------|---------|
+| 2026-07-24 | S3→S2 | 砍掉功能X | plan 分析发现技术不可行 | §7 功能清单、§8 处理说明 |
+```
+
+### 17.4 增量入口设计（v0.7 新增）
+
+S1 路径路由器支持 6 种入口路径，使 orchestrator 从"一次性工具"升级为"持续使用的编排器"：
+
+| 入口 | 条件 | 跳转 | 说明 |
+|------|------|------|------|
+| 全新需求 | 无现有 PRD，需求模糊 | → S2 | 完整流程 |
+| 续版需求 | 有 PRD vN，用户要加功能 | → S2（PRD vN+1） | 新版本迭代 |
+| 重新计划 | PRD 已冻结，plan 需调整 | → S3 | 跳过 brainstorm |
+| 继续执行 | changes 已拆分，继续下一个 | → S4/S5 | 先输出**状态恢复简报**（各 change 状态 + 下一步建议），用户确认后继续 |
+| 单 change 快速通道 | 需求极清晰，无需 PRD（仅限单一功能点、无 UI、无跨模块依赖的极小变更） | → 直接创建 change → workflow-start | 最轻量路径，无 PRD 锚点，不可触发 S3→S2 回退 |
+| 紧急修复（Hotfix） | bug/生产问题，需最小范围修复 | → 直接创建 change（type: hotfix，注入 bug 描述替代 PRD）→ workflow-start | closing 时强制补录复利 |
+
+> **v0.7 会审修订**：
+> - **路由结果显式呈现**（B3）：S1 路由判断后必须向用户确认——"我判断你当前处于【续版需求】路径（已有 PRD v1，将创建 v2），确认？[Y/其他路径]"。路由是建议而非决定。
+> - **Hotfix 入口**（B8）：新增第 6 种入口，不走 S2/S3/S4 大部分步骤。
+> - **"继续执行"上下文恢复**：读取 `.workflow-orchestrator.yaml` 的 change_dag，汇总各 change 状态，输出简报后由用户选择下一步（支持跳过被阻塞的 change）。
+
+### 17.5 ce-plan pipeline 快速路径（v0.7 新增）
+
+ce-plan 在 orchestrator pipeline 上下文中使用 `pipeline_mode: orchestrator`，减少仪式开销：
+
+| 保留（核心价值） | 跳过（仪式开销） |
+|-----------------|-----------------|
+| Phase 1 repo research（代码库侦察） | output format 解析（强制 md） |
+| Phase 3 change splitting + 依赖 DAG | handoff 菜单（Proof/Issue/Browser） |
+| 技术方向决策（一人公司模式） | confidence check 降级为 Lightweight |
+| 风险与约束分析 | ce-doc-review 降级为 headless |
+| 里程碑计划 | 独立调用时的 scoping synthesis 确认 |
+
+**S3 不可取消的理由**（调研确认）：
+1. Change 拆分无替代源：PRD 不包含 change 概念，S4 的输入只能来自 ce-plan
+2. 技术方向需全局视角：避免各 change 的 spec-writer 各自为政
+3. Repo Research 不可重复：代码库侦察做一次，不能每个 change 重复 N 次
+
+### 17.6 触发域分层（v0.7 新增）
+
+各 skill 按触发层级划分，避免触发词冲突导致误路由：
+
+| 层级 | 入口 Skill | 触发域 | 说明 |
+|------|-----------|--------|------|
+| 接入层 | workflow-bootstrap | "初始化/接入/分析代码库" | 一次性，触发词独特 |
+| 产品级（唯一入口） | **workflow-orchestrator** | 新的产品级需求（"新需求/从头开始/我有个想法"） | 拥有所有产品级新需求触发词 |
+| 变更级（唯一入口） | workflow-start | change 上下文内的操作（.spec-superflow.yaml） | 强上下文约束，天然隔离 |
+| 步骤级 - 独立工具 | ce-ideate, ce-strategy, ce-compound, ce-proof, architecture-design, prototype, e2e | 各自独特触发词 | 无冲突 |
+| 步骤级 - 受限独立 | ce-brainstorm, ce-plan | 可独立触发，但产品级新需求应走 orchestrator | description 标注路由指导 |
+| 步骤级 - 仅路由 | need-explorer, spec-writer, contract-builder, build-executor, code-reviewer, spec-merger, release-archivist, bug-investigator | 仅由 workflow-start 路由 | 不独立触发 |
+
+> **规则**：新增 skill 时必须在此表登记所属层级。产品级新需求触发词归 workflow-orchestrator 独占。
+
+### 17.7 身份统一规划（v0.7 新增）
+
+当前 team-flow 插件的身份链：
+- **插件名**：team-flow（Claude Code 插件）
+- **npm 包名**：spec-superflow（底层 CLI 底座）
+- **CLI 前缀**：ssf（`ssf state init`、`ssf solutions capture` 等）
+- **状态文件**：`.spec-superflow.yaml`
+
+**v1.0.0 身份统一方案（P1-6）**：
+
+| 当前 | 目标 | 影响范围 |
+|------|------|---------|
+| npm 包名 `spec-superflow` | `team-flow` | package.json、所有 npx 引用 |
+| CLI 前缀 `ssf` | `tf` | 所有 SKILL.md 中的命令引用、scripts/ |
+| `.spec-superflow.yaml` | `.team-flow.yaml` | workflow-start、所有状态检测逻辑 |
+| `npx --package spec-superflow@x.y.z` | `npx --package team-flow@x.y.z` | 所有 SKILL.md（~74 处） |
+
+**ce- 前缀处理**：保留不 rename（方案C）。理由：改 tf- 是伪统一（14 个 skill 仍无前缀），文档说明即可。已在 README.md 增加命名约定小节。
+
+### 17.8 subagent 拆分规划（v0.7 新增）
+
+> **设计原则**：编排层只负责编排（状态判断、路由决策、阶段转换、用户确认），执行委托 subagent。
+
+**划界根本判据——"是否交互"，而非"轻/重"**：
+
+| 载体 | 判据 | 典型动作 |
+|------|------|---------|
+| 编排层（orchestrator 自己做） | 状态判断、路由、阶段转换、用户确认 | 路径判断、循环控制、阻塞式用户确认 |
+| 会话级 skill（不可下沉 subagent） | **需要与用户多轮交互** | ce-brainstorm、ce-plan、prototype |
+| subagent（隔离上下文） | **非交互**的分析、检查、报告 | 原型评审、拆分审计、一致性检查 |
+| 确定性脚本（ssf CLI） | 机械文件操作、无需 LLM 判断 | change 目录创建、state init、index 重建 |
+
+**关键约束**：Claude Code 的 subagent 在独立上下文运行，**不能调用 AskUserQuestion**。因此 ce-brainstorm/ce-plan/prototype 永远不能变成 subagent。
+
+> **v0.7 会审修订（A4，结构性修正）**："只传路径、只收 verdict"**仅约束 subagent**。会话级 skill（ce-brainstorm/ce-plan/prototype）通过 Skill 工具加载进 orchestrator **同一上下文**执行，其过程对话会进入编排层上下文窗口——"编排层变薄"对此不成立。应对策略：
+> 1. **阶段后压缩协议**：ce-brainstorm 冻结 PRD 后，编排层主动触发 compact，只保留 `prd/vN/prd.md` 路径与 frozen 状态，丢弃过程对话。
+> 2. **yaml = 持久化记忆**：跨阶段、跨 session 的状态一律读 `.workflow-orchestrator.yaml`，不依赖上下文记忆。
+> 3. **会话级 skill 内部的非交互子步骤**（如 ce-brainstorm 内部的原型产出、一致性预检）应由 skill 自行派发 subagent（ce-plan 已有此模式），编排层不介入。
+
+**v2 逐阶段拆分总表**：
+
+| 阶段 | 编排层动作 | 执行层动作（委托） | 载体 |
+|------|-----------|-------------------|------|
+| S1 | baseline/CONCEPTS 存在性检查；路径判断；阻塞确认 | 上下文简报组装 | 🆕 kickoff-context-assembler（种子提示） |
+| S2 | 调用 ce-brainstorm（传路径）；原型触发判断；循环控制（verdict 路由、≤3 轮）；frozen 确认 | PRD/原型产出；原型评审；复利检测 | 会话 skill；🆕 prototype-reviewer（agent）；🆕 compound-moment-detector（种子提示，可选） |
+| S3 | 调用 ce-plan（传路径）；阶段转换 | 计划产出（ce-plan 内部自行派发研究 agent） | 会话 skill |
+| S4 | 读 plan change 列表；verdict 路由；告知用户 | 拆分质量审计；change 脚手架 | 🆕 change-split-auditor（种子提示）；🔧 ssf change scaffold（建议新增 CLI） |
+| S5 | 读状态文件；触发时机判断；冲突处置路由；用户确认 | 跨 change 一致性检查；单 change 合并门禁；重规划评估 | 🆕 cross-change-consistency-checker（种子提示）；✅ 复用 code-reviewer；🆕 replan-analyst（种子提示） |
+
+**新增 subagent 清单**：
+
+| 名称 | 形态 | 职责 | 优先级 |
+|------|------|------|--------|
+| prototype-reviewer | 插件 agent（只读，**无 Write**，报告写在 response，编排层落盘） | PRD vs 原型一致性审查（6 维度），→ §17.10 | 必做 |
+| change-split-auditor | **插件 agent**（v0.7 会审升级，提示词>30行+需固定tools） | plan.md 拆分质量审计（覆盖矩阵/DAG 无环/粒度均衡） | 必做 |
+| cross-change-consistency-checker | **插件 agent**（v0.7 会审升级，跨 skill 复用价值） | 跨 change 冲突检测（共享聚合/API/原型漂移） | 必做 |
+| replan-analyst | 种子提示 | 重规划前状态评估（gap 报告），只评估不决策 | 必做（与 §17.9 配套，v0.16.0+） |
+| kickoff-context-assembler | 种子提示 | S1 上下文简报组装（消除重复注入） | 建议做 |
+| compound-moment-detector | 种子提示 | 复利时刻内容判断（结构信号由编排层规则兜底） | 缓做 |
+
+> **v0.7 会审修订**：
+> - **B4**：prototype-reviewer 对齐 code-reviewer 模式——不给 Write 权限，审查报告写在 final response 中，由编排层落盘到 `prd/vN/prototype-auto-review.md`。保证只读独立性。（注：Claude Code 的 tools 白名单只能控制工具可用性，Write 无路径级强制能力，设计文档如实标注。）
+> - **B5**：change-split-auditor 和 cross-change-consistency-checker 从种子提示升级为插件 agent（判据：提示词>30 行 / 需固定 tools 白名单 / 跨 skill 复用）。晋升通用判据：满足任一即升插件 agent——提示词>30行 / 需固定 tools / 跨 session 或多 skill 复用 / 需独立审计。
+> - **B6 跨 skill 集成规约**：凡跨 skill / skill↔agent 的行为分支与状态传递，一律使用**显式入参或字面标记**（frontmatter key / 固定段落标题），禁止依赖 LLM 语义推断对方状态。实例：ce-brainstorm 接受 `mode: orchestrated | standalone` 显式参数；kickoff-context-assembler 在简报中写入 `solutions_injected: true` 字面标记。
+
+**横展影响（P1 设计须一并处理）**：
+- ce-brainstorm Phase 3.5 需条件化：接受 `mode: orchestrated` 显式参数，被 orchestrator 调用时跳过（循环归编排层），直接调用时保留
+- prototype skill 的审查职责外迁到 prototype-reviewer
+- prototype-auto-review.md 写入权归编排层（agent 只读，报告写在 response）
+- 设计增强方案第十五章须同步更新
+
+### 17.9 动态重规划机制（v0.7 新增）
+
+> **设计目标**：从"固定管道"升级为"默认路径 + 任意时刻可重规划"。复利不止回写知识，还回写工作流模式（L2，advisory 级）。
+
+#### 17.9.1 State 对象模型
+
+orchestrator 引入 `.workflow-orchestrator.yaml` 持久化状态文件（对标变更级 `.spec-superflow.yaml`）：
+
+```yaml
+schema_version: 1                     # schema 版本号
+workflow_phase: S2                    # 当前阶段
+phases:                               # 各阶段状态
+  - { id: S1, status: completed, started_at: "...", completed_at: "...", artifacts: [...] }
+  - { id: S2, status: active, started_at: "...", artifacts: [...] }
+  - { id: S3, status: pending }
+custom_phases: []                     # reserved, Phase 2 (v0.15.0)
+replan_log:                           # 重规划履历
+  - { seq: 1, trigger: "用户要求跳过原型", before: "S2→S3", after: "S2(skip-proto)→S3", approved_by: user }
+change_dag:                           # change 依赖图（S4 后填充）
+  - id: change-1
+    spec_dir: specs/change-1/
+    state_file: specs/change-1/.spec-superflow.yaml
+    depends_on: []
+    priority: 1
+    parallel_group: A                 # 同组可并行
+    status: executing                 # 从 .spec-superflow.yaml 同步
+  - id: change-2
+    depends_on: [change-1]
+    status: pending
+prd_version: v1                       # PRD 版本
+```
+
+**状态枚举**：`pending | active | completed | skipped | blocked | aborted`
+
+**状态转换规则**：
+- 正向：pending → active → completed
+- 跳过：pending → skipped（用户确认）
+- 回退：active → pending（**必须写 replan_log**）
+- 阻塞：active → blocked → active（S5 检测到 change 卡死）或 blocked → aborted
+- 终止：任何非 completed 状态 → aborted（用户放弃编排）
+
+**双层冻结语义**（v0.7 会审修订，解决 §17.3 与 §17.9.1 矛盾）：
+- `frozen_downstream`（S2 完成时设置）：下游阶段（S3/S4/S5）不可直接修改 PRD，只能通过回退到 S2 修改。**S3→S2 回退 = 临时解除 frozen_downstream**，S2 重新完成后恢复。
+- `frozen_absolute`（用户显式确认或 vN+1 启动时设置）：任何修改都必须升版 vN+1。
+- **单一真相源**：frozen 状态以 `prd/vN/prd.md` frontmatter 为准，yaml 只存指针不重复存 frozen 值，避免双写不一致。
+
+**yaml 定位**：`.workflow-orchestrator.yaml` 是编排层的**持久化记忆 / checkpointer**（对标 LangGraph Checkpointer），跨阶段、跨 session 的状态一律读 yaml 而非依赖上下文记忆。S1 路由器的"继续执行"入口通过 yaml + 制品实际存在性双重校验重建状态（幂等恢复）。产品级 yaml 只由 orchestrator 单写，各 change 只写自己的 `.spec-superflow.yaml`，避免并发写冲突。
+
+#### 17.9.2 任意时刻输入处理
+
+**三级意图分类器**（宁可漏判，不可误触发）：
+
+| 级别 | 方法 | 触发条件 | 动作 |
+|------|------|---------|------|
+| L1 关键词 | 零成本匹配（**宾语须为 orchestrator 阶段或 change 全局结构**） | "改阶段顺序/跳过原型阶段/插入一个评审阶段/回退到S2/重规划工作流" | → 重规划评估 |
+| L2 语义分析 | LLM 判断 | 对阶段顺序的不满 / 对缺失环节的要求 / 对已完成产出的否定 | → **建议模式**：输出轻量提示"你似乎想调整工作流？输入'重规划'进入重规划模式"，**不自动进入评估流程** |
+| L3 默认 | — | 不改变工作流结构 | 普通问答处理 |
+
+> **v0.7 会审修订**：L1 增加上下文限定——"跳过这个功能"（PRD 内容讨论）不触发，"跳过原型阶段"（orchestrator 阶段）才触发。L2 从"自动触发"降级为"建议模式"（v0.7 会审 B2），将触发权交还用户，消除"随便说句话会不会改变工作流"的焦虑。
+
+**重规划评估流程**：
+```
+边界检查（红/绿/灰区）→ 影响分析 → before/after 对比呈现
+  → DP-R 用户确认（硬门禁，阻塞式）→ 执行 + 写入 replan_log
+  → 触发复利捕获（workflow_pattern）
+```
+
+#### 17.9.3 重规划边界
+
+| 区域 | 范围 | 规则 |
+|------|------|------|
+| **绿区（可重规划）** | 调整未完成阶段顺序；跳过未完成阶段；插入新阶段；修改未执行 change 的优先级/依赖；S4 后新增 change | 用户确认即可 |
+| **红区（不可重规划）** | 修改已冻结 PRD（只能升版）；删除已执行 change（只能走 abandoned）；重做已完成阶段；改变已合并 delta spec | 硬阻断 |
+| **灰区（二次确认）** | 回退 active 阶段（半成品可能丢失）；修改有下游执行的 change 依赖图 | 需二次确认 + 影响说明 |
+
+#### 17.9.4 工作流模式复利 L2
+
+与现有 solutions 体系完全兼容，新增 `type: workflow_pattern`：
+
+| 字段 | 值 |
+|------|---|
+| type | `workflow_pattern`（新增值） |
+| domain | `workflow`（固定） |
+| phase | `cross-phase`（固定） |
+| pattern_kind | stage-insertion / stage-skip / reorder / change-split-adjust / gate-adding |
+| outcome | positive / negative / neutral |
+| confidence | 浮点数（0.3 基础 + occurrences×0.1 + outcome 加成） |
+| occurrences | 出现次数 |
+
+**捕获时机**：DP-R 确认的重规划、阶段回退、用户主动反馈、PRD 升版、change closing 回顾。
+
+**注入时机**（全部 advisory 级，不阻断）：
+- S1 路由时：历史模式 top-3（confidence ≥ 0.5）
+- 阶段转换时：applicable_when 匹配
+- DP-R 触发时：类似历史重规划
+
+**置信度阈值**：≥0.7 强建议 / ≥0.5 弱建议 / <0.5 仅记录 / ≤0.1 淘汰。晋升：confidence ≥ 0.7 且 occurrences ≥ 3 → 建议固化到 SOP。
+
+#### 17.9.5 行业参考（调研确认）
+
+| 框架/方法论 | 借鉴点 |
+|------------|--------|
+| **LangGraph** | interrupt() + Checkpointer 模式。**注意对标映射**：`.workflow-orchestrator.yaml` + S1 恢复协议 = Checkpointer（持久化状态 + 跨 session 恢复）；DP-R = human-in-the-loop guard（会话内决策点），**不是** interrupt()（Claude Code 无进程级暂停恢复能力） |
+| **ACM/CMMN** | "偏离即信号" + Sentry-Gated Activation：不强制步骤顺序，通过前置条件控制活动可用性。replan_log 是 Case Event Log 的 LLM 简化版 |
+| **CrewAI/AutoGen** | 均不支持工作流结构级自改进——team-flow 的 L2 设计在此方向上领先 |
+| **Process Mining** | 无现成自改进引擎，最接近的是 Celonis "分析→人决策→手动修改"模式 |
+
+#### 17.9.6 实施路线图
+
+| 阶段 | 版本 | 内容 | 依赖 |
+|------|------|------|------|
+| Phase 0 | v0.14.0 | `.workflow-orchestrator.yaml` 状态持久化 | 无（一切前提） |
+| Phase 1 | v0.14.0 | DP-R 决策点 + 阶段跳过/插入/重排 + replan_log | Phase 0 |
+| Phase 2 | v0.15.0 | 三级意图分类器 + 红/绿/灰区边界检查 | Phase 1 |
+| Phase 3 | v0.15.0 | workflow_pattern 注册 + 捕获 + INDEX.md 兼容 | Phase 1 |
+| Phase 4 | v0.16.0 | confidence 模型 + 三处注入 + 用户反馈回写 | Phase 3 |
+| Phase 5 | v0.17.0+ | 高 confidence 模式固化 SOP + 失效淘汰 | Phase 4 |
+
+**关键约束**：Phase 0 是一切前提；所有 L2 注入为 advisory 级，与现有复利约束一致；L3（自动工作流修改）明确不做，人在环。
+
+### 17.10 原型自动评审机制（v0.7 新增）
+
+> **设计目标**：原型设计完成后，系统自动检查 PRD vs 原型一致性，通过后再进入人工评审。解决当前"自审自判"的质量风险。
+
+**现有流程的 4 个核心缺陷**：
+1. 自审自判：同一 LLM 会话既写 PRD、又产出原型、又做审查（锚定效应）
+2. 检查清单过于粗糙：仅 3 个问题，无结构化对照
+3. 没有 pass/fail 门禁：审查结果无阻断机制
+4. 未区分自动评审与人工评审
+
+**修订后流程**（Phase 3.5.3 拆分为 3.5.3a + 3.5.3b）：
+
+```
+原型产出完成
+  → 3.5.3a 自动评审（prototype-reviewer agent，独立上下文）
+    → 输出一致性报告（prd/vN/prototype-auto-review.md）
+    → FAIL（Critical > 0）→ 修正 → 重新自动评审（≤3 轮）
+    → PASS_WITH_WARNINGS → 警告项交人工裁定
+    → PASS → 进入人工评审
+  → 3.5.3b 人工评审（聚焦：美观/体验/品牌/信息密度）
+    → 通过 → 冻结
+    → 不通过 → 修正 → 回 3.5.3a
+```
+
+**6 维度检查**：
+
+| 维度 | PRD 基准源 | 检查内容 | 严重级别 |
+|------|-----------|---------|---------|
+| D1 页面完整性 | §4 画面原型 | 每个页面是否有对应 HTML + 导航链接 | Critical |
+| D2 功能覆盖 | §7 系统功能清单 | 每个 UI 功能是否有对应交互元素 | Critical |
+| D3 字段一致性 | §8.4 功能模块 | 字段是否在表单中体现 | Important |
+| D4 导航一致性 | §8.2.2 画面交互 | 页面跳转是否与 flow.md 一致 | Important |
+| D5 术语一致性 | §6 业务术语 + CONCEPTS.md | 标签/术语是否一致 | Minor |
+| D6 状态覆盖 | §8.2.3 异常状态 | 空/错误/加载状态是否体现 | Important（**可标 N/A**：自包含原型用静态 mock，加载/空状态结构性无法体现时标 N/A 不阻断） |
+
+> **v0.7 会审修订（B7）**：
+> - **判定标准柔性化**：FAIL **仅由 Critical 触发**；Important 累计为 warning 交人工裁定，不直接 FAIL。避免 D6 等维度的误报卡死循环。
+> - **D6 N/A 机制**：自包含 HTML 原型结构性无法体现的状态（如动态加载），允许标 N/A，借鉴 §16.5 e2e 的"维度条件触发 + N/A 不阻断"机制。
+> - **收敛检测**：连续两轮不一致项集合无缩小（修正无效/误报死循环）→ 立即转人工，不等满 3 轮。
+> - **人工介入 = 编排层阻塞确认**（非 subagent，因 subagent 不能 AskUserQuestion），呈现争议项 + 选项（接受现状/指定修正方向/升版/放弃原型）。
+
+**判定标准**（v0.7 会审修订）：
+- **PASS**：Critical=0 且 Important=0
+- **PASS_WITH_WARNINGS**：Critical=0 且 Important>0（警告项交人工裁定，不阻断）
+- **FAIL**：**仅当 Critical>0**（Important 误报不触发 FAIL）
+
+**实现形式**：独立 `prototype-reviewer` agent（只读审查员，对齐 code-reviewer 模式）
+- tools: Read, Bash, Grep, Glob（**无 Write**，报告写在 response，编排层落盘到 `prd/vN/prototype-auto-review.md`）
+- 独立上下文运行，未参与 PRD/原型产出（规避锚定）
+- 两阶段检查：Pre-check（Bash 结构化预检，D1/D4 机械化）+ Deep-check（LLM 六维度语义对比，D2/D3/D5/D6 标注为"建议级，误报可被人工推翻"）
+
+**自动评审不能检查的维度**（只能人工评审）：美观度、交互体验、品牌一致性、响应式适配、动效合理性、信息密度、无障碍访问。
+
+**复利集成**：每次自动评审发现不一致并修正后，触发 `ssf solutions capture --phase prd --type pitfall`。
+
+### 17.11 与 workflow-start 的边界（不变）
 
 ```
 workflow-orchestrator（产品级）
@@ -631,32 +1003,17 @@ release-archivist（closing）
 workflow-orchestrator 收到 change 完成通知（通过状态文件检测）
 ```
 
-### 17.4 ce-plan 职责收窄（v0.5 修正）
-
-| v0.3 ce-plan | v0.5 ce-plan |
-|-------------|-------------|
-| Implementation Units 细到文件级 | **change 拆分方案**（每 change 的 scope + 依赖） |
-| 每 unit 含 Files/Approach/Test scenarios | **change 间依赖图**（DAG） |
-| 一人公司模式含完整技术设计 | **整体技术方向**（技术选型、架构策略，不含文件级细节） |
-| 与 spec-writer 高度重叠 | **明确分工**：ce-plan 定"做什么、什么顺序"，spec-writer 定"怎么做" |
-
-ce-plan 产出 plan.md 的核心章节：
-```markdown
-## Change 拆分方案
-| change | scope | 依赖 | 优先级 | 预估复杂度 |
-## 技术方向（一人公司模式）
-## 风险与依赖
-## 验收策略
-```
-
-**不再产出**：Implementation Units、Files 列表、Test scenarios（这些归 spec-writer）。
-
-### 17.5 skill 定义
+### 17.12 skill 定义（v0.7 修订）
 
 ```yaml
 ---
 name: workflow-orchestrator
-description: 产品级工作流编排器。编排 ce-brainstorm→原型内循环→ce-plan→拆change→分发到 spec-superflow。当用户提出模糊需求、需要从头开始产品级流程时使用。不替代 workflow-start（变更级），而是其上游编排层。
+description: >-
+  产品级工作流编排器，产品级新需求的首选入口。从模糊需求到可执行 change
+  的全流程编排：需求澄清、PRD 产出（含原型验证）、实施计划、change 拆分
+  与分发。作为产品级唯一入口，内部路由到各阶段 skill。
+  不适用于：已有 change 内的操作（用 workflow-start）、独立工具操作
+  （ce-ideate/ce-strategy/prototype 等）、纯架构设计（用 architecture-design）。
 ---
 ```
 
@@ -711,12 +1068,14 @@ docs/solutions/
 ---
 phase: prd          # 阶段标签
 domain: auth        # 领域标签
-type: pitfall       # pitfall | pattern | decision | insight
+type: pitfall       # pitfall | pattern | decision | insight | workflow_pattern
 severity: high      # high | medium | low
 date: 2026-07-15
 source: change-id   # 来源 change（晋升时保留）
 ---
 ```
+
+> **v0.7 新增 `workflow_pattern` 类型**（详见 §17.9.4）：用于捕获工作流模式复利（L2）。扩展字段：`pattern_kind`（stage-insertion/stage-skip/reorder/change-split-adjust/gate-adding）、`outcome`（positive/negative/neutral）、`confidence`（浮点数）、`occurrences`（出现次数）。`domain` 固定为 `workflow`，`phase` 固定为 `cross-phase`。扩展字段只存在经验文件 frontmatter 中，INDEX.md 保持 7 列格式不变（confidence 映射到 severity 列：≥0.7→high, ≥0.5→medium, <0.5→low）。
 
 ### 18.3 阶段感知注入
 
@@ -1037,7 +1396,27 @@ description: 既有项目接入初始化器。在首次使用 team-flow 时执�
    - 与 workflow-orchestrator 分层（bootstrap 管"从哪里开始"，orchestrator 管"做什么"）：✅ 已确认。
    - 对全新项目可跳过：✅ 已确认。
    - 手动触发（/workflow-bootstrap）：✅ 已确认。
+9. **orchestrator v2 重设计（v0.7 新增）**：
+   - 反馈环路（vN 内修订 + 变更履历，非升版）：✅ LT 确认（2026-07-24）。
+   - PRD vN = 迭代版本，迭代内变更不升版：✅ LT 确认（2026-07-24）。
+   - 增量入口（S1 路径路由器，5 种入口路径）：✅ LT 确认。
+   - 原型循环上提到 orchestrator（思路B）：✅ LT 确认。
+   - 原型自动评审（PRD 一致性检查 → 人工评审）：✅ LT 确认，机制待调研。
+   - S3 保留 + ce-plan pipeline 快速路径：✅ 调研确认（S3 不可取消）。
+   - S4 拆分质量自检 + 并行策略：✅ LT 确认。
+   - S5 多 change 必选化：✅ LT 确认。
+   - description 从"列举步骤"改为"描述能力"：✅ LT 确认。
+   - 编排层只编排，执行委托 subagent：✅ LT 确认，拆分方案待调研。
+   - 动态重规划（state 对象 + 任意时刻输入）：✅ 初版设计完成（§17.9），待实施（P2-4）。
+   - 工作流模式复利 L2（type: workflow-pattern）：✅ 初版设计完成（§17.9.4），待实施（P2-4）。
+10. **触发域分层（v0.7 新增）**：
+    - 四层触发域（接入层/产品级/变更级/步骤级）：✅ 已实施（2026-07-24）。
+    - 4 个 SKILL.md description 改写：✅ 已实施。
+    - AGENTS.md 触发域分层表：✅ 已实施。
+11. **身份统一规划（v0.7 新增）**：
+    - spec-superflow → team-flow 全链路重命名方案：🔲 待实施（P1-6，目标 v1.0.0）。
+    - ce- 前缀保留 + 文档化命名来源（方案C）：✅ 已实施（2026-07-24）。
 
 ---
 
-*v0.3 由 copilot(阿通) 基于 architecture-design skill + 四方专家会审（v0.2）+ 第 13–16 轮原型调研，全量修订；v0.5 由 CC 基于 LT 第 17 轮核对（实现 vs 设计缺口分析）+ 四项核心修订（原型内循环 + 产品级编排 + ce-plan 收窄 + 复利贯穿），全量修订；v0.6 由 CC 基于 LT 第 18 轮需求（既有项目接入）+ workflow-bootstrap 设计，增补修订。*
+*v0.3 由 copilot(阿通) 基于 architecture-design skill + 四方专家会审（v0.2）+ 第 13–16 轮原型调研，全量修订；v0.5 由 CC 基于 LT 第 17 轮核对（实现 vs 设计缺口分析）+ 四项核心修订（原型内循环 + 产品级编排 + ce-plan 收窄 + 复利贯穿），全量修订；v0.6 由 CC 基于 LT 第 18 轮需求（既有项目接入）+ workflow-bootstrap 设计，增补修订；v0.7 由 CC 基于 LT 第 19 轮设计讨论（orchestrator v2 重设计 + 触发域分层 + 身份统一规划 + S3 必要性调研 + 动态重规划 + subagent 拆分），重大修订。§17.8/§17.9/§17.10 已完成初版设计（经四方专家会审修订），待 P2 实施时细化。*

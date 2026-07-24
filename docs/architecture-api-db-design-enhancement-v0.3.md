@@ -28,9 +28,13 @@
 ## 三、总体闭环（SOP 步骤）
 ```
 模糊需求
- └─[ce-brainstorm→ce-plan 就地 enrich]→ prd/vN（PRD 有版本，requirements-only → implementation-ready）
-       │  注：演进是 ce-brainstorm→ce-plan 的"就地 enrich"，PRD 完备态在 enrich 之后
-       │       PRD 升版→新 git 分支；原型/代码各一份，git 分支隔离版本
+ └─ce-brainstorm→ prd/vN/prd.md（业务要件，定义 WHAT，从业务角度定义需求）
+       │  注：PRD 有版本 v1→v2→v3，git 分支隔离
+       ▼
+ └─ce-plan→ prd/vN/plan.md（实施方案，定义 HOW，基于 PRD 制定实施计划）
+       │  注：ce-plan 读取 PRD 作为输入，产出独立的方案文档（与 PRD 同路径）
+       │       支持两种模式：业务模式（产品视角）/ 一人公司模式（技术视角）
+       │       PRD + plan 两份产物共同作为后续阶段的输入
        ▼
 全局 prototype/（一份，与 PRD 同级，UI 契约真相源）◀── 增量回写 ──┐
        │                                                       │
@@ -56,8 +60,10 @@ spec-superflow change（一份 PRD 可拆多 change）：               │
 ## 四、产物结构（全量）
 ```
 项目根/
-├── prd/                    # 【全局层，与 prototype 同级】PRD，有版本 v1→v2→v3（git 分支隔离）
-│   └── vN/prd.md
+├── prd/                    # 【全局层，与 prototype 同级】PRD + 实施方案，有版本 v1→v2→v3（git 分支隔离）
+│   └── vN/
+│       ├── prd.md          # 业务要件（ce-brainstorm 产出，定义 WHAT）
+│       └── plan.md         # 实施方案（ce-plan 产出，定义 HOW，支持业务/一人公司双模式）
 ├── prototype/              # 【全局层，一份，git 分支隔离】原型系统（见第十五章 §15.3）
 │   ├── index.html          # 入口 / 全局导航
 │   ├── pages/              # 多页面（首页/列表/详情/设置…）
@@ -159,7 +165,7 @@ tags: [db, <领域>]
 |---|---|---|
 | 1 | 全局锚点（STRATEGY.md, Anchor not plan） | → `docs/architecture/` 作**技术架构单一事实源**；业务策略(BA/STRATEGY.md)与技术架构(IA/AA/TA)是两份独立文档、互相链接不混写——填补 compound 无技术架构产物的缺位（非"修正其错误"）；ARCHITECTURE.md 是**瘦锚点**(短稳 what&why)，非评审交付巨著 |
 | 2 | 结构化复利回写 | → 架构专用 frontmatter + 双视图回写（原则借鉴，非套用 schema.yaml） |
-| 3 | requirements-only→implementation-ready | → **ce-brainstorm→ce-plan 就地 enrich** 演进（PRD 完备态在 enrich 后） |
+| 3 | requirements-only→implementation-ready | → **ce-brainstorm→ce-plan 独立文档** 演进：ce-brainstorm 产出 PRD（业务要件，定义 WHAT），ce-plan 基于 PRD 产出独立的实施方案（定义 HOW），两份产物共同作为后续输入。ce-plan 支持两种模式：业务模式（产品视角，不关心技术选型）/ 一人公司模式（技术视角，补充技术方案） |
 | 4 | one learning per run + 并行 | → 一次一变更 delta 回写 |
 | 5 | pulse 大环 | → （增强项）架构健康度脉冲，后续 |
 
@@ -322,7 +328,84 @@ PRD(vN) ──拆解──┬─▶ change-1 ─┐
 
 ---
 
-## 十六、决策落实状态
+## 十六、E2E 测试集成（v0.4 设计修订）
+
+> 设计修订号 v0.4（打包版本 0.10.0）。详细方案、双专家评审与决策记录见 `docs/e2e-integration-design.md`。来源：gtmc `acceptance-test` SKILL.md v3.0.0 + `test-verifier.md`；spoko.space《AI & Playwright E2E Testing 2026》。
+
+### 16.1 决策记录
+| 维度 | 决策 |
+|---|---|
+| 原型框架 | 维持 HTML 自包含 + 强化 `data-testid` 契约（守 v0.3 零依赖/可离线） |
+| E2E 挂载 | 独立 `e2e` skill（17→18；可选 overlay，不进核心状态机） |
+| `data-testid` 规范 | 搬 gtmc 命名；选择器优先级统一 spoko；元素级仅关键锚点 |
+| 覆盖率门禁 | 分级：原型期放宽 / 集成期严格照搬 gtmc |
+| AC 提取 | 门禁按维度条件触发 + 关键字回退（解除"可选→强制"陷阱） |
+| 验收证据归属 | `release-archivist`（非 `ce-proof`；`ce-proof` 是 Proof 编辑器） |
+
+### 16.2 背景与缺口
+- 现有测试纪律：`build-executor` 的 TDD Iron Law + SDD + review gate + 8 态状态机；`spec.md` 的 `#### Scenario:` 是"可测行为"源，但仅作 spec 内容校验，**未自动执行为 Playwright**。
+- 核心缺口：**spec 场景 / 验收标准 → 可执行 E2E (Playwright) 的桥接未自动化**。gtmc 的 `acceptance-test` + `test-verifier` 是此桥接的完整参考实现（AC 驱动黑盒 + 机械覆盖率 + Playwright 生成）。
+
+### 16.3 核心约束
+- **零依赖/可离线**：`data-testid` 为纯 HTML 属性，不引入 JS/CSS/构建/Playwright；Playwright 仅进**用户项目**，不进插件。
+- **通用不固化框架**：E2E 靠 `data-testid` 契约跨框架复用，不假设 Vue/React。
+
+### 16.4 data-testid 契约
+- **命名层级**：场景级 `S-{nn}-{slug}`、页面级 `P-{xx}-{slug}`、元素级 `{语义名}`（如 `create-btn`）。
+- **选择器优先级**：`getByRole` > `data-testid` > `id` > `getByLabel` > CSS/XPath（禁用于新测试）；`data-testid` 仅用于动态/hydration 边界；禁止 `waitForTimeout`。
+- **打标纪律**：场景/页面级必带；元素级仅**关键交互锚点**（提交、主操作、状态切换）带，内部优先 `getByRole`/`getByText`（避免过度打标）。
+- **可选开启**：项目 config `prototype.e2e: true` 时强制；避免无测试需求项目被迫加 testid。
+- **契约治理**：`execution-contract.md` 记录 UI 契约；提供 testid checker 比对原型与实际代码两侧 testid 集合，漂移即报警。
+
+### 16.5 spec → Playwright 映射
+- **提取源**：`#### Scenario:`（→ HP）/ 可选 `##### Exception:`（→ EX）/ `##### State:`（→ ST）/ `##### Boundary:`（→ BND）。
+- **解除"可选→强制"陷阱**：① 维度条件触发——仅含某维度标签才考核该维度，未含标 `N/A` 不阻断；② 关键字回退——未打标签时从 Scenario 文本提取 error/invalid/fail/边界 等作 EX/ST/BND 来源。二者至少取一，保向后兼容。
+- **AC 公式**：`Total = HP×1 + EX×2 + ST×2 + BND×1`（ST-invalid 若已被 EX 覆盖则去重）。
+- **阶段映射**（不用 gtmc 编号）：bridging/prototype（验证可执行性）→ executing（集成）→ closing（验收，release-archivist gate）。
+
+### 16.6 门禁分级
+| 指标 | 原型期（验证可执行性，静态 mock） | 集成期（实际代码） |
+|---|---|---|
+| AC 覆盖率 | ≥ 80%（HP 必测） | ≥ 95% |
+| 异常 EX | 有则测、无则带说明（不阻断） | ≥ 80% |
+| 状态 ST | 有则测、无则带说明（不阻断） | ≥ 90% |
+| 边界 BND | 有则测、无则带说明（不阻断） | ≥ 75% |
+| 阻断级别 | AC<80% = BLOCKER | AC/EX<门槛 = BLOCKER；ST/BND = WARNING |
+
+门禁随被测体成熟度**单调递增**；原型 mock 结构性做不到 EX/ST 全覆盖，强行照搬会产出虚假 BLOCKER。
+
+### 16.7 e2e skill 设计
+- frontmatter：`name: e2e` / `user-invocable: true` / 用法 `/e2e [原型|集成|验收] [spec路径]`。
+- **执行流程（5 步）**：① 确定测试类型；② AC 提取与分类生成矩阵（总测试数 ≥ AC×1.5）；③ 调用 `test-verifier` 生成脚本；④ 执行与报告（AC 覆盖率/四维/类型分布/未覆盖/根因）；⑤ 覆盖率审计（分级门槛判定 BLOCKER/WARNING）。
+- **落盘位置（统一 `e2e/`，不放 `prototype/`）**：`playwright.config.ts` 的 `projects`（baseURL）切被测体——`prototype` project → http-server 托管 HTML；`integration` project → 真实应用。脚本一致，**仅切地址 + 少量选择器/断言适配**（高重叠复用，非零触碰；原型绿 ≠ 集成绿）。
+
+### 16.8 test-verifier 执行层（MVP 子集）
+- **保留**：AC 深度分析（4 类提取 + 分级门禁）、选择器纪律、E2E 决策矩阵（轻量）、执行与报告。
+- **移交 `release-archivist`**：4 级制品验证（L1 存在→L4 数据流；设计→实现追溯）。
+- **DEFER / 归 `prototype-reviewer`**：8 维健康评分、每页 7 点视觉走查（需 axe/Lighthouse，不匹配自包含原型 MVP）。
+
+### 16.9 对现有 skill 影响面
+| Skill | 改动 |
+|---|---|
+| `prototype` | 补 `data-testid` 产出（场景/页面级必带 + 关键锚点；config 可选开启；零依赖声明） |
+| `build-executor` | 不改（TDD 管单测；E2E 独立） |
+| `ce-proof` | 不改（Proof 编辑器，与验证无关） |
+| `release-archivist` | 接入 e2e 报告 + 4 级制品比对（closing 验收 gate） |
+| `architecture-design` | API/DB 设计文档供制品比对使用 |
+| `spec-writer` | specs 规则补可选子标签说明；补回归用例 |
+| `design-system`（=模板/项目 design-system.md，**非 skill**） | 不在 9 段视觉 schema 加测试段；testid 契约只置 `execution-contract.md` |
+
+### 16.10 实施状态（v0.4）
+- ✅ 新建 `skills/e2e/SKILL.md` + `skills/e2e/references/test-verifier.md`
+- ✅ 改 `prototype/SKILL.md`（data-testid 契约段）
+- ✅ 改 `spec-writer/SKILL.md`（可选子标签 + 回归用例）
+- ✅ 改 `release-archivist/SKILL.md`（接入 e2e + 4 级制品比对）
+- ✅ `plugin.json` "17 skills" → "18 skills"
+- ⏳ 待用户在 Claude Code 跑 `npm test` / `npm run validate` 验证插件不因新增 skill 破损
+
+---
+
+## 十七、决策落实状态
 1. **全局文档组织**：✅ 已定——起步即按 bounded context 分目录（第八节）。
 2. **落地节奏**：✅ 已定——初期即全量铺开（第十四节）。
 3. **技术锚点定性**：✅ 已定——瘦锚点、与 STRATEGY.md 分离补位；设计影响与高质量可拓展保障见 6.1。
