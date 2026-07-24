@@ -294,6 +294,8 @@ P1 设计 → P2 实施 → P3 验证 → P4 同步 → P5 提交
 | v0.12.0 | **治理债务清理**          | ① 身份命名统一（team-flow vs spec-superflow） ② AGENTS.md 同步到 v0.11.0 ③ 版本号硬编码修复（74 处 npx 引用） ④ skill 计数全链路一致 ⑤ check-versions 扩展（计数 + npx 引用校验）                      | ✅ 2026-07-24 完成       |
 | v0.13.0 | **渐进式披露 + Agent 化** | ① ce-compound / ce-plan SKILL.md 拆分到 references/（控制在 150 行内） ② code-reviewer / bug-investigator 改为 agent ③ 13 个无 references/ 的 skill 补充支撑文件                   | ✅ 2026-07-24 完成       |
 | v1.0.0  | **成熟版**             | ① 触发词去重（分层触发域，方案C） ② PreToolUse hook 执行期状态守护 ③ "ce-" 前缀正名（保留+文档化，方案C） ④ 设计增强方案 v1.0 全量定稿 ⑤ 身份统一 spec-superflow→team-flow（P1-6） ⑥ orchestrator 设计优化（反馈环路+增量入口） | 🔲 进行中（①②③已完成，④⑤⑥待实施） |
+| v0.16.0+ | **原型生成体系升级**       | 学习 `docs/external-references/open-design`（nexu-io/open-design 原型生成体系，含 skill、设计系统、生成流程），吸收其方法论升级 team-flow 的 prototype 设计能力（设计系统 schema / 原型生成质量 / 组件体系） | 🔲 规划中（参考库已引入，待检出学习） |
+| v1.x    | **项目级差异化配置**       | 工作流编排 + 原型设计系统支持**项目级差异化配置**；配置优先级：**项目级配置 > plugin 内置默认**。扩展现有 config 注入（`prd.template`/`prototype.designSystem`/`prototype.entry`）到工作流 SOP/阶段开关/设计系统，形成统一的分层配置体系 | 🔲 规划中 |
 
 
 ## 待办列表
@@ -339,6 +341,8 @@ P1 设计 → P2 实施 → P3 验证 → P4 同步 → P5 提交
 | P2-3 | 13 个 skill 补 references/：3 个已填充内容（workflow-start/build-executor/release-archivist），10 个目录已就绪 | ✅ 2026-07-24      | v0.13.0 | 来源：v0.11.0 设计评审 W1                                       |
 | P2-4 | 动态重规划机制调研：① 运行时提问动态重组工作流（突破固定闸点限制） ② 复利回写工作流自身（harness 自改进，不止回写知识）                           | ✅ 调研完成 2026-07-24 | v1.0.0+ | 来源：外部反馈，设计已写入 v0.7 §17.9，实施分 Phase 0-5（v0.14.0-v0.17.0+） |
 | P2-5 | 修复 8 个既有测试失败（cmd-install-workbuddy / 执行控制面 #45#47 文档 / marketplace 发布文档 / 模型 profile 文档） | 🔲 待实施 | v0.16.0 | 来源：v0.15.0 P3 校验发现（git stash 对照确认为既有技术债，非本次引入） |
+| P2-6 | 原型生成体系升级：检出并学习 `docs/external-references/open-design`（nexu-io/open-design，含 skill/设计系统/生成流程），吸收方法论升级 prototype 设计能力 | 🔲 规划中 | v0.16.0+ | 来源：LT 指示（2026-07-25），参考库已 clone（空壳，待检出） |
+| P2-7 | 项目级差异化配置体系：工作流编排 + 原型设计系统支持项目级配置，优先级「项目级 > plugin 内置默认」；扩展现有 config 注入到工作流 SOP/阶段开关/设计系统 | 🔲 规划中 | v1.x | 来源：LT 指示（2026-07-25），现有 `spec-superflow.config.json` 注入（prd.template/prototype.*）为基础 |
 
 
 ### P3（低优先级，时机成熟再做）
