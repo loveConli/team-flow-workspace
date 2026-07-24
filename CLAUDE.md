@@ -166,6 +166,28 @@ CONCEPTS.md        领域词汇
 1. **子仓库**：升级 plugin 版本号（`npm version <new> --no-git-tag-version`，自动同步所有文件）+ 提交变更
 2. **主项目空间**：更新 `CLAUDE.md`（版本号、skills 数量、SOP、产物结构、命令等）+ 提交变更
 
+## 插件迭代工作流（强制规则）
+
+每次 team-flow 插件迭代（新增/修改 skill、agent、hook、command、SOP 等）必须按以下五阶段执行：
+
+```
+P1 设计 → P2 实施 → P3 验证 → P4 同步 → P5 提交
+```
+
+| 阶段 | 动作 | 工具 |
+|------|------|------|
+| **P1 设计** | 更新设计增强方案（重大→新版本文件，小幅→当前版本修订）+ LT 确认决策 | — |
+| **P2 实施** | 新 skill→`/plugin-dev:skill-development`；新 agent→`/plugin-dev:agent-development`；新 hook→`/plugin-dev:hook-development`；新 command→`/plugin-dev:command-development`；结构问题→`/plugin-dev:plugin-structure` | plugin-dev 技能集 |
+| **P3 验证** | ① `plugin-dev:plugin-validator` agent 全面校验 ② `plugin-dev:skill-reviewer` agent 审查新/改 skill ③ `npm run check-versions` ④ `npm test` | plugin-dev agent + npm |
+| **P4 同步** | 按下方「文档维护规范 · 迭代同步清单」逐项检查 + 更新 Roadmap 和待办列表 | 见文档维护规范 |
+| **P5 提交** | 子仓库 `npm version` + commit → 父仓库 commit | 见 Git 管理规则 |
+
+**约束**：
+- P1 未完成（设计文档未更新 / LT 未确认）→ 不进 P2
+- P3 的 check-versions 和 plugin-validator 是门禁，不通过 → 不进 P4
+- P4 同步清单有遗漏 = 迭代未完成
+- 新 SKILL.md ≤150 行，详细内容进 references/（渐进式披露）
+
 ## 文档维护规范（强制规则）
 
 ### 迭代同步清单
