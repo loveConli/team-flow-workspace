@@ -18,13 +18,14 @@
 | v0.15.0    | subagent 编排下沉 + 多需求状态治理 + PRD/Plan 规范修复（设计增强方案 v0.8）；3 新 agent、recon-probe.sh、prototype 内部编排器、冻结措辞 BUG 修复 | ✅ 2026-07-25 |
 | v0.16.0    | 会话交接 + 工作流反馈（设计增强方案 v0.8 §21）；2 新 skill（session-handoff/workflow-feedback）、6 个 references、release-archivist 收尾联动、P2-5 既有测试修复（421/421） | ✅ 2026-07-25 |
 | v0.17.0    | S4 路径修复（spec_dir→change_dir + 横展）+ S4 审计必选门禁 + P2-6 原型升级研究（open-design 方法论 + 19 项缺口 + 三波路线图）；421/421 测试全过 | ✅ 2026-07-25 |
+| v0.18.0    | 原型生成体系升级 Wave 1+2：种子模板+骨架库+craft 五件套+P0/P1/P2 checklist+reviewer craft 4 席 rubric+env-scout direction-picker+architect token 四层模型+guard 脚本 | ✅ 2026-07-25 |
 
 ## 规划中里程碑
 
 | 版本      | 里程碑                 | 核心内容                                                                                                                                                          | 状态                    |
 | ------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- |
 | v1.0.0  | **成熟版**             | ① 触发词去重（分层触发域，方案C） ② PreToolUse hook 执行期状态守护 ③ "ce-" 前缀正名（保留+文档化，方案C） ④ 设计增强方案 v1.0 全量定稿 ⑤ 身份统一 spec-superflow→team-flow（P1-6） ⑥ orchestrator 设计优化（反馈环路+增量入口） | 🔲 进行中（①②③已完成，④⑤⑥待实施） |
-| v0.16.0+ | **原型生成体系升级**       | 学习 open-design 方法论，升级 prototype 设计能力。研究 ✅ v0.17.0（升级提案已输出）；Wave 1 v0.18.0 / Wave 2 v0.19.0 / Wave 3 待反馈决策 | 🔲 Wave 1 待实施 |
+| v0.16.0+ | **原型生成体系升级**       | 学习 open-design 方法论，升级 prototype 设计能力。研究 ✅ v0.17.0；Wave 1+2 ✅ v0.18.0（合并实施）；Wave 3 待反馈决策 | ✅ Wave 1+2 已完成 |
 | v1.x    | **项目级差异化配置**       | 工作流编排 + 原型设计系统支持项目级差异化配置；配置优先级：项目级 > plugin 内置默认 | 🔲 规划中 |
 
 ## 待办列表
@@ -55,8 +56,8 @@
 | P1-8  | subagent 拆分规划：明确各阶段子代理分工，编排层只负责编排                                                                                                                         | 🔲 部分落地       | v1.0.0  | **§18.1 交接协议 + bootstrap/prototype/brainstorm 执行下沉 ✅ v0.15.0**；剩余 kickoff-context-assembler / replan-analyst / compound-moment-detector 待实施 |
 | P1-9  | ce-brainstorm / ce-ideate / ce-proof SKILL.md 拆分到 references/（415/402/346行→≤150行）                                                                                                             | 🔲 待实施       | v1.0.0  | v0.7 实施横展 + v0.16.0 校验横展发现 |
 | P1-10 | 新增 `session-handoff` + `workflow-feedback` skill。设计见 v0.8 §21 | ✅ 2026-07-25 | v0.16.0 | P1-P5 全流程完成 |
-| P1-11 | 原型 Wave 1：scaffold 升级（template.html + layouts.md 骨架库）+ craft 五件套 + P0/P1/P2 checklist 注入 builder/reviewer | 🔲 待实施 | v0.18.0 | 来源：P2-6 升级提案 |
-| P1-12 | 原型 Wave 2：token 四层模型 + reviewer rubric 扩展 + direction-picker + guard 脚本 | 🔲 待实施 | v0.19.0 | 来源：P2-6 升级提案 |
+| P1-11 | 原型 Wave 1：scaffold 升级（template.html + layouts.md 骨架库）+ craft 五件套 + P0/P1/P2 checklist 注入 builder/reviewer | ✅ 2026-07-25 | v0.18.0 | 来源：P2-6 升级提案 |
+| P1-12 | 原型 Wave 2：token 四层模型 + reviewer rubric 扩展 + direction-picker + guard 脚本 | ✅ 2026-07-25 | v0.18.0 | 来源：P2-6 升级提案（Wave 1+2 合并实施） |
 
 ### P2（改善，按节奏推进）
 

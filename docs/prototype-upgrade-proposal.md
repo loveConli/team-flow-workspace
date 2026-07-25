@@ -76,7 +76,7 @@ open-design 与 team-flow 共享最深层约束：
 
 ## 四、三波升级路线图
 
-### Wave 1（v0.18.0）—— 质量基线
+### Wave 1（v0.18.0）—— 质量基线 ✅ 已实施
 
 **目标**：builder 不从零写 CSS + AI 设计通病防线 + 评审从 PRD 合规升级为工艺质量。
 
@@ -91,7 +91,7 @@ open-design 与 team-flow 共享最深层约束：
 | 15 | section 节奏交替规则附 layouts.md | 同 #1 |
 | 19 | No filler 红线进 builder | prototype-builder agent 修改 |
 
-### Wave 2（v0.19.0）—— 评审深化 + 设计系统完整性
+### Wave 2（v0.18.0 合并实施）—— 评审深化 + 设计系统完整性 ✅ 已实施
 
 | 缺口# | 落地形态 | 改动文件 |
 |---|---|---|
