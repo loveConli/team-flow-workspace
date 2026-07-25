@@ -19,6 +19,7 @@
 | v0.16.0    | 会话交接 + 工作流反馈（设计增强方案 v0.8 §21）；2 新 skill（session-handoff/workflow-feedback）、6 个 references、release-archivist 收尾联动、P2-5 既有测试修复（421/421） | ✅ 2026-07-25 |
 | v0.17.0    | S4 路径修复（spec_dir→change_dir + 横展）+ S4 审计必选门禁 + P2-6 原型升级研究（open-design 方法论 + 19 项缺口 + 三波路线图）；421/421 测试全过 | ✅ 2026-07-25 |
 | v0.18.0    | 原型生成体系升级 Wave 1+2：种子模板+骨架库+craft 五件套+P0/P1/P2 checklist+reviewer craft 4 席 rubric+env-scout direction-picker+architect token 四层模型+guard 脚本 | ✅ 2026-07-25 |
+| v0.19.0    | Design-System 独立化：新增 design-system skill（23 skills）+ 用户主导交互创建（预填推荐+确认）+ 预览画廊 + 存储迁移 .team-flow/design-system/（base+变体）+ prototype 生态路径重构 | ✅ 2026-07-25 |
 
 ## 规划中里程碑
 
