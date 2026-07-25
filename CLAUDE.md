@@ -345,7 +345,7 @@ P1 设计 → P2 实施 → P3 验证 → P4 同步 → P5 提交
 | P2-2 | PreToolUse hook 执行期状态守护（14/14 测试通过，~22ms，防御性优先）                                              | ✅ 2026-07-24      | v1.0.0  | 来源：v0.11.0 设计评审 W5                                       |
 | P2-3 | 13 个 skill 补 references/：3 个已填充内容（workflow-start/build-executor/release-archivist），10 个目录已就绪 | ✅ 2026-07-24      | v0.13.0 | 来源：v0.11.0 设计评审 W1                                       |
 | P2-4 | 动态重规划机制调研：① 运行时提问动态重组工作流（突破固定闸点限制） ② 复利回写工作流自身（harness 自改进，不止回写知识）                           | ✅ 调研完成 2026-07-24 | v1.0.0+ | 来源：外部反馈，设计已写入 v0.7 §17.9，实施分 Phase 0-5（v0.14.0-v0.17.0+） |
-| P2-5 | 修复 8 个既有测试失败（cmd-install-workbuddy / 执行控制面 #45#47 文档 / marketplace 发布文档 / 模型 profile 文档） | 🔲 待实施 | v0.16.0 | 来源：v0.15.0 P3 校验发现（git stash 对照确认为既有技术债，非本次引入） |
+| P2-5 | 修复 10 个既有测试失败（cmd-install-workbuddy 计数 / cmd-config+cmd-runtime ANSI 色码 / 执行控制面 #45#47 文档 ×3 / marketplace 发布文档 ×2 / 模型 profile 文档）+ 27 处 npx @0.11.0 版本漂移 | ✅ 2026-07-25 | v0.16.0 | 来源：v0.15.0 P3 校验发现（既有技术债）；v0.16.0 遗留修复，421/421 全过 |
 | P2-6 | 原型生成体系升级：检出并学习 `docs/external-references/open-design`（nexu-io/open-design，含 skill/设计系统/生成流程），吸收方法论升级 prototype 设计能力 | 🔲 规划中 | v0.16.0+ | 来源：LT 指示（2026-07-25），参考库已 clone（空壳，待检出） |
 | P2-7 | 项目级差异化配置体系：工作流编排 + 原型设计系统支持项目级配置，优先级「项目级 > plugin 内置默认」；扩展现有 config 注入到工作流 SOP/阶段开关/设计系统 | 🔲 规划中 | v1.x | 来源：LT 指示（2026-07-25），现有 `spec-superflow.config.json` 注入（prd.template/prototype.*）为基础 |
 
