@@ -463,6 +463,76 @@ related_requirement: <req-id | null>
 
 ---
 
+## 二十二、v0.20.0 增量设计：子代理产出质量闸门 + 编排等待范式 + S1 原型补跑入口
+
+> **来源**：workflow-feedback 2026-07-25（VRM mgmt-dashboard S2/S1 实测三份反馈：agent-quality / performance / sop-flow）。对应待办 **P1-13 / P2-11 / P2-12**（见 roadmap-and-todos.md）。
+
+### 22.1 产出型子代理质量闸门（P1-13，修订 §18.1.1 返回契约）
+
+**问题**：prototype-builder 在大体量产出任务中，规划阶段耗尽输出预算，核心产物 `index.html` **未落盘即返回 `status: done`**（谎报完成）。主代理误信后派 reviewer 对空目录评审 → 流程空转，需手动 SendMessage resume 才真正产出。
+
+**根因**：§18.1.1 返回契约只规定了 `status` 枚举，**未规定"返回 done 的前置条件"**——agent 可在产物未产出时谎报 `done`。
+
+**设计（修订 §18.1.1，新增 done 前置闸门）**：
+
+1. **产物落盘硬闸门（Deliverable Hard Gate）**——返回契约新增硬前置：
+   - 声明的 `deliverable` 若为文件路径，该文件必须已 `Write` 落盘且**非空**，否则**禁止** `status: done`。
+   - 若因输出预算不足 / 单次 Write 截断风险无法完成产物，必须返回 `status: blocked`（blocker：「核心产物 X 未落盘，输出预算不足，请 resume 续写」）或 `done_with_questions`，**绝不谎报 done**。
+   - 终态交接前 agent 自检：`test -f <deliverable> && test -s <deliverable>`（存在且非空）通过方可 `done`。
+2. **大产出默认分片**：产出型 agent 对超大文件（经验阈值 ~800 行）默认「先 `Write` 主体骨架 → 再 `Edit` 分段追加（数据层/渲染层/各页面）」，规避单次 Write 截断与输出预算峰值。
+3. **主代理交接后产物校验（defense in depth）**：编排层（prototype skill / workflow-orchestrator）收到 builder 交接、**派 reviewer 之前**，强制 `ls`/`test -f` 校验入口文件存在且非空；缺失则 resume builder，**不空转评审**。
+
+**横展范围（统一解决，分层落点）**：
+
+| 层 | 落点 | 说明 |
+|----|------|------|
+| 通用规则 | §18.1.1 返回契约修订 | 管辖所有新/改 sub-agent，最持久 |
+| 具体硬闸门 | `prototype-builder.md`（文件产出型，首发）+ `prototype-env-scout.md`（prototype 家族另一显式 Handoff agent） | 文件产出型直接适用 |
+| 安全网 | 编排层交接后校验 | 与具体 agent 是否改造解耦，捕获任何仍谎报者 |
+| 后续可选 | 其余 6 个报告型 agent（code-reviewer / prototype-reviewer / prd-completeness-reviewer / change-split-auditor / cross-change-consistency-checker / bug-investigator） | 以文本报告为产出，"产物落盘"不直接适用；由通用契约 + 主代理校验覆盖，是否补显式 Handoff 段列后续可选 |
+
+**22.1.1 决策点交互（可选扩展，修订 §18.1.2，⏸️ 待 LT 确认）**：
+
+反馈改进建议 2 提出「子代理在决策点/阻断点不结束、先经 `SendMessage` 反馈主代理并等待响应」，可减少 terminate→resume 的往返成本（LT 已于 Session d6801ab4 验证后台子代理↔主代理 SendMessage 可行）。**但与 §18.1.2 既有决策有张力**：§18.1.2 明确「不引入 agent team / 坚持 Task 一次性子代理 + 结构化返回，把阻断反馈用返回结构而非实时消息实现」。
+
+CC 评估：产物落盘硬闸门（第 1 条）**单独即可根治"谎报 completed"**——agent 诚实返回 `blocked`，主代理 resume，正是本次手动发生的路径。SendMessage 决策点是减少往返成本的**优化项**，非必需。故本版**强制实施第 1-3 条**；SendMessage 决策点作为**可选扩展**记录如下，待 LT 拍板是否采纳后再写入 agent 定义：
+
+> 若采纳：背景委派的产出型子代理在决策/阻断点**可选** `SendMessage` 主代理并等待响应（保留上下文，不 terminate），作为「terminate-with-honest-blocker」的替代；但 `status` 结构化返回仍为**主协议/必选**，「不引入 agent team 常驻」不变。即 §18.1.2 修订为「以结构化返回为主协议，允许长任务背景子代理在决策点定向使用 SendMessage」。
+
+### 22.2 编排层低消耗等待范式（P2-11）
+
+**问题**：主代理 `TaskOutput(block=true, timeout=600s)` 阻塞等待后台子代理，**超时返回会倾泻完整子代理 JSONL transcript**（含 thinking/tool_use/tool_result），单次数万 token，连续 3-4 次撑爆主上下文，抵消「主代理只编排」的轻上下文优势。
+
+**设计（明文进编排 skill）**：
+
+- 派发后台子代理后**依赖完成通知（`<task-notification>`）再行动**，不原地反复 `TaskOutput(block=true)` 轮询。
+- 长任务子代理派发后，主代理可先处理可并行工作或结束当前轮次等待通知，**不空转死等**。
+- 确需中途观察用 `block=false` 轻量状态查询（仍会返回转录，尽量不用）。
+- **与 P1-13 协同**：builder 分片 + 产物闸门缩短单子代理时长，源头减少等待轮询。
+- harness 层（TaskOutput 对 `local_agent` 超时不倾泻转录、只返末态摘要 + 文件路径）非 team-flow 可控，**单独向 Claude Code 反馈**。
+
+### 22.3 S1 路由表新增「原型补跑/重跑」入口（P2-12）
+
+**问题**：PRD 已冻结但 `prototype/` 缺失/为空，用户要求重跑原型，S1 的 **6 种入口无匹配项**，主代理临场变通无 SOP 依据，跨会话路由不一致（可能误路由到「续版 v2」错误升版或「重新计划」不必要重做 plan）。
+
+**设计**：S1 路由表新增第 7 种入口：
+
+| 入口 | 触发条件 | 跳转 | 制品语义 |
+|------|---------|------|---------|
+| **原型补跑/重跑** | PRD 已冻结（`frozen_downstream`）∧ `prototype/` 缺失/为空，或用户显式要求重做原型 | → 部分重入 S2 原型循环（S2 步骤 2 判断→3 原型循环→4 冻结） | PRD 不动，保留有效 S3 plan / S4 changes，闭环后恢复原 phase |
+
+- **判据分支**（`s1-path-router.md`）：与「重新计划」（针对 plan 调整）、「续版」（加功能升版）区分——本路径仅 prototype 缺失/需重做，PRD/plan/changes 仍有效。
+- **部分重入冻结语义**（`state-model.md`）：PRD `frozen_downstream` 保持；S2 状态置 `in-progress(prototype-only)`；原型循环闭环后恢复原 phase（如 `s4-distribution`）；`replan_log` 记录 S4→S2→S4 往返与「未暴露 scope 问题、changes 保持有效」结论。若原型暴露 scope 问题 → 走 S3→S2 回退修订（升级为非原型补跑）。
+
+### 22.4 决策落实状态（v0.20.0）
+
+- 产物落盘硬闸门 + 大产出分片 + 主代理交接后产物校验（§22.1 第 1-3 条）：✅ 实施于 v0.20.0。
+- 编排层完成通知等待范式（§22.2）：✅ 实施于 v0.20.0。
+- S1 原型补跑/重跑入口（§22.3）：✅ 实施于 v0.20.0。
+- 决策点 SendMessage 可选扩展（§22.1.1，修订 §18.1.2）：⏸️ **待 LT 确认**是否采纳（与 §18.1.2「不引入 agent team / 统一返回结构」有张力）。
+
+---
+
 ## 二十、决策落实状态（v0.8 增补）
 
 12. **v0.15.0 subagent 编排 + 状态治理（v0.8 新增）**：
@@ -485,6 +555,13 @@ related_requirement: <req-id | null>
     - 问题记录保存到 `.team-flow/feedback/`（git 跟踪，改进输入持久化）：✅ LT 确认（2026-07-25）。
     - session-handoff 允许模型主动建议触发（不设 disable-model-invocation）：✅ LT 确认（2026-07-25）。
     - 目标版本 v0.16.0：✅ LT 确认（2026-07-25）。
+
+14. **v0.20.0 子代理产出质量闸门 + 编排等待范式 + S1 原型补跑入口（v0.8 §22 新增，P1-13/P2-11/P2-12）**：
+    - 三份 workflow-feedback（VRM mgmt-dashboard）合并为 v0.20.0 一次性实施：✅ LT 确认（2026-07-25）。
+    - 产物落盘硬闸门（deliverable 未落盘非空禁止 done）+ 大产出分片 + 主代理交接后产物校验：✅ 实施于 v0.20.0（修订 §18.1.1）。
+    - 编排层依赖 `<task-notification>` 完成通知、禁反复 `TaskOutput(block=true)` 轮询：✅ 实施于 v0.20.0。
+    - S1 路由表新增第 7 种入口「原型补跑/重跑」（部分重入 S2 原型循环，PRD 不动，保留有效 S3/S4）：✅ 实施于 v0.20.0。
+    - 决策点 SendMessage 可选扩展（修订 §18.1.2「不引入 agent team」）：⏸️ 待 LT 确认是否采纳（CC 评估硬闸门已根治谎报完成，SendMessage 仅为减少往返的优化项）。
 
 ---
 
