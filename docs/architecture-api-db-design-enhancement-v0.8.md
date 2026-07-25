@@ -65,6 +65,8 @@ subagent final response 结构契约（所有新/改 sub-agent 强制遵守）�
 
 claude agent team（SendMessage 多代理常驻）交互更灵活，但**通用性/健壮性不足**：绑死 Claude Code、依赖常驻 teammate、Codex/Antigravity/Pi 等 harness 无对等原语。本协议坚持 **Task 一次性子代理 + 结构化返回**，把「阻断反馈」用返回结构而非实时消息实现，全平台可降级运行（对齐 §17.8 model-tiers 降级规则）。**结论：不引入 agent team。**
 
+> **v0.21.0 修订（LT 实证确认，详见 §22.1.1）**：上述「不引入 agent team」指**不采用常驻 teammate 多代理架构**，**不排斥**子代理在决策点经 `SendMessage` 做 **stop-and-resume** 中途交互（发问即停 → 主代理经 task-notification 代问用户 → 回传自动 resume 续跑，LT 已于 Session d6801ab4 验证四形态可行）。结构化返回仍为**终态主协议**；SendMessage 仅为**中途输入通道**，harness 不支持 resume 时降级为 `blocked` + 携答案重派。子代理无 AskUserQuestion，此中继是其获取用户输入的唯一工程路径。
+
 **18.1.3 会话级 skill 内部编排（A4 第 3 点落地）**
 
 ce-brainstorm / ce-plan / prototype 因需多轮交互**永远不能变 subagent**，但其**内部非交互子步骤**应自行派发 subagent（ce-plan 已有此模式）。本版将 bootstrap、prototype 也改造为此模式（见 §18.4 / §18.6）。
@@ -491,13 +493,25 @@ related_requirement: <req-id | null>
 | 安全网 | 编排层交接后校验 | 与具体 agent 是否改造解耦，捕获任何仍谎报者 |
 | 后续可选 | 其余 6 个报告型 agent（code-reviewer / prototype-reviewer / prd-completeness-reviewer / change-split-auditor / cross-change-consistency-checker / bug-investigator） | 以文本报告为产出，"产物落盘"不直接适用；由通用契约 + 主代理校验覆盖，是否补显式 Handoff 段列后续可选 |
 
-**22.1.1 决策点交互（可选扩展，修订 §18.1.2，⏸️ 待 LT 确认）**：
+**22.1.1 决策点 SendMessage stop-and-resume 交互协议（✅ LT 实证确认采纳，v0.21.0 实施，修订 §18.1.2）**：
 
-反馈改进建议 2 提出「子代理在决策点/阻断点不结束、先经 `SendMessage` 反馈主代理并等待响应」，可减少 terminate→resume 的往返成本（LT 已于 Session d6801ab4 验证后台子代理↔主代理 SendMessage 可行）。**但与 §18.1.2 既有决策有张力**：§18.1.2 明确「不引入 agent team / 坚持 Task 一次性子代理 + 结构化返回，把阻断反馈用返回结构而非实时消息实现」。
+> **决策更正（2026-07-25）**：本条 v0.20.0 曾标 Deferred，CC 当时误判其为「子代理阻塞挂起 / 类 agent-team 常驻」而担心与 §18.1.2 冲突。经 LT 指认并解析实证实录（Session `d6801ab4-b970-431f-b054-902981e59794`，VRM 项目机制验证测试）后纠正：实测机制是 **stop-and-resume**（发问即停、回传即唤醒），**不引入常驻 agent team**，与 §18.1.2 核心意图兼容。LT 确认采纳（「我觉得这套机制可以」）。
 
-CC 评估：产物落盘硬闸门（第 1 条）**单独即可根治"谎报 completed"**——agent 诚实返回 `blocked`，主代理 resume，正是本次手动发生的路径。SendMessage 决策点是减少往返成本的**优化项**，非必需。故本版**强制实施第 1-3 条**；SendMessage 决策点作为**可选扩展**记录如下，待 LT 拍板是否采纳后再写入 agent 定义：
+**实证机制（LT 已验证单轮 / 多轮追问 / 三子代理并行 / 多问合并弹窗四形态）**：
 
-> 若采纳：背景委派的产出型子代理在决策/阻断点**可选** `SendMessage` 主代理并等待响应（保留上下文，不 terminate），作为「terminate-with-honest-blocker」的替代；但 `status` 结构化返回仍为**主协议/必选**，「不引入 agent team 常驻」不变。即 §18.1.2 修订为「以结构化返回为主协议，允许长任务背景子代理在决策点定向使用 SendMessage」。
+子代理工具集**不含 AskUserQuestion**（即使声明 `Tools:*` 亦失败），故决策点需用户/主代理输入时走中继：
+
+1. **子代理发问即停**：决策点调用 `SendMessage(to: "main")` 发结构化提问请求（`{ question, why, options[] }`），随后**主动停止**（Agent 任务 `status=completed`）——是「发完即停」，**非阻塞挂起**；末条消息须明示「已发问、等待回传后续跑」，使主代理识别为中继请求而非终态交接。
+2. **主代理收通知代问**：主代理经 `task-notification` 收到 `<agent-message>`（**零 TaskOutput 轮询**，对齐 §22.2），用 `AskUserQuestion` 代为提问（或在其权限内自决）；并行场景可将多个子代理问题**合并为一个多问弹窗**。
+3. **回传即自动唤醒**：主代理 `SendMessage(to: <agentId>)` 回传答案，该调用**自动 resume 已停止的子代理**（「was stopped (completed); resumed it in the background」），子代理带答案从断点续跑（上下文经 transcript 保留）。
+
+**与 §18.1.2 的关系（修订）**：结构化返回（`done/done_with_questions/blocked`）仍是**终态交接主协议**不变；SendMessage 决策点是**中途交互通道**（子代理未完成、需输入才能继续），二者分层互补。**「不引入常驻 agent team」不变**——子代理仍是一次性任务的停止-恢复，无常驻 teammate。§18.1.2 据此修订为「以结构化返回为终态主协议；允许子代理在决策点经 SendMessage stop-and-resume 获取用户/主代理输入」。
+
+**请求-应答匹配纪律（实证暴露的唯一真风险，必设）**：机制**不保证请求↔应答对应性**——实录中主代理曾将无主答案错回传给未发追问的子代理。故：
+- **主代理侧**：维护每子代理的「未决提问请求」台账，仅回传子代理实际提出过的提问；勿自发追加问题后错配回传。
+- **子代理侧**：收到回传时校验「该应答是否对应自己实际发出的提问」，不匹配则按「正确优先」拒绝将错就错（实录中子代理正是如此识别并拒绝错配回传）。
+
+**跨平台降级（承 §17.8 / §18.1.2）**：harness 支持 resume（Claude Code）→ 走 stop-and-resume；不支持 resume 的 harness（Codex/Antigravity/Pi 等）→ 降级为既有 `blocked` 终态返回 + 主代理携答案**重新派发**子代理（丢失部分上下文但全平台可运行）。
 
 ### 22.2 编排层低消耗等待范式（P2-11）
 
@@ -561,7 +575,7 @@ CC 评估：产物落盘硬闸门（第 1 条）**单独即可根治"谎报 comp
     - 产物落盘硬闸门（deliverable 未落盘非空禁止 done）+ 大产出分片 + 主代理交接后产物校验：✅ 实施于 v0.20.0（修订 §18.1.1）。
     - 编排层依赖 `<task-notification>` 完成通知、禁反复 `TaskOutput(block=true)` 轮询：✅ 实施于 v0.20.0。
     - S1 路由表新增第 7 种入口「原型补跑/重跑」（部分重入 S2 原型循环，PRD 不动，保留有效 S3/S4）：✅ 实施于 v0.20.0。
-    - 决策点 SendMessage 可选扩展（修订 §18.1.2「不引入 agent team」）：⏸️ 待 LT 确认是否采纳（CC 评估硬闸门已根治谎报完成，SendMessage 仅为减少往返的优化项）。
+    - 决策点 SendMessage stop-and-resume 交互协议（修订 §18.1.2，§22.1.1）：✅ LT 实证确认采纳（Session d6801ab4，「我觉得这套机制可以」），实施于 **v0.21.0**。CC  v0.20.0 曾误判Deferred，解析实录后纠正（实为 stop-and-resume 非常驻 agent team）。
 
 ---
 
