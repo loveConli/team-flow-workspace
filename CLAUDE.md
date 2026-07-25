@@ -75,7 +75,7 @@ team-flow-workspace/
 ### 当前版本说明
 
 - **设计增强方案当前权威版本**：`docs/architecture-api-db-design-enhancement-v0.8.md`（subagent 编排下沉 + 多需求状态治理 + PRD/Plan 规范修复；承袭 v0.7 全量内容）
-- **插件版本**：`v0.15.0`（22 skills + 8 agents）
+- **插件版本**：`v0.16.0`（22 skills + 8 agents）
 - 设计增强方案的历史版本（v1 / v0.2 / v0.3 / v0.5 / v0.7）保留在 `docs/` 下，仅供追溯，不作为实施依据
 
 ## team-flow 工作流核心
@@ -288,6 +288,7 @@ P1 设计 → P2 实施 → P3 验证 → P4 同步 → P5 提交
 | v0.10.0    | E2E skill（AC 驱动 Playwright 测试）                                     | ✅   |
 | v0.11.0    | workflow-orchestrator + workflow-bootstrap + e2e 集成、复利 CLI 命令、三层索引 | ✅   |
 | v0.15.0    | subagent 编排下沉 + 多需求状态治理 + PRD/Plan 规范修复（设计增强方案 v0.8）；3 新 agent（prd-completeness-reviewer/prototype-builder/prototype-env-scout）、recon-probe.sh 脚本、prototype 内部编排器、冻结措辞 BUG 修复 | ✅ 2026-07-25 完成 |
+| v0.16.0    | 会话交接 + 工作流反馈（设计增强方案 v0.8 §21）；2 新 skill（session-handoff/workflow-feedback）、6 个 references、release-archivist 收尾联动、P2-5 既有测试修复（421/421） | ✅ 2026-07-25 完成 |
 
 
 ### 规划中里程碑
@@ -298,7 +299,7 @@ P1 设计 → P2 实施 → P3 验证 → P4 同步 → P5 提交
 | v0.12.0 | **治理债务清理**          | ① 身份命名统一（team-flow vs spec-superflow） ② AGENTS.md 同步到 v0.11.0 ③ 版本号硬编码修复（74 处 npx 引用） ④ skill 计数全链路一致 ⑤ check-versions 扩展（计数 + npx 引用校验）                      | ✅ 2026-07-24 完成       |
 | v0.13.0 | **渐进式披露 + Agent 化** | ① ce-compound / ce-plan SKILL.md 拆分到 references/（控制在 150 行内） ② code-reviewer / bug-investigator 改为 agent ③ 13 个无 references/ 的 skill 补充支撑文件                   | ✅ 2026-07-24 完成       |
 | v1.0.0  | **成熟版**             | ① 触发词去重（分层触发域，方案C） ② PreToolUse hook 执行期状态守护 ③ "ce-" 前缀正名（保留+文档化，方案C） ④ 设计增强方案 v1.0 全量定稿 ⑤ 身份统一 spec-superflow→team-flow（P1-6） ⑥ orchestrator 设计优化（反馈环路+增量入口） | 🔲 进行中（①②③已完成，④⑤⑥待实施） |
-| v0.16.0 | **会话交接 + 工作流反馈**   | ① `session-handoff` skill（会话级上下文交接，上下文腐化时压缩为交接文档） ② `workflow-feedback` skill（工作流问题结构化记录，与 ce-compound 互补） ③ `.team-flow/handoffs/` + `.team-flow/feedback/` 产物目录 ④ release-archivist 收尾联动 | 🔲 设计完成（v0.8 §21），待实施 |
+| v0.16.0 | **会话交接 + 工作流反馈**   | ① `session-handoff` skill（会话级上下文交接，上下文腐化时压缩为交接文档） ② `workflow-feedback` skill（工作流问题结构化记录，与 ce-compound 互补） ③ `.team-flow/handoffs/` + `.team-flow/feedback/` 产物目录 ④ release-archivist 收尾联动 | ✅ 2026-07-25 完成 |
 | v0.16.0+ | **原型生成体系升级**       | 学习 `docs/external-references/open-design`（nexu-io/open-design 原型生成体系，含 skill、设计系统、生成流程），吸收其方法论升级 team-flow 的 prototype 设计能力（设计系统 schema / 原型生成质量 / 组件体系） | 🔲 规划中（参考库已引入，待检出学习） |
 | v1.x    | **项目级差异化配置**       | 工作流编排 + 原型设计系统支持**项目级差异化配置**；配置优先级：**项目级配置 > plugin 内置默认**。扩展现有 config 注入（`prd.template`/`prototype.designSystem`/`prototype.entry`）到工作流 SOP/阶段开关/设计系统，形成统一的分层配置体系 | 🔲 规划中 |
 
@@ -333,7 +334,7 @@ P1 设计 → P2 实施 → P3 验证 → P4 同步 → P5 提交
 | P1-7  | orchestrator v2 设计优化：① 反馈环路（vN 内修订+变更履历，非升版） ② 增量入口（S1 路径路由器） ③ 原型循环上提到 orchestrator（思路B） ④ 原型自动评审（PRD 一致性检查→人工评审） ⑤ S4 拆分质量自检 ⑥ S5 多 change 必选化 ⑦ description 从"列举步骤"改为"描述能力" | ✅ 2026-07-24 | v1.0.0  | 来源：LT 设计讨论（2026-07-24），v0.7 设计+四方会审+P2 实施+P3 review 全流程完成         |
 | P1-8  | subagent 拆分规划：明确各阶段子代理分工（哪些执行步骤由 subagent 实施），编排层只负责编排                                                                                                                         | 🔲 部分落地       | v1.0.0  | **§18.1 交接协议 + bootstrap/prototype/brainstorm 执行下沉 ✅ v0.15.0**；剩余 kickoff-context-assembler / replan-analyst / compound-moment-detector 待实施 |
 | P1-9  | ce-brainstorm / ce-ideate / ce-proof SKILL.md 拆分到 references/（415/402/346行→≤150行），与 P1-1/P1-2 同类项                                                                                                             | 🔲 待实施       | v1.0.0  | 来源：v0.7 实施横展发现（P1-1/P1-2 拆了 ce-compound/ce-plan，ce-brainstorm 遗漏）；v0.16.0 校验横展发现 ce-ideate(402)/ce-proof(346) 同类超标 |
-| P1-10 | 新增两个 skill：`session-handoff`（会话级上下文交接，区别于 change 级 `ssf handoff`）+ `workflow-feedback`（工作流问题结构化记录，与 ce-compound 互补）。设计见 v0.8 §21 | 🔲 P2-P4 完成，待 P5 提交 | v0.16.0 | P1 设计 ✅ 2026-07-25（LT 确认四项决策）；P2 实施 ✅（2 SKILL.md + 6 references + release-archivist 联动）；P3 验证 ✅（check-versions 通过 + plugin-validator 无阻断 + skill-reviewer PASS/PASS_WITH_WARNINGS 已修复）；P4 同步 ✅（AGENTS.md/README/plugin.json/CLAUDE.md 全链路 22 skills）；P5 待执行 |
+| P1-10 | 新增两个 skill：`session-handoff`（会话级上下文交接，区别于 change 级 `ssf handoff`）+ `workflow-feedback`（工作流问题结构化记录，与 ce-compound 互补）。设计见 v0.8 §21 | ✅ 2026-07-25 | v0.16.0 | P1 设计 ✅（LT 确认四项决策）；P2 实施 ✅（2 SKILL.md + 6 references + release-archivist 联动）；P3 验证 ✅（check-versions + plugin-validator + skill-reviewer）；P4 同步 ✅（全链路 22 skills）；P5 提交 ✅（子仓库 401842a + 65cc971，父仓库 b8c1729 + e00c8eb） |
 
 
 ### P2（改善，按节奏推进）
