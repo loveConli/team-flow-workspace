@@ -828,6 +828,7 @@ change_dag:                           # change 依赖图（S4 后填充）
   - id: change-1
     spec_dir: specs/change-1/
     state_file: specs/change-1/.spec-superflow.yaml
+    <!-- 勘误（v0.17.0 P2-8）：spec_dir 已更名为 change_dir，路径由 specs/change-1/ 修正为 changes/change-1/。以 state-model.md 为准。 -->
     depends_on: []
     priority: 1
     parallel_group: A                 # 同组可并行

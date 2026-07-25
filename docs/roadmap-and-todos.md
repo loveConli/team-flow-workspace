@@ -17,13 +17,14 @@
 | v0.13.0    | 渐进式披露 + Agent 化：ce-compound/ce-plan 拆分、code-reviewer/bug-investigator agent 化、13 skill 补 references | ✅ 2026-07-24 |
 | v0.15.0    | subagent 编排下沉 + 多需求状态治理 + PRD/Plan 规范修复（设计增强方案 v0.8）；3 新 agent、recon-probe.sh、prototype 内部编排器、冻结措辞 BUG 修复 | ✅ 2026-07-25 |
 | v0.16.0    | 会话交接 + 工作流反馈（设计增强方案 v0.8 §21）；2 新 skill（session-handoff/workflow-feedback）、6 个 references、release-archivist 收尾联动、P2-5 既有测试修复（421/421） | ✅ 2026-07-25 |
+| v0.17.0    | S4 路径修复（spec_dir→change_dir + 横展）+ S4 审计必选门禁 + P2-6 原型升级研究（open-design 方法论 + 19 项缺口 + 三波路线图）；421/421 测试全过 | ✅ 2026-07-25 |
 
 ## 规划中里程碑
 
 | 版本      | 里程碑                 | 核心内容                                                                                                                                                          | 状态                    |
 | ------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- |
 | v1.0.0  | **成熟版**             | ① 触发词去重（分层触发域，方案C） ② PreToolUse hook 执行期状态守护 ③ "ce-" 前缀正名（保留+文档化，方案C） ④ 设计增强方案 v1.0 全量定稿 ⑤ 身份统一 spec-superflow→team-flow（P1-6） ⑥ orchestrator 设计优化（反馈环路+增量入口） | 🔲 进行中（①②③已完成，④⑤⑥待实施） |
-| v0.16.0+ | **原型生成体系升级**       | 学习 `docs/external-references/open-design`（nexu-io/open-design 原型生成体系），吸收方法论升级 prototype 设计能力 | 🔲 规划中（参考库已引入，待检出学习） |
+| v0.16.0+ | **原型生成体系升级**       | 学习 open-design 方法论，升级 prototype 设计能力。研究 ✅ v0.17.0（升级提案已输出）；Wave 1 v0.18.0 / Wave 2 v0.19.0 / Wave 3 待反馈决策 | 🔲 Wave 1 待实施 |
 | v1.x    | **项目级差异化配置**       | 工作流编排 + 原型设计系统支持项目级差异化配置；配置优先级：项目级 > plugin 内置默认 | 🔲 规划中 |
 
 ## 待办列表
@@ -54,6 +55,8 @@
 | P1-8  | subagent 拆分规划：明确各阶段子代理分工，编排层只负责编排                                                                                                                         | 🔲 部分落地       | v1.0.0  | **§18.1 交接协议 + bootstrap/prototype/brainstorm 执行下沉 ✅ v0.15.0**；剩余 kickoff-context-assembler / replan-analyst / compound-moment-detector 待实施 |
 | P1-9  | ce-brainstorm / ce-ideate / ce-proof SKILL.md 拆分到 references/（415/402/346行→≤150行）                                                                                                             | 🔲 待实施       | v1.0.0  | v0.7 实施横展 + v0.16.0 校验横展发现 |
 | P1-10 | 新增 `session-handoff` + `workflow-feedback` skill。设计见 v0.8 §21 | ✅ 2026-07-25 | v0.16.0 | P1-P5 全流程完成 |
+| P1-11 | 原型 Wave 1：scaffold 升级（template.html + layouts.md 骨架库）+ craft 五件套 + P0/P1/P2 checklist 注入 builder/reviewer | 🔲 待实施 | v0.18.0 | 来源：P2-6 升级提案 |
+| P1-12 | 原型 Wave 2：token 四层模型 + reviewer rubric 扩展 + direction-picker + guard 脚本 | 🔲 待实施 | v0.19.0 | 来源：P2-6 升级提案 |
 
 ### P2（改善，按节奏推进）
 
@@ -64,10 +67,10 @@
 | P2-3 | 13 个 skill 补 references/ | ✅ 2026-07-24      | v0.13.0 | 来源：v0.11.0 设计评审 W1                                       |
 | P2-4 | 动态重规划机制调研                           | ✅ 调研完成 2026-07-24 | v1.0.0+ | 设计已写入 v0.7 §17.9 |
 | P2-5 | 修复 10 个既有测试失败 + 27 处 npx 版本漂移 | ✅ 2026-07-25 | v0.16.0 | 421/421 全过 |
-| P2-6 | 原型生成体系升级：学习 open-design | 🔲 规划中 | v0.16.0+ | 参考库已 clone（空壳，待检出） |
+| P2-6 | 原型生成体系升级：学习 open-design | ✅ 研究完成 2026-07-25 | v0.17.0 | 升级提案见 `docs/prototype-upgrade-proposal.md`；Wave 1/2 已追加为 P1 待办 |
 | P2-7 | 项目级差异化配置体系 | 🔲 规划中 | v1.x | 现有 config 注入为基础 |
-| P2-8 | S4 change 目录位置修复：① `state-model.md:50-51` 误写 `specs/change-1/` → `changes/change-1/` ② S4 SKILL.md 强化路径约束 | 🔲 待实施 | v0.17.0 | 来源：v0.16.0 无头测试 |
-| P2-9 | S4 拆分审计不可跳过：明确 change-split-auditor 为必选步骤 | 🔲 待实施 | v0.17.0 | 来源：v0.16.0 无头测试 |
+| P2-8 | S4 change 目录位置修复：① `state-model.md:50-51` 误写 `specs/change-1/` → `changes/change-1/` ② S4 SKILL.md 强化路径约束 + spec_dir→change_dir 重命名 + 横展 cross-change-consistency-checker | ✅ 2026-07-25 | v0.17.0 | 来源：v0.16.0 无头测试 |
+| P2-9 | S4 拆分审计不可跳过：明确 change-split-auditor 为必选步骤（必选门禁 + Guardrails + AGENTS.md/README.md 同步） | ✅ 2026-07-25 | v0.17.0 | 来源：v0.16.0 无头测试 |
 | P2-10 | 无头测试框架 skill 化（已完成 `.claude/skills/team-flow-e2e-test/`） | ✅ 2026-07-25 | v0.17.0 | 来源：LT 指示 |
 
 ### P3（低优先级，时机成熟再做）

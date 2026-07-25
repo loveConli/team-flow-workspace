@@ -204,3 +204,24 @@ PRD(vN) ──拆解──┬─▶ change-1 ─┐
 3. **产物层级模型（本轮确认 ✓）**：全局层（PRD 有版本、原型/代码/设计系统各一份、git 分支隔离）+ 变更层（一份 PRD 拆多 change，change = spec-superflow 单位）；原型全局、与 PRD 同级。LT 第 16 轮已确认"符合"。
 4. 是否同意将本方案并入 v0.3 原型章（含：层级模型 + 配置驱动 + 完整原型目录维护 + 迭代/衔接/复利回写）？
 5. 是否授权：起草 v0.3（含原型章）→ 安排专家评审 → 你决策 → 再建统一插件？
+
+---
+
+## 八、v0.17.0 深度研究更新（2026-07-25）
+
+> 本节为 P2-6「原型生成体系升级」的深度研究结论摘要。完整升级提案见 **`docs/prototype-upgrade-proposal.md`**。
+
+### 研究方式
+
+LT 手动 clone 了 open-design 完整源码到 `docs/external-references/open-design/`，CC 对其五层内容（skills/design-templates/design-systems/craft/plugins）进行了系统研究。
+
+### 关键发现
+
+1. **open-design 的核心价值不在 app 代码（daemon/Next.js/Electron），而在纯文本契约层**——design-templates（~110 个渲染型模板）、craft（12 个品牌无关工艺规则）、design-systems/_schema（token 四层模型）、plugins/_official/atoms（16 个流程原子）。
+2. **与 team-flow 架构同构**：open-design 的所有防线都是纯文本契约，与"零依赖 + 子代理 + 文件落盘"完全兼容。两者共享最深层约束："agent 把单份 :root 块粘进单个 `<style>`，无全局级联"。
+3. **本文（v0.3 调研）的结论依然成立**：零外部依赖 / 纯 CLI / 自包含 HTML 内核不变；在此基础上吸收 open-design 的方法论防线。
+4. **19 项缺口已识别**，按 ROI 排序，分三波路线图落地（详见升级提案）。
+
+### 与本文结论的关系
+
+本文第二节的选型结论（本地 HTML 原型内核 + 借鉴 DESIGN.md 概念）**不变**。P2-6 是在此基础上的**方法论深化**——从"借鉴概念"升级为"系统性吸收工艺防线"。

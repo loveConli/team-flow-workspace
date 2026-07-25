@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 本工作区的核心目标是**开发和测试 team-flow 工作流**。team-flow 是一个统一插件（22 skills + 8 agents），整合了 spec-superflow（9）、compound-engineering（6）、architecture-design（1）、prototype（1）、workflow-orchestrator（1）、workflow-bootstrap（1）、e2e（1）、session-handoff（1）、workflow-feedback（1）。
 
 - **设计增强方案当前权威版本**：`docs/architecture-api-db-design-enhancement-v0.8.md`
-- **插件版本**：`v0.16.0`（22 skills + 8 agents）
+- **插件版本**：`v0.17.0`（22 skills + 8 agents）
 
 ## 工作区结构
 
@@ -30,12 +30,14 @@ team-flow-workspace/
 
 以下内容已抽取到独立文件，**按需读取，不要一次性全部加载**：
 
-| 场景 | 读取文件 |
-|------|---------|
+
+| 场景                   | 读取文件                        |
+| -------------------- | --------------------------- |
 | 迭代规划、检查待办、更新 Roadmap | `docs/roadmap-and-todos.md` |
-| 设计文档维护、版本规则、文档层级 | `docs/design-doc-system.md` |
-| P4 同步阶段、迭代同步清单、一致性校验 | `docs/doc-maintenance.md` |
-| 开发命令、产物结构、配置项 | `docs/dev-reference.md` |
+| 设计文档维护、版本规则、文档层级     | `docs/design-doc-system.md` |
+| P4 同步阶段、迭代同步清单、一致性校验 | `docs/doc-maintenance.md`   |
+| 开发命令、产物结构、配置项        | `docs/dev-reference.md`     |
+
 
 ## 工作流 SOP
 
@@ -78,15 +80,18 @@ team-flow-workspace/
 P1 设计 → P2 实施 → P3 验证 → P4 同步 → P5 提交
 ```
 
-| 阶段 | 动作 | 工具 |
-|------|------|------|
-| **P1 设计** | 更新设计增强方案 + LT 确认决策 | — |
-| **P2 实施** | 新 skill→`/plugin-dev:skill-development`；新 agent→`/plugin-dev:agent-development`；新 hook→`/plugin-dev:hook-development`；新 command→`/plugin-dev:command-development` | plugin-dev 技能集 |
-| **P3 验证** | ① plugin-validator ② skill-reviewer ③ `npm run check-versions` ④ `npm test` | plugin-dev agent + npm |
-| **P4 同步** | 按 `docs/doc-maintenance.md` 迭代同步清单逐项检查 + 更新 `docs/roadmap-and-todos.md` | 见 doc-maintenance.md |
-| **P5 提交** | 子仓库 `npm version` + commit → 父仓库 commit | 见 Git 管理规则 |
+
+| 阶段        | 动作                                                                                                                                                                | 工具                     |
+| --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| **P1 设计** | 更新设计增强方案 + LT 确认决策                                                                                                                                                | —                      |
+| **P2 实施** | 新 skill→`/plugin-dev:skill-development`；新 agent→`/plugin-dev:agent-development`；新 hook→`/plugin-dev:hook-development`；新 command→`/plugin-dev:command-development` | plugin-dev 技能集         |
+| **P3 验证** | ① plugin-validator ② skill-reviewer ③ `npm run check-versions` ④ `npm test`                                                                                       | plugin-dev agent + npm |
+| **P4 同步** | 按 `docs/doc-maintenance.md` 迭代同步清单逐项检查 + 更新 `docs/roadmap-and-todos.md`                                                                                           | 见 doc-maintenance.md   |
+| **P5 提交** | 子仓库 `npm version` + commit → 父仓库 commit                                                                                                                           | 见 Git 管理规则             |
+
 
 **约束**：
+
 - P1 未完成（设计文档未更新 / LT 未确认）→ 不进 P2
 - P3 的 check-versions 和 plugin-validator 是门禁，不通过 → 不进 P4
 - P4 同步清单有遗漏 = 迭代未完成
@@ -95,6 +100,13 @@ P1 设计 → P2 实施 → P3 验证 → P4 同步 → P5 提交
 ## 关键路径约束
 
 - **change 目录位置**：项目根 `changes/<name>/`（不是 `.team-flow/changes/`），由 S4 创建，内含 `.spec-superflow.yaml`
-- **`.team-flow/` 只存产品级编排状态**：registry.yaml / requirements/ / handoffs/ / feedback/
+- `**.team-flow/` 只存产品级编排状态**：registry.yaml / requirements/ / handoffs/ / feedback/
 - **设计增强方案是唯一真相源**：定义 WHY + WHAT；AGENTS.md 定义 HOW；SKILL.md 是执行指令
 - **历史版本保留不删**：设计增强方案旧版文件仅供追溯
+
+
+
+# 约束
+
+使用中文回复我（包含思考）
+
