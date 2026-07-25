@@ -1,8 +1,9 @@
 # 子工程为独立 Git 仓库，parent 不跟踪
 team-flow/
 
-# Claude 临时文件
-.claude/
+# Claude 临时文件（保留项目级 skills）
+.claude/*
+!.claude/skills/
 .claude-plugin/
 .codex-plugin/
 .cursor-plugin/
@@ -19,6 +20,9 @@ package-lock.json
 *.tmp
 *.log
 .DS_Store
+
+# 无头测试输出（大体积 JSON，不跟踪）
+tests/output/
 
 # 构建产物
 dist/
