@@ -14,6 +14,7 @@
 > - **prototype**：SKILL.md 重构为「内部编排器」，绘制/探查/评审下沉子代理（新增 `prototype-builder`、`design-system-architect` 子代理），主代理只编排；新增设计系统生命周期。
 > - **ce-plan**：模式强制询问（pipeline 下由 orchestrator 问定后显式传参）；一人公司模式收窄到「高阶设计」（删接口清单）；钉死产品级/变更级作用边界。
 > - 第二十章决策落实状态补 v0.8 决策。
+> - **v0.16.0 增量（2026-07-25 追加）**：新增 §21「会话交接 + 工作流反馈」——`session-handoff`（上下文腐化时压缩会话为交接文档）+ `workflow-feedback`（工作流使用问题结构化记录）。LT 确认四项决策（保存位置 `.team-flow/`、feedback git 跟踪、允许模型建议触发、目标版本 v0.16.0）。
 
 ---
 
@@ -276,6 +277,192 @@ ce-plan SKILL.md 顶部新增「作用边界」硬声明：
 
 ---
 
+## 二十一、v0.16.0 增量设计：会话交接 + 工作流反馈（P1-10）
+
+> **决策（LT 确认 2026-07-25）**：新增 `session-handoff` + `workflow-feedback` 两个 skill，目标版本 v0.16.0。
+> 四项决策：① 交接文档保存到 `.team-flow/handoffs/`（项目内，新会话可发现）；② 问题记录 git 跟踪（`.team-flow/feedback/`，不 gitignore）；③ session-handoff 允许模型主动建议触发（不设 `disable-model-invocation`）；④ 目标版本 v0.16.0。
+
+### 21.0 修订背景
+
+| 问题 | 现象 | 根因 |
+|------|------|------|
+| 上下文腐化 | 长时间对话后产出质量下降，重复提问、遗忘约束 | 无会话级交接机制，换会话后隐性知识丢失 |
+| 工作流问题散落 | 使用中遇到的 skill 触发不准、SOP 不顺等问题只在对话中提及，无法追踪 | 无结构化问题收集端，与 ce-compound（经验沉淀端）不对称 |
+
+**与已有机制的边界**：
+
+| 已有机制 | 层级 | 本 skill 的关系 |
+|---------|------|---------------|
+| `ssf handoff`（CLI） | change 级任务委派（prototype/research/experiment） | 不冲突，`session-handoff` 是会话级，不处理 change 级任务委派 |
+| `ssf checkpoint`（CLI） | change 级执行进度快照 | 不冲突，checkpoint 记录任务进度，session-handoff 记录会话上下文 |
+| `.team-flow/` yaml | 产品级跨 session 状态恢复（结构化数据） | 互补，yaml 记录结构化状态，handoff 记录非结构化隐性知识 |
+| §18.1 交接协议 | subagent→主代理进程内返回 | 不同层级，§18.1 是进程内，session-handoff 是跨会话 |
+| ce-compound | 经验沉淀端（解决方案→docs/solutions/） | 互补，workflow-feedback 是问题发现端 |
+| CLAUDE.md 待办列表 | 手动维护的问题/改进清单 | workflow-feedback 输出可直接映射为待办条目 |
+
+### 21.1 session-handoff：会话级上下文交接
+
+**定位**：当长时间对话导致上下文腐化（context rot）时，将当前会话的工作上下文压缩为结构化交接文档，供新会话无缝继续。核心价值 = 把"只存在于对话上下文中的隐性知识"显性化。
+
+**Frontmatter**：
+```yaml
+---
+name: session-handoff
+description: >
+  将当前会话的工作上下文压缩为结构化交接文档，供新会话无缝继续。
+  当长时间对话导致上下文腐化、产出质量下降时使用；
+  也可在切换设备、交接给其他开发者时使用。
+  不适用于：change 级任务委派（用 ssf handoff）、
+  产品级状态恢复（已由 .team-flow/ yaml 自动处理）、
+  subagent 进程内交接（已由 §18.1 交接协议覆盖）。
+argument-hint: "[下一个会话的关注点描述]"
+---
+```
+
+**核心工作流**：
+
+```
+触发 → 1. 环境感知 → 2. 上下文萃取 → 3. 文档生成 → 4. 恢复指引
+```
+
+| 步骤 | 动作 | 说明 |
+|------|------|------|
+| 1. 环境感知 | 自动检测 `.team-flow/registry.yaml`、`orchestrator.yaml`、`.spec-superflow.yaml`、`prd/vN/` | 无状态文件时降级为通用 handoff 模式 |
+| 2. 上下文萃取 | 从当前对话提取：进度摘要、关键决策（未写入产物的）、未解决问题、用户偏好、失败尝试 | 敏感信息脱敏（`${PLACEHOLDER}`） |
+| 3. 文档生成 | 输出到 `.team-flow/handoffs/<timestamp>-<req-id>.md` | 引用产物路径，不复制内容 |
+| 4. 恢复指引 | 输出到终端：新会话的恢复操作 + 建议 skills | 基于触发域分层表精准推荐 |
+
+**交接文档结构**（10 节）：
+
+| 节 | 内容 | 来源 |
+|----|------|------|
+| §1 下一个会话的关注点 | 用户传入的 argument 或从对话推断 | 用户/推断 |
+| §2 工作流状态 | 活跃需求、SOP 阶段、状态机状态、PRD 版本（引用 yaml 路径） | 自动检测 |
+| §3 本次会话进度 | 已完成/正在进行/下一步 | 对话萃取 |
+| §4 关键决策 | 未写入产物的决策（表格：决策/理由/影响） | 对话萃取 |
+| §5 未解决问题与临时假设 | 表格：问题/默认处理/需确认？ | 对话萃取 |
+| §6 失败尝试 | 放弃的方案及原因（避免重蹈覆辙） | 对话萃取 |
+| §7 用户偏好与约束 | 不在文档中的隐性偏好 | 对话萃取 |
+| §8 建议 Skills | 表格：优先级/Skill/理由（基于触发域分层） | 自动推荐 |
+| §9 关键产物引用 | 路径列表（PRD/原型/设计方案/复利经验） | 自动检测 |
+| §10 敏感信息声明 | 脱敏声明 | 固定 |
+
+**触发域**：步骤级-独立工具。触发词：handoff、交接、换会话、上下文太长、context rot、新会话继续。排除：`ssf handoff`（change 级）、`checkpoint`（执行进度）。
+
+**模型建议触发**：允许。当检测到上下文腐化迹象（重复提问、遗忘约束、响应质量下降）时，模型可建议用户触发 session-handoff。
+
+### 21.2 workflow-feedback：工作流问题记录
+
+**定位**：记录 team-flow 工作流使用过程中发现的问题和改进建议。核心价值 = 把"用的时候觉得不好用"转化为可追踪的改进项。与 ce-compound（经验沉淀端）互补，构成"问题发现→经验沉淀"闭环。
+
+**Frontmatter**：
+```yaml
+---
+name: workflow-feedback
+description: >
+  记录 team-flow 工作流使用过程中发现的问题和改进建议。
+  当 skill 触发不准、SOP 流程不顺、产物质量不符预期、
+  交互体验不好时使用；也可在 change 收尾时回顾性触发。
+  不适用于：记录业务代码 bug（用 bug-investigator）、
+  沉淀已解决问题的经验（用 ce-compound）。
+argument-hint: "[问题简述] [--category <分类>] [--severity <P0-P3>]"
+---
+```
+
+**问题分类体系**（对应 team-flow 实际组件）：
+
+| 分类 | 说明 | 优化责任方 |
+|------|------|-----------|
+| `skill-trigger` | skill 触发不准（误触发/不触发/触发域冲突） | skill description + 触发域分层表 |
+| `sop-flow` | SOP 阶段转换、路由、回退不顺畅 | orchestrator + 设计增强方案 |
+| `artifact-quality` | 产物格式/内容/校验不符预期 | 对应 skill + 制品契约 |
+| `state-management` | 状态文件不一致、恢复失败、并发冲突 | state-model + CLI |
+| `agent-quality` | subagent 产出质量（交接协议、返回格式） | agent 定义 + §18.1 |
+| `cli-command` | ssf CLI 命令问题 | scripts/ |
+| `ux-interaction` | 交互不流畅、信息过载、确认过多/过少 | skill 工作流设计 |
+| `performance` | token 消耗过大、响应慢 | skill 拆分/渐进式披露 |
+| `cross-platform` | 跨平台兼容性（Claude Code/Codex/Cursor 等） | 多安装面配置 |
+| `documentation` | 文档不一致、过时、缺失 | 文档维护规范 |
+
+**核心工作流**：
+
+```
+触发 → 1. 问题采集 → 2. 上下文关联 → 3. 结构化记录 → 4. 改进建议
+```
+
+| 步骤 | 动作 | 说明 |
+|------|------|------|
+| 1. 问题采集 | 主动模式（用户传入 argument）或回顾模式（分析当前会话） | 回顾模式识别：skill 被纠正、用户不满表达、状态回退、多次确认 |
+| 2. 上下文关联 | 关联 SOP 阶段、状态机状态、涉及的 skill/agent/CLI | 自动检测 |
+| 3. 结构化记录 | 输出到 `.team-flow/feedback/<timestamp>-<category>.md` | git 跟踪 |
+| 4. 改进建议 | 生成可追加到 CLAUDE.md 待办列表的条目 + 优先级建议 | 已有解决方案时建议触发 ce-compound |
+
+**问题记录结构**（YAML frontmatter + Markdown）：
+
+```yaml
+---
+type: workflow-feedback
+version: 1
+created_at: <ISO 8601>
+category: <分类>
+severity: <P0 | P1 | P2 | P3>
+status: open
+related_skill: <skill-name | null>
+related_phase: <S1-S5 | change-level | null>
+related_requirement: <req-id | null>
+---
+```
+
+正文：现象 → 期望 → 复现路径 → 影响（范围+频率） → 改进建议 → 建议待办条目。
+
+**触发域**：步骤级-独立工具。触发词：工作流问题、记录问题、这个不好用、流程有问题、反馈、workflow issue。排除：业务代码 bug（→ bug-investigator）、经验沉淀（→ ce-compound）。
+
+**联动**：release-archivist 收尾时建议触发（"本次 change 有工作流问题要记录吗？"）。
+
+### 21.3 两个 skill 的协同与会话生命周期
+
+```
+会话生命周期：
+  开始 → 工作 → [遇到问题] → workflow-feedback 记录
+                → [上下文腐化] → session-handoff 交接 → 新会话继续
+                → [change 完成] → release-archivist 收尾
+                                    → 建议 workflow-feedback 回顾
+                                    → 建议 ce-compound 沉淀
+                                    → 建议 session-handoff（如果还有后续工作）
+```
+
+### 21.4 产物结构变更
+
+```
+.team-flow/                    # 已有
+  ├── registry.yaml            # 已有
+  ├── requirements/            # 已有
+  ├── handoffs/                # 🆕 session-handoff 输出（建议 .gitignore，临时性质）
+  │   └── <timestamp>-<req-id>.md
+  └── feedback/                # 🆕 workflow-feedback 输出（git 跟踪，改进输入）
+      └── <timestamp>-<category>.md
+```
+
+### 21.5 新增组件清单（v0.16.0）
+
+| 组件 | 类型 | 动作 | 触发域层级 |
+|------|------|------|-----------|
+| `session-handoff` | skill | 新增 | 步骤级-独立工具 |
+| `workflow-feedback` | skill | 新增 | 步骤级-独立工具 |
+| `.team-flow/handoffs/` | 产物目录 | 新增（.gitignore） | — |
+| `.team-flow/feedback/` | 产物目录 | 新增（git 跟踪） | — |
+
+**同步更新清单（P4 预评估）**：
+
+| 变更 | 需更新的文件 |
+|------|------------|
+| 新增 2 个 skill（20→22） | ① 设计增强方案 ② AGENTS.md Skills 索引 ③ README.md ④ CLAUDE.md skills 表 ⑤ plugin.json description |
+| 新增产物目录 | ① 设计增强方案 ② AGENTS.md ③ CLAUDE.md 产物结构 |
+| 触发域分层 | AGENTS.md 触发域分层表新增 2 行 |
+| release-archivist 联动 | release-archivist SKILL.md（收尾时建议触发 workflow-feedback） |
+
+---
+
 ## 二十、决策落实状态（v0.8 增补）
 
 12. **v0.15.0 subagent 编排 + 状态治理（v0.8 新增）**：
@@ -291,6 +478,16 @@ ce-plan SKILL.md 顶部新增「作用边界」硬声明：
     - prototype 内部子代理编排 + 设计系统生命周期：✅ 已实施（v0.15.0，2026-07-25）。
     - ce-plan 收窄高阶设计（删接口清单）+ 作用边界声明：✅ 已实施（v0.15.0，2026-07-25）。
 
+13. **v0.16.0 会话交接 + 工作流反馈（v0.8 §21 新增，P1-10）**：
+    - 新增 `session-handoff` skill（会话级上下文交接，区别于 change 级 `ssf handoff`）：✅ LT 确认（2026-07-25）。
+    - 新增 `workflow-feedback` skill（工作流问题结构化记录，与 ce-compound 互补）：✅ LT 确认（2026-07-25）。
+    - 交接文档保存到 `.team-flow/handoffs/`（项目内，新会话可发现，.gitignore）：✅ LT 确认（2026-07-25）。
+    - 问题记录保存到 `.team-flow/feedback/`（git 跟踪，改进输入持久化）：✅ LT 确认（2026-07-25）。
+    - session-handoff 允许模型主动建议触发（不设 disable-model-invocation）：✅ LT 确认（2026-07-25）。
+    - 目标版本 v0.16.0：✅ LT 确认（2026-07-25）。
+
 ---
 
 *v0.8 由 CC 基于 LT 第 20 轮实证复盘（VRM 管理驾驶舱 Session 29d058e5 全链路动作还原）+ 4 项架构决策（多需求状态模型 / ce-plan 模式传参 / .team-flow 治理节奏 / v0.15.0 打包），增量修订。承袭 v0.7 全量内容，仅记录 v0.15.0 增量。*
+
+*2026-07-25 追加 §21（v0.16.0 会话交接 + 工作流反馈，P1-10），LT 确认四项决策（保存位置 / git 跟踪 / 模型建议触发 / 目标版本）。*

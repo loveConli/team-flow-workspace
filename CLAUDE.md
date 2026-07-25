@@ -75,12 +75,12 @@ team-flow-workspace/
 ### 当前版本说明
 
 - **设计增强方案当前权威版本**：`docs/architecture-api-db-design-enhancement-v0.8.md`（subagent 编排下沉 + 多需求状态治理 + PRD/Plan 规范修复；承袭 v0.7 全量内容）
-- **插件版本**：`v0.15.0`（20 skills + 8 agents）
+- **插件版本**：`v0.15.0`（22 skills + 8 agents）
 - 设计增强方案的历史版本（v1 / v0.2 / v0.3 / v0.5 / v0.7）保留在 `docs/` 下，仅供追溯，不作为实施依据
 
 ## team-flow 工作流核心
 
-### 七套能力（20 skills）
+### 九套能力（22 skills）
 
 
 | 模块                  | Skills                                                                                                                                        | 职责                                         |
@@ -92,6 +92,8 @@ team-flow-workspace/
 | 产品级编排（v0.11.0 新增）   | workflow-orchestrator                                                                                                                         | 产品级工作流编排（brainstorm→原型内循环→plan→拆change→分发） |
 | 既有项目接入（v0.11.0 新增）  | workflow-bootstrap                                                                                                                            | 既有项目一次性侦察+基线建立（代码库侦察→架构基线→领域词汇→目录初始化）      |
 | E2E（v0.10.0 新增）     | e2e                                                                                                                                           | AC 驱动 Playwright E2E 测试                    |
+| 会话交接（v0.16.0 新增）    | session-handoff                                                                                                                               | 上下文腐化时压缩会话为交接文档，供新会话无缝继续                  |
+| 工作流反馈（v0.16.0 新增）   | workflow-feedback                                                                                                                             | 工作流问题结构化记录，与 ce-compound 互补                |
 
 
 ### 工作流 SOP（v0.7 修订，v0.15.0 增补，对应设计增强方案 v0.8）
@@ -143,7 +145,9 @@ ssf solutions promote <change-dir>                   # change→product 晋升
 ```
 .team-flow/        状态文件（v0.15.0，原 .workflow-orchestrator.yaml 迁入）
   ├── registry.yaml             # 需求注册表（多需求并行 + active_requirement）
-  └── requirements/<req-id>/orchestrator.yaml  # 每需求产品级编排状态
+  ├── requirements/<req-id>/orchestrator.yaml  # 每需求产品级编排状态
+  ├── handoffs/                 # 会话交接文档（v0.16.0 新增，session-handoff 产出，.gitignore）
+  └── feedback/                 # 工作流问题记录（v0.16.0 新增，workflow-feedback 产出，git 跟踪）
 prd/               PRD + 实施方案 + 原型审查记录（v1→v2，分支隔离）
   └── vN/
       ├── prd.md              # 业务要件（ce-brainstorm 产出）
@@ -294,6 +298,7 @@ P1 设计 → P2 实施 → P3 验证 → P4 同步 → P5 提交
 | v0.12.0 | **治理债务清理**          | ① 身份命名统一（team-flow vs spec-superflow） ② AGENTS.md 同步到 v0.11.0 ③ 版本号硬编码修复（74 处 npx 引用） ④ skill 计数全链路一致 ⑤ check-versions 扩展（计数 + npx 引用校验）                      | ✅ 2026-07-24 完成       |
 | v0.13.0 | **渐进式披露 + Agent 化** | ① ce-compound / ce-plan SKILL.md 拆分到 references/（控制在 150 行内） ② code-reviewer / bug-investigator 改为 agent ③ 13 个无 references/ 的 skill 补充支撑文件                   | ✅ 2026-07-24 完成       |
 | v1.0.0  | **成熟版**             | ① 触发词去重（分层触发域，方案C） ② PreToolUse hook 执行期状态守护 ③ "ce-" 前缀正名（保留+文档化，方案C） ④ 设计增强方案 v1.0 全量定稿 ⑤ 身份统一 spec-superflow→team-flow（P1-6） ⑥ orchestrator 设计优化（反馈环路+增量入口） | 🔲 进行中（①②③已完成，④⑤⑥待实施） |
+| v0.16.0 | **会话交接 + 工作流反馈**   | ① `session-handoff` skill（会话级上下文交接，上下文腐化时压缩为交接文档） ② `workflow-feedback` skill（工作流问题结构化记录，与 ce-compound 互补） ③ `.team-flow/handoffs/` + `.team-flow/feedback/` 产物目录 ④ release-archivist 收尾联动 | 🔲 设计完成（v0.8 §21），待实施 |
 | v0.16.0+ | **原型生成体系升级**       | 学习 `docs/external-references/open-design`（nexu-io/open-design 原型生成体系，含 skill、设计系统、生成流程），吸收其方法论升级 team-flow 的 prototype 设计能力（设计系统 schema / 原型生成质量 / 组件体系） | 🔲 规划中（参考库已引入，待检出学习） |
 | v1.x    | **项目级差异化配置**       | 工作流编排 + 原型设计系统支持**项目级差异化配置**；配置优先级：**项目级配置 > plugin 内置默认**。扩展现有 config 注入（`prd.template`/`prototype.designSystem`/`prototype.entry`）到工作流 SOP/阶段开关/设计系统，形成统一的分层配置体系 | 🔲 规划中 |
 
@@ -327,8 +332,8 @@ P1 设计 → P2 实施 → P3 验证 → P4 同步 → P5 提交
 | P1-6  | 身份统一：`spec-superflow` 全部改为 `team-flow`（含 npm 包名、CLI 前缀 `ssf`→`tf`、`.spec-superflow.yaml`→`.team-flow.yaml`、所有 SKILL.md/脚本中的 npx 引用及底层命令）                                       | 🔲 部分落地       | v1.0.0  | **第一阶段（产品级状态文件迁 `.team-flow/`）✅ v0.15.0**；第二阶段（npm 包名/CLI/npx/变更级 `.spec-superflow.yaml`→`.team-flow.yaml`）待 v1.0.0，与 npm 包重命名同批 |
 | P1-7  | orchestrator v2 设计优化：① 反馈环路（vN 内修订+变更履历，非升版） ② 增量入口（S1 路径路由器） ③ 原型循环上提到 orchestrator（思路B） ④ 原型自动评审（PRD 一致性检查→人工评审） ⑤ S4 拆分质量自检 ⑥ S5 多 change 必选化 ⑦ description 从"列举步骤"改为"描述能力" | ✅ 2026-07-24 | v1.0.0  | 来源：LT 设计讨论（2026-07-24），v0.7 设计+四方会审+P2 实施+P3 review 全流程完成         |
 | P1-8  | subagent 拆分规划：明确各阶段子代理分工（哪些执行步骤由 subagent 实施），编排层只负责编排                                                                                                                         | 🔲 部分落地       | v1.0.0  | **§18.1 交接协议 + bootstrap/prototype/brainstorm 执行下沉 ✅ v0.15.0**；剩余 kickoff-context-assembler / replan-analyst / compound-moment-detector 待实施 |
-| P1-9  | ce-brainstorm SKILL.md 拆分到 references/（415行→≤150行），与 P1-1/P1-2 同类项                                                                                                             | 🔲 待实施       | v1.0.0  | 来源：v0.7 实施横展发现（P1-1/P1-2 拆了 ce-compound/ce-plan，ce-brainstorm 遗漏）；v0.15.0 校验再次标记 |
-| P1-10 | 新增两个skill1: handoff skill用于在一个大的需求长时间对话后，上下文腐化，产出低效的时候转换到新的会话中继续2: 工作流使用问题记录 skill，用于在实际的工作流使用过程，通过读取会话内容识别工作流的实际情况以及问题识别，用于plugin开发者进行优化                                    | 🔲 待实施       | v0.16.0 | 人工记录                                                              |
+| P1-9  | ce-brainstorm / ce-ideate / ce-proof SKILL.md 拆分到 references/（415/402/346行→≤150行），与 P1-1/P1-2 同类项                                                                                                             | 🔲 待实施       | v1.0.0  | 来源：v0.7 实施横展发现（P1-1/P1-2 拆了 ce-compound/ce-plan，ce-brainstorm 遗漏）；v0.16.0 校验横展发现 ce-ideate(402)/ce-proof(346) 同类超标 |
+| P1-10 | 新增两个 skill：`session-handoff`（会话级上下文交接，区别于 change 级 `ssf handoff`）+ `workflow-feedback`（工作流问题结构化记录，与 ce-compound 互补）。设计见 v0.8 §21 | 🔲 P2-P4 完成，待 P5 提交 | v0.16.0 | P1 设计 ✅ 2026-07-25（LT 确认四项决策）；P2 实施 ✅（2 SKILL.md + 6 references + release-archivist 联动）；P3 验证 ✅（check-versions 通过 + plugin-validator 无阻断 + skill-reviewer PASS/PASS_WITH_WARNINGS 已修复）；P4 同步 ✅（AGENTS.md/README/plugin.json/CLAUDE.md 全链路 22 skills）；P5 待执行 |
 
 
 ### P2（改善，按节奏推进）
