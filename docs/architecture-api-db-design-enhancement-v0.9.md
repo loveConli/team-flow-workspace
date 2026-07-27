@@ -11,6 +11,8 @@
 > - **§23 产品级 → 变更级产物交接契约**：新增 `change-brief.md` 交接物，由 orchestrator S4 在审计 PASS 后落盘到每个 change 目录；变更层（workflow-start / need-explorer / spec-writer）继承 scope/AC/技术方向，不再重复询问意图、不再重复决策拆分——修复两层产物断链。
 > - **§24 拆分维度治理**：正向钉死 change 拆分维度 = 用户故事 / 功能模块（内聚功能域）；`change-split-auditor` 新增 **D5 拆分维度合规硬门禁**（拆到单接口/单文件/单任务 = Critical = FAIL），与原 D3 数值粒度（advisory）正交。
 > - **§25 文档一致性修正**：修正 state-model.md / s1-path-router.md 关于变更级状态文件名的现状口吻漂移（`.team-flow.yaml` → 当前仍为 `.spec-superflow.yaml`，v1.0.0 改名）。
+> - **§26 架构设计显式编排与产物独立化**：workflow-start 显式编排 architecture-design 子代理（判断+执行一体化）；产出目录从 `specs/<cap>/` 提升为独立 `architecture/`；spec-writer Required Inputs 增加 `architecture/` 读取；hotfix/tweak 不豁免。
+> - **§27 身份统一：spec-superflow → team-flow 全量迁移**：完成 P1-6 第二阶段——npm 包名 `spec-superflow` → `team-flow`、CLI 前缀 `ssf` → `tf`、状态文件 `.spec-superflow.yaml` → `.team-flow.yaml`、脚本文件名 `spec-superflow.mjs` → `team-flow.mjs`；全量 721 处引用一刀切迁移；存量项目通过 `tf doctor` 自动迁移。
 > - **第二十章**决策落实状态新增第 15 条。
 > - **零脚本逻辑改动**：本修订全部为指令文本 / 文档措辞 / 设计文档；`hash.mjs` / `state-loader.mjs` / `cmd-state.mjs` / `infer-workflow.mjs` 均不动（详见 §23.3 决策记录）。
 
@@ -347,4 +349,158 @@ plan.md (高阶技术方向)       ──→  判断 + 执行一体化  ──�
 
 ---
 
-*v0.9 §26 由 CC 基于 LT 讨论结论增量修订。核心为「architecture-design 由 workflow-start 显式编排 + 判断执行一体化 + 产出独立目录 + 上下游衔接闭环」，全案零脚本逻辑改动。*
+## 二十七、身份统一：spec-superflow → team-flow 全量迁移（v0.23.0）
+
+> 触发来源：P1-6 第二阶段（v0.22.2 版本错位问题实证暴露——npx 找不到本地包 @0.22.2 而回退到 npm 公共 @0.11.0，根因为身份分裂：产品名 team-flow 与底座包名 spec-superflow 并存）。
+
+### 27.0 问题诊断
+
+| 断点 | 现象 | 根因 |
+|------|------|------|
+| 身份分裂 | 产品名 `team-flow`（23 skills + 8 agents 统一插件），底座 npm 包名 `spec-superflow`（停在 0.11.0 未发布） | 历史遗留：spec-superflow 是 team-flow 的 CLI 底座，但包名从未重命名 |
+| 版本错位 | skill 文件引用 `spec-superflow@0.22.2`，npm 公共最新只有 `0.11.0`，npx 找不到 → 回退旧版 → 命令缺失/字段不匹配 | `npm version` pre-publish hook 只同步版本号 + git commit，无自动 `npm publish` |
+| CLI 前缀分裂 | CLI 命令 `ssf`（spec-superflow CLI），与产品名 `tf`（team-flow）不一致 | 身份分裂的表象 |
+| 状态文件分裂 | 变更级状态文件 `.spec-superflow.yaml`，产品级目录 `.team-flow/`，命名不统一 | 身份分裂的表象 |
+| 99 处 npx 引用断裂 | 18 个 skill 文件中 99 处 `npx --package spec-superflow@X.Y.Z ssf ...` 全部指向未发布的包版本 | 身份分裂 + 发布流程缺失 |
+
+### 27.1 迁移决策（LT 确认 4 项）
+
+| 维度 | 现状 | 目标 | 策略 |
+|------|------|------|------|
+| npm 包名 | `spec-superflow` | `team-flow` | 一刀切（package.json `name` + npm publish） |
+| CLI 前缀 | `ssf` | `tf` | 一刀切（package.json `bin` + 99 处 npx 引用同步） |
+| npx 安装方式 | `npx --yes --package spec-superflow@X.Y.Z ssf` | `npx --yes --package team-flow@X.Y.Z tf` | 保持 npx 远程安装（不改本地路径调用） |
+| 状态文件（变更级） | `.spec-superflow.yaml` | `.team-flow.yaml` | 扁平文件（不进 `.team-flow/` 目录，与产品级 `.team-flow/` 平级区分） |
+| 脚本文件名 | `spec-superflow.mjs` | `team-flow.mjs` | 一刀切（1 文件重命名 + 多处引用同步） |
+| 配置文件 | `spec-superflow.config.json` | `team-flow.config.json` | 一刀切 |
+| 存量项目迁移 | 存量 change 目录下有 `.spec-superflow.yaml` | 自动迁移到 `.team-flow.yaml` | `tf doctor` 检测 + 一键迁移脚本 |
+
+### 27.2 影响面评估（721 处引用）
+
+| 类别 | 引用数 | 分布 | 迁移动作 |
+|------|--------|------|---------|
+| npx 包引用 | 99 | 18 个 skill 文件（workflow-start / spec-writer / contract-builder / build-executor / release-archivist / code-reviewer / bug-investigator / need-explorer / spec-merger + 各自 references/） | `--package spec-superflow@X.Y.Z` → `--package team-flow@X.Y.Z` |
+| CLI 命令 | 217 | 同上 + 测试文件 | `ssf` → `tf`（含 `npx ... ssf` → `npx ... tf`） |
+| 状态文件名 | 111 | skills/ + tests/ + scripts/ | `.spec-superflow.yaml` → `.team-flow.yaml` |
+| 脚本文件名 | ~30 | tests/ + scripts/ 引用 | `spec-superflow.mjs` → `team-flow.mjs` |
+| 配置文件名 | ~5 | scripts/ + tests/ | `spec-superflow.config.json` → `team-flow.config.json` |
+| 文档/描述 | ~259 | AGENTS.md / README.md / CHANGELOG.md / docs/ / skills/*.md 描述文本 | `spec-superflow` → `team-flow`（描述性文本） |
+
+### 27.3 迁移步骤（P2 实施清单）
+
+#### 步骤 1：package.json 重命名
+
+```json
+{
+  "name": "team-flow",
+  "bin": {
+    "tf": "./scripts/team-flow.mjs",
+    "team-flow": "./scripts/team-flow.mjs"
+  }
+}
+```
+
+移除旧 `ssf` / `spec-superflow` 别名（一刀切，不保留过渡期）。
+
+#### 步骤 2：脚本文件重命名
+
+```bash
+mv scripts/spec-superflow.mjs scripts/team-flow.mjs
+```
+
+同步更新所有引用 `spec-superflow.mjs` 的测试文件（~30 处）。
+
+#### 步骤 3：状态文件名迁移
+
+```bash
+# 脚本层：state-loader.mjs / cmd-state.mjs / hash.mjs 等
+# 搜索 `.spec-superflow.yaml` → 替换为 `.team-flow.yaml`
+```
+
+111 处引用全量替换（skills/ + tests/ + scripts/）。
+
+#### 步骤 4：npx 引用全量替换
+
+```bash
+# 18 个 skill 文件中 99 处
+# `npx --yes --package spec-superflow@X.Y.Z ssf`
+# → `npx --yes --package team-flow@X.Y.Z tf`
+```
+
+#### 步骤 5：配置文件名迁移
+
+```bash
+# `spec-superflow.config.json` → `team-flow.config.json`
+```
+
+~5 处引用全量替换。
+
+#### 步骤 6：文档/描述文本替换
+
+```bash
+# AGENTS.md / README.md / CHANGELOG.md / docs/ / skills/*.md 描述文本
+# `spec-superflow` → `team-flow`（仅描述性，不改代码标识符）
+```
+
+~259 处全量替换。
+
+#### 步骤 7：存量项目自动迁移脚本
+
+在 `scripts/lib/cmd-doctor.mjs` 中增加迁移检查：
+
+```javascript
+// 检测存量 .spec-superflow.yaml
+// 提示用户运行 `tf doctor --migrate` 一键迁移
+// 迁移动作：mv .spec-superflow.yaml .team-flow.yaml
+```
+
+#### 步骤 8：npm publish
+
+```bash
+cd team-flow && npm publish
+```
+
+发布 `team-flow@0.23.0` 到 npm registry。
+
+#### 步骤 9：pre-commit hook 增强
+
+在 `scripts/install-git-hooks.mjs` 中增加发布状态检查：
+
+```javascript
+// pre-commit hook:
+// 1. 读 package.json version
+// 2. npm view team-flow@<version> → 404?
+//    → WARN: "version X.Y.Z not published, run npm publish"
+//    → 阻断提交（或 advisory 警告）
+```
+
+防止再次出现"本地版本号领先 npm"的断裂。
+
+### 27.4 需修订的文件清单
+
+| 文件 | 修订内容 |
+|------|---------|
+| `package.json` | `name` 改 `team-flow`、`bin` 改 `tf` / `team-flow`、移除 `ssf` / `spec-superflow` |
+| `scripts/spec-superflow.mjs` → `scripts/team-flow.mjs` | 文件重命名 + 内部引用 `.spec-superflow.yaml` → `.team-flow.yaml` |
+| `scripts/lib/*.mjs` | 状态文件名引用全量替换（state-loader / cmd-state / hash / infer-workflow 等） |
+| `scripts/check-version-consistency.mjs` | 检查范围扩展到配置文件名 |
+| `scripts/install-git-hooks.mjs` | 增加发布状态检查 |
+| `scripts/lib/cmd-doctor.mjs` | 增加存量 `.spec-superflow.yaml` 检测 + `--migrate` 迁移命令 |
+| `skills/**/SKILL.md` + `skills/**/references/*.md` | 99 处 npx 引用 + 217 处 CLI 命令全量替换 |
+| `tests/**/*.mjs` | 111 处状态文件名 + ~30 处脚本文件名 + ~5 处配置文件名全量替换 |
+| `AGENTS.md` / `README.md` / `CHANGELOG.md` | 描述文本 `spec-superflow` → `team-flow` |
+| `docs/**/*.md` | 描述文本替换 |
+| `docs/roadmap-and-todos.md` | P1-6 状态更新为 ✅ |
+
+### 27.5 风险与缓解
+
+| 风险 | 缓解 |
+|------|------|
+| npm 发布后用户仍在用旧 `spec-superflow` 包 | 在 `spec-superflow` 包发布 deprecation notice，指引迁移到 `team-flow` |
+| 存量项目 `.spec-superflow.yaml` 未迁移导致 workflow 断裂 | `tf doctor` 自动检测 + `--migrate` 一键迁移 |
+| 99 处 npx 引用替换遗漏 | `check-version-consistency.mjs` 扩展扫描 + pre-commit hook 拦截 |
+| pre-commit hook 误报（本地开发未 publish 时阻断） | 默认 advisory 模式，可通过环境变量 `TF_SKIP_PUBLISH_CHECK=1` 跳过 |
+
+---
+
+*v0.9 §27 由 CC 基于 LT 确认的 4 项决策增量修订。核心为「spec-superflow → team-flow 全量一刀切迁移（npm 包名 + CLI 前缀 + 状态文件 + 脚本文件 + 配置文件 + 文档描述）+ 存量项目自动迁移 + pre-commit 发布状态检查」，全案 721 处引用同步，零功能逻辑改动。*

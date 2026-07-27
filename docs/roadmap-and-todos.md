@@ -27,7 +27,7 @@
 
 | 版本      | 里程碑                 | 核心内容                                                                                                                                                          | 状态                    |
 | ------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- |
-| v1.0.0  | **成熟版**             | ① 触发词去重（分层触发域，方案C） ② PreToolUse hook 执行期状态守护 ③ "ce-" 前缀正名（保留+文档化，方案C） ④ 设计增强方案 v1.0 全量定稿 ⑤ 身份统一 spec-superflow→team-flow（P1-6） ⑥ orchestrator 设计优化（反馈环路+增量入口） | 🔲 进行中（①②③已完成，④⑤⑥待实施） |
+| v1.0.0  | **成熟版**             | ① 触发词去重（分层触发域，方案C） ② PreToolUse hook 执行期状态守护 ③ "ce-" 前缀正名（保留+文档化，方案C） ④ 设计增强方案 v1.0 全量定稿 ⑤ orchestrator 设计优化（反馈环路+增量入口） | 🔲 进行中（①②③已完成，④⑤待实施；⑥身份统一提前至 v0.23.0 ✅） |
 | v0.16.0+ | **原型生成体系升级**       | 学习 open-design 方法论，升级 prototype 设计能力。研究 ✅ v0.17.0；Wave 1+2 ✅ v0.18.0（合并实施）；Wave 3 待反馈决策 | ✅ Wave 1+2 已完成 |
 | v1.x    | **项目级差异化配置**       | 工作流编排 + 原型设计系统支持项目级差异化配置；配置优先级：项目级 > plugin 内置默认 | 🔲 规划中 |
 
@@ -54,7 +54,7 @@
 | P1-3  | code-reviewer agent 创建（只读审查员，tools: Read/Bash/Grep/Glob，171行）                                                                                                                  | ✅ 2026-07-24 | v0.13.0 | 来源：v0.11.0 设计评审 W2                                                |
 | P1-4  | bug-investigator agent 创建（自主调查员，tools: Read/Bash/Grep/Glob/Write，180行）                                                                                                         | ✅ 2026-07-24 | v0.13.0 | 来源：v0.11.0 设计评审 W2                                                |
 | P1-5  | README.md 同步：七套能力 20 skills + SOP + 产物结构                                                                                                                                       | ✅ 2026-07-24 | v0.12.0 | 来源：v0.11.0 设计评审                                                   |
-| P1-6  | 身份统一：`spec-superflow` 全部改为 `team-flow`（含 npm 包名、CLI 前缀 `ssf`→`tf`、`.spec-superflow.yaml`→`.team-flow.yaml`、所有 SKILL.md/脚本中的 npx 引用及底层命令）                                       | 🔲 部分落地       | v1.0.0  | **第一阶段（产品级状态文件迁 `.team-flow/`）✅ v0.15.0**；第二阶段（npm 包名/CLI/npx/变更级 `.spec-superflow.yaml`→`.team-flow.yaml`）待 v1.0.0，与 npm 包重命名同批 |
+| P1-6  | 身份统一：`spec-superflow` 全部改为 `team-flow`（含 npm 包名、CLI 前缀 `ssf`→`tf`、`.spec-superflow.yaml`→`.team-flow.yaml`、所有 SKILL.md/脚本中的 npx 引用及底层命令）                                       | ✅ 2026-07-27       | v0.23.0  | **第一阶段（产品级状态文件迁 `.team-flow/`）✅ v0.15.0**；**第二阶段（npm 包名/CLI/npx/变更级 `.spec-superflow.yaml`→`.team-flow.yaml`）✅ v0.23.0**，721 处引用全量迁移 + 存量项目自动迁移脚本 + pre-commit 发布状态检查 |
 | P1-7  | orchestrator v2 设计优化：① 反馈环路 ② 增量入口 ③ 原型循环上提 ④ 原型自动评审 ⑤ S4 拆分质量自检 ⑥ S5 多 change 必选化 ⑦ description 改为"描述能力" | ✅ 2026-07-24 | v1.0.0  | v0.7 设计+四方会审+P2 实施+P3 review 全流程完成         |
 | P1-8  | subagent 拆分规划：明确各阶段子代理分工，编排层只负责编排                                                                                                                         | 🔲 部分落地       | v1.0.0  | **§18.1 交接协议 + bootstrap/prototype/brainstorm 执行下沉 ✅ v0.15.0**；剩余 kickoff-context-assembler / replan-analyst / compound-moment-detector 待实施 |
 | P1-9  | ce-brainstorm / ce-ideate / ce-proof SKILL.md 拆分到 references/（415/402/346行→≤150行）                                                                                                             | 🔲 待实施       | v1.0.0  | v0.7 实施横展 + v0.16.0 校验横展发现 |
