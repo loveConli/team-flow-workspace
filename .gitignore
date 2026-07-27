@@ -27,3 +27,4 @@ tests/output/
 # 构建产物
 dist/
 build/
+docs/npm-token
