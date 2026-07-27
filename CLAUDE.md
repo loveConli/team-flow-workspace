@@ -56,6 +56,20 @@ team-flow-workspace/
   → change 完成：arch-merge → prototype-sync + 复利晋升
 ```
 
+## 文档治理规则
+
+### 设计增强方案版本管理
+
+- **当前权威版本**：`docs/architecture-api-db-design-enhancement-v0.8.md`
+- **历史版本**：已删除（v0.2/v0.3/v0.5/v0.7），可通过 `git log --all -- "docs/architecture-api-db-design-enhancement-v0.*.md"` 追溯
+- **新版本规则**：重大设计变更时创建新版本文件，旧版本保留不删
+
+### Roadmap 更新策略
+
+- **版本发布时**：更新里程碑状态（✅ + 完成版本/日期）
+- **待办完成时**：只更新状态列（✅ + 日期），不重新整理
+- **新增待办时**：追加行，注明优先级和来源
+
 ## Git 管理规则
 
 ### 父级仓库（当前仓库）
@@ -77,25 +91,29 @@ team-flow-workspace/
 ## 插件迭代工作流（强制规则）
 
 ```
-P1 设计 → P2 实施 → P3 验证 → P4 同步 → P5 提交
+P1 设计 → P2 实施 → P3 验证 → P4 提交
 ```
-
 
 | 阶段        | 动作                                                                                                                                                                | 工具                     |
 | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
 | **P1 设计** | 更新设计增强方案 + LT 确认决策                                                                                                                                                | —                      |
 | **P2 实施** | 新 skill→`/plugin-dev:skill-development`；新 agent→`/plugin-dev:agent-development`；新 hook→`/plugin-dev:hook-development`；新 command→`/plugin-dev:command-development` | plugin-dev 技能集         |
 | **P3 验证** | ① plugin-validator ② skill-reviewer ③ `npm run check-versions` ④ `npm test`                                                                                       | plugin-dev agent + npm |
-| **P4 同步** | 按 `docs/doc-maintenance.md` 迭代同步清单逐项检查 + 更新 `docs/roadmap-and-todos.md`                                                                                           | 见 doc-maintenance.md   |
-| **P5 提交** | 子仓库 `npm version` + commit → 父仓库 commit                                                                                                                           | 见 Git 管理规则             |
-
+| **P4 提交** | 子仓库 `npm version` + commit（pre-commit hook 自动同步）→ 父仓库 commit                                                                                                 | 见 Git 管理规则             |
 
 **约束**：
 
 - P1 未完成（设计文档未更新 / LT 未确认）→ 不进 P2
 - P3 的 check-versions 和 plugin-validator 是门禁，不通过 → 不进 P4
-- P4 同步清单有遗漏 = 迭代未完成
+- P4 提交时 pre-commit hook 自动执行版本一致性检查和修复
 - 新 SKILL.md ≤150 行，详细内容进 references/（渐进式披露）
+
+**自动化同步（pre-commit hook）**：
+
+- skill 计数自动更新（plugin.json, AGENTS.md, README.md）
+- npx 引用自动更新（skills/*/SKILL.md, skills/*/references/*.md）
+- 修复后自动 re-stage，确保包含在提交中
+- 绕过方式：`git commit --no-verify`（仅限紧急情况）
 
 ## 关键路径约束
 
