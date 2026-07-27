@@ -121,48 +121,65 @@ brief 是**上游输入**，**不**混入 workflow-start 现有三条产物互�
 
 ---
 
-## 二十四、拆分维度治理（v0.22.0，待办 1）
+## 二十四、拆分维度治理——所有权自包含根因判据（v0.22.0 重写，待办 1）
 
-### 24.0 问题诊断
+### 24.0 问题诊断与迭代历程
 
-产品阶段 change 拆分维度此前**没有正向钉死**：实际维度散落在 ce-plan `references/change-splitting.md`（"one bounded context or one coherent feature area"）与审计基线（"功能点 / 用户故事 / AC"混合），bounded context（架构话语）与 user story（需求话语）两套词并存未对齐；且"拆得过细"在审计中是**唯一不触发 FAIL 的纯 advisory 维度**（D3），无硬门禁；缺"一个迭代 PRD = 多用户故事/多模块合集"的认知声明。
+**v0.9 初稿（已作废为根因）**：初稿以"用户故事 / 功能模块 vs 实现单元"作为 D5 判据。这是**表层启发式**——scope 文本"像不像故事/模块"。LT 在 VRM 管理驾驶舱实战中实证暴露盲区：6 个 change 按视角/层切分（4 视角 + 读侧基座 + 页面骨架），每个 scope 文本上"像个模块"，初稿 D5 放行 PASS；但它们**共享同一看板读模型/契约的所有权**，6 家 change 的 architecture-design 增量设计互相重叠、复利回写打架——正是"产品阶段拆太细"的活样本。
+
+**根因**：CC 把判据用错了层次——把"粒度尺子"当"标签章"用（先接受 6 change 结果、再各盖 PASS/🟡），且把**变更级实现组织**（按视角/层组织 specs/tasks）误提级为**产品级 change 边界**。
+
+**LT 判据（CC 认同为根因）**："能独立做架构设计来拆分"——精确化为**所有权自包含**：一个 change 当且仅当它对应一个所有权自包含的架构设计单元。
 
 > 承袭说明：v0.7 §17.2 为 change 拆分的原始设计锚点，但该文件在本仓库不存在。下述正向定义**自包含**给出，不依赖 v0.7 §17.2 原文。
 
-### 24.1 正向定义（自包含，全文）
+### 24.1 根因判据（自包含，全文）
 
-**认知声明**：一个迭代版本的 PRD 通常是**多个用户故事或多个功能模块的合集**；ce-plan 拆 change 时必须认识到这一点，拆分应**跟着用户故事 / 功能模块走**，而不是跟着接口、文件或任务走。
+**change 边界 = 所有权边界**。一个 change 当且仅当它对应**一个所有权自包含的架构设计单元**——即该 change 能独立做一次架构增量设计（`architecture-design` skill 核心动作：识别聚合 / 限界上下文 / 读写模型 / API 指令映射），且该设计不依赖其它 change 去重新定义同一聚合/上下文/读模型/契约的所有权。
 
-**拆分维度（硬约束）**：每个 change 的 scope 必须是**一个用户故事**（角色-动作-价值）或**一个内聚功能模块**（如"下单""报表导出""权限体系"）。这与 DDD 的 bounded context 对齐——一个 bounded context 内的一个内聚功能域 = 一个 change。scope 以故事/模块命名，**内部可含多个接口/文件/任务**（这些留给 spec-writer 在 tasks.md 拆）。
+**认知声明**：一个迭代版本的 PRD 通常涵盖**多个所有权自包含的设计单元**。产品级 change 拆分的首要动作是**识别这些所有权单元**——不是识别"视角""页面""接口""层"等实现组织。用户故事 / 功能模块 / 视角 / 层 / 页面，都是 **change 内部** spec-writer / build-executor 的实现组织启发式，**不提级**为 change 边界。
 
-**为何不拆细（正向理由）**：变更级 spec-writer 还有 proposal / specs / design / tasks 四层产物 + 实施 task 拆分；产品阶段拆到接口 / 任务级 = **越界做变更级设计**（违反 ce-plan 作用边界，见 §24.3 / v0.8 §18.7.3）+ **重复劳动**（变更层会再拆一遍）。产品阶段的 change 粒度目标止于"用户故事 / 功能模块"，这是变更阶段能**并行设计与实施**的前提。
+**启发式近似**（与根因判据冲突时以根因为准）：
+- 一个用户故事（角色-动作-价值）通常 ≈ 一个所有权单元 → 通常 = 一个 change
+- 一个内聚功能模块（如"下单""权限体系"）通常 ≈ 一个所有权单元 → 通常 = 一个 change
+- 但若多个故事/视角/层**共享同一所有权单元**（如看板多视角共享同一读模型），应合为一个 change
 
-**反模式（硬约束）**：scope 主体是单个接口路径（`/api/xxx`）、单个文件、单个方法/函数、单条 SQL、单个 task 动作（"添加字段""写校验"）→ 这是实现单元，不是故事/模块，禁止独立成 change。
-- 反例：scope = "实现 `/api/order/create` 接口" → 维度错配。
-- 正例：scope = "订单下单用户故事（含创建接口 + 库存校验 + 下单页）" → 维度正确（内含的多实现单元正是留给 spec-writer 的层级）。
+**为何如此**：变更级 `architecture-design` 对每个 change 做"架构增量设计"。若两个 change 共享同一聚合/读模型/契约所有权，则两家的增量设计互相重叠、复利回写打架、所有权不自包含——这是"拆太细"的真正病根。反过来，一个所有权单元内部按视角/层/页面组织 specs 和 tasks，是**变更级实现组织**，完全正确且推荐。
 
-### 24.2 D5 拆分维度合规硬门禁
+**反模式**（Critical）：
+- **切碎所有权**：把一个所有权单元按视角/层/页面/前后端/DB 切成多个 change。例：看板 4 视角 + 读侧基座 + 页面骨架共享同一看板读模型/契约 → 应合为 **1 个 change**，而非 6 个。又如把"下单"按 C-后端 + C-前端 + C-读模型 切 3 change → 三家瓜分"下单"聚合所有权 → FAIL
+- **跨无关节所有权单元**：一个 change 横跨 ≥2 个互不相关的限界上下文/所有权单元
+- **细到无所有权单元**：scope 是单接口/单文件/单方法/单 SQL/单 task → 无设计单元可识别
 
-`change-split-auditor` 在原有 D1-D4 基础上新增 **D5 拆分维度合规**，**severity = Critical**（进 PASS/FAIL 判定）。
+**正例**：
+- scope = "管理驾驶舱（含总览 KPI / 进度流 / 价值流矩阵 / 三层下钻 / 读侧基座 / 页面骨架，持有看板限界上下文完整所有权）" → **1 个 change**，内部按视角/层组织 specs/tasks
+- scope = "订单下单（含创建接口+库存校验+下单页，持有下单聚合完整所有权）" → PASS
+- scope = "读侧 CQRS 查询基座（持有看板读模型完整所有权，上层 change 消费不重设计）" → PASS（合法基座）
 
-**判定信号**（scope 文本特征）：实现单元信号（单接口/单文件/单方法/单 SQL/单 task 动作）→ Critical；故事/模块信号（以角色-动作-价值或功能模块命名、内含多实现单元）→ PASS。与 D1 复用覆盖单位：若某 change 的 scope 无法映射到 D1 的任何覆盖单位、只能映射到实现单元 → 维度错配。
+### 24.2 D5 所有权粒度合规硬门禁
 
-**Critical 的理由**：维度错配使变更级 spec-writer 的四层产物无从展开——spec 需要"行为"，单接口 scope 给不出行为边界；且与 ce-plan 作用边界硬声明直接冲突，属结构性缺陷而非程度问题。
+`change-split-auditor` D5 从"scope 文本标签检查"**重构**为"所有权粒度分析"，**severity = Critical**。
 
-**安全港（防误杀）**：① 单 change 计划（整 PRD 仅一个 change）整体豁免——无"拆分"可言；② 仅对多 change 计划中被拆细到实现单元的 change 判 Critical；③ hotfix / 单 change 快速通道不经本审计，天然豁免。
+**判定方法**（非文本标签，而是所有权分析）：
+1. 从每个 change 的 scope 识别其声明的**架构所有权对象**（聚合/限界上下文/读模型/契约/层）
+2. **切碎检测**（最核心）：若 ≥2 change 的 architecture-design 会重复设计同一聚合/上下文/读模型/契约 → 所有权被瓜分 → FAIL，要求合并
+3. **无设计单元检测**：scope 细到无法识别任何架构所有权对象 → FAIL
+4. **跨单元臃肿检测**：横跨 ≥2 互不相关的所有权单元 → FAIL
 
-**与 D3 正交（不矛盾）**：D3 管数值粒度（太大/太小，advisory，Important，明确不 FAIL）；D5 管维度对错（故事/模块 vs 接口/文件，Critical）。一个 change 可粒度很小但维度正确（极小独立功能模块：D3 flag、D5 PASS）；也可粒度适中但维度错配（"三个接口的打包"：D3 无异常、D5 FAIL）。二者正交，不重叠。
+**安全港**：① 单 change 计划整体豁免；② hotfix / tweak / 快速通道不经审计；③ 合法基座/横切前置层（持有**完整**层/契约所有权，上层只消费不重设计）→ PASS。关键区分：合法基座 = 持有完整所有权；非法切碎 = 与别家瓜分同一所有权。
 
-**判定表更新**：Critical = coverage gap, DAG cycle, dangling dependency reference, **splitting-dimension violation (D5)**；Important 集合不变。
+**与 D3 正交**：D3 管数值粒度（advisory/Important，不 FAIL）；D5 管所有权粒度（Critical）。二者正交。
+
+**判定表**：Critical = coverage gap, DAG cycle, dangling dependency reference, **ownership-granularity violation (D5: 切碎/无设计单元/跨单元臃肿)**；Important 集合不变。
 
 ### 24.3 与 ce-plan 作用边界呼应
 
-ce-plan SKILL.md「作用边界」硬声明（v0.8 §18.7.3 确立，v0.9 追加拆分维度一句）：
+ce-plan SKILL.md「作用边界」硬声明（v0.8 §18.7.3 确立，v0.9 重写为所有权判据）：
 
-> **ce-plan = 产品级策略**：change 拆分（scope+依赖+优先级+复杂度）、change 依赖 DAG、技术方向决策、风险与里程碑。**产品阶段拆到用户故事/功能模块即止**——拆分维度是用户故事或内聚功能模块（见 ce-plan `references/change-splitting.md` v0.9 正向定义），接口/文件/任务级拆分属变更级 spec-writer。
+> **ce-plan = 产品级策略**：change 拆分（scope+依赖+优先级+复杂度）、change 依赖 DAG、技术方向决策、风险与里程碑。**change 边界 = 所有权边界**——一个 change 当且仅当一个所有权自包含的架构设计单元（见 ce-plan `references/change-splitting.md` v0.9 根因判据）；用户故事/功能模块/视角/层是 change **内部**的实现组织启发式，不提级为 change 边界。
 > **ce-plan ≠ 变更级详细设计**：接口清单、字段定义、方法签名、文件级 Implementation Unit 一律属各 change 的 spec-writer / architecture-design，不进 plan.md。
 
-D5 硬门禁即作用边界在审计层的强制落点：作用边界说"接口/文件级不进 plan"，D5 说"若 plan 把 change 拆到接口/文件级则 FAIL"，二者闭环。
+D5 硬门禁即作用边界在审计层的强制落点：作用边界说"接口/文件级不进 plan"，D5 说"若 plan 把 change 拆到无所有权单元可识别的粒度则 FAIL"；作用边界说"change 内组织由 spec-writer 负责"，D5 说"若 plan 把 change 内组织（视角/层）提级为 change 边界则切碎 = FAIL"。二者闭环。
 
 ---
 
@@ -183,8 +200,8 @@ D5 硬门禁即作用边界在审计层的强制落点：作用边界说"接口/
 ## 二十、决策落实状态（v0.9 增补）
 
 15. **v0.22.0 产品级 change 拆分治理 + 产品级↔变更级产物交接契约（v0.9 §23/§24/§25 新增）**：
-    - change 拆分维度正向钉死为「用户故事 / 功能模块」+「大 PRD = 多故事/多模块合集」认知声明（§24.1，ce-plan `change-splitting.md` + SKILL.md 作用边界）：✅ 已实施于 v0.22.0。
-    - `change-split-auditor` 新增 D5 拆分维度合规硬门禁（Critical，与 D3 正交，含单 change 安全港）（§24.2）：✅ 已实施于 v0.22.0。
+    - change 拆分根因判据 = **所有权自包含**（一个 change 当且仅当一个所有权自包含的架构设计单元；用户故事/功能模块/视角/层降为 change 内部实现组织启发式）+「大 PRD = 多所有权单元合集」认知声明（§24.1，ce-plan `change-splitting.md` + SKILL.md 作用边界）：✅ 已实施于 v0.22.0。
+    - `change-split-auditor` D5 **重构**为所有权粒度合规硬门禁（切碎检测/无设计单元/跨单元臃肿，Critical，与 D3 正交，含单 change 安全港 + 合法基座安全港）（§24.2）：✅ 已实施于 v0.22.0。
     - 新增 `change-brief.md` 交接物，S4 审计 PASS 后由 orchestrator 落盘（AC 取自 auditor Dim1 矩阵，落盘归 orchestrator 不归 auditor）（§23.2）：✅ 已实施于 v0.22.0。
     - 机器判源主载体 = brief frontmatter + brief 存在为 DP-0 主信号；yaml `upstream_*` 可选增强本次不实施（§23.3 决策记录）：✅ 已实施于 v0.22.0。
     - 变更层三接入点继承（workflow-start DP-0 / need-explorer / spec-writer，含 Honor Brief + Plan Technical Direction）（§23.4）：✅ 已实施于 v0.22.0。
