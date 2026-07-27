@@ -214,3 +214,137 @@ D5 硬门禁即作用边界在审计层的强制落点：作用边界说"接口/
 ---
 
 *v0.9 由 CC 基于 LT 两项 plugin 待办（产品阶段 change 拆分维度 + workflow-orchestrator↔workflow-start 产物对齐实证）增量修订，承袭 v0.8 全量内容。核心为「拆分维度正向定义 + D5 硬门禁」（§24）与「change-brief.md 交接契约 + brief-frontmatter 中心判源」（§23），全案零脚本逻辑改动。鉴于 v0.7 全文在本仓库缺失，§23/§24 正向定义自包含内嵌，不依赖任何缺失旧文。*
+
+---
+
+## 二十六、架构设计显式编排与产物独立化（v0.23.0）
+
+> 触发来源：LT 与 CC 讨论——架构设计（API/DB/聚合/限界上下文/CQRS）是变更级必须经过的一道门，即使最终判断不涉及架构设计，也应有显式判断记录。当前设计中 architecture-design 是独立 skill，不在 workflow-start 路由表中，完全靠用户主动触发，缺乏纪律性保障。
+
+### 26.0 问题诊断
+
+| 断点 | 现象 | 根因 |
+|------|------|------|
+| 架构设计无必经之门 | architecture-design 不在 workflow-start 路由表中，spec-writer 可直接产出 design.md 而不经过架构审视 | workflow-start 路由表无 architecture-design 入口 |
+| 判断与执行分离 | 架构设计判断由 workflow-start 或用户做，执行由 architecture-design 做，判断者不是最专业者 | 职责分层不当 |
+| 产出语义混杂 | 架构产出（architecture.md / database.md / api.md）放在 `specs/<cap>/` 下，与行为规格混杂 | 目录设计未区分架构产物与行为规格 |
+| 下游消费断裂 | spec-writer 未读取架构设计产出作为 design.md 约束输入，架构设计与 spec-writer 之间无显式衔接 | spec-writer Required Inputs 不含 architecture/ |
+
+### 26.1 workflow-start 显式编排 architecture-design
+
+**状态机变化**：workflow-start 在 `exploring` 完成后、`specifying` 之前，**必须调用** architecture-design 子代理。
+
+```
+exploring → [architecture-design 子代理调用] → specifying → bridging → ...
+```
+
+**职责分层**：
+
+| 层 | 职责 |
+|---|------|
+| workflow-start | 编排：调用子代理 → 确认结果合理性 → 路由下游 |
+| architecture-design | 领域能力：判断 + 执行一体化（判断者即执行者，最专业） |
+| spec-writer | 下游消费：读取架构设计产出（若有），作为 design.md 约束 |
+
+**架构设计子代理契约**：
+
+**输入**：
+- `change-brief.md`（scope / AC / 技术方向）
+- `prd/vN/plan.md` 高阶技术设计段
+- 现有 `specs/`（若有）
+- 全局 `docs/architecture/`（As-Is 基线）
+
+**输出**（结构化）：
+```yaml
+decision: required | skipped
+reason: "..."                    # skip 时必填理由；required 时填设计摘要
+artifacts:                       # required 时的产出路径列表
+  - architecture/architecture.md
+  - architecture/database.md
+  - architecture/api.md
+```
+
+**内部分流逻辑**：
+1. 先做架构变更判定（五项检查：是否新增/修改聚合、限界上下文边界变化、读写模型变化、API 新增/变更、DB schema 变更）
+2. 全部为否 → `decision: skipped` + reason
+3. 任一为是 → `decision: required` → 执行完整 4A+DDD 增量设计
+
+### 26.2 workflow-start 确认机制
+
+workflow-start 接收子代理结果后做**合理性校验**（非被动接收）：
+
+| 子代理返回 | workflow-start 校验 | 不通过时 |
+|-----------|-------------------|---------|
+| `skipped` + reason | reason 与 brief/plan scope 一致性（如 scope 含"新增 API"但 reason 说不涉及架构变更 → 不合理） | BLOCK，提示用户复核 |
+| `required` + artifacts | artifacts 文件实际存在 | BLOCK，要求重跑 |
+| `null`（未判定） | — | BLOCK |
+
+**yaml 字段**：
+```yaml
+arch_design_decision: required | skipped    # null = BLOCK
+arch_design_reason: "..."                   # skip 时必填
+arch_design_artifacts: [architecture/*.md]  # required 时必填
+arch_design_timestamp: "..."
+```
+
+**hotfix / tweak 不豁免**：同样过 architecture-design 子代理（hotfix 可能正是架构缺陷导致的，更需要过这道门）。
+
+### 26.3 架构产出独立目录
+
+**目录结构修订**：
+
+```
+changes/<name>/
+├── .spec-superflow.yaml
+├── change-brief.md              # 上游交接物（orchestrator S4）
+├── proposal.md                  # spec-writer：why + scope
+├── design.md                    # spec-writer：decisions + trade-offs
+├── tasks.md                     # spec-writer：implementation steps
+├── execution-contract.md        # contract-builder：execution handshake
+│
+├── specs/                       # 行为规格（spec-writer）
+│   └── <cap>.md                 # SHALL/MUST + Scenario + WHEN/THEN
+│
+├── architecture/                # ★ 架构设计（architecture-design，独立一等产物）
+│   ├── architecture.md          # DDD 增量（聚合/限界上下文/CQRS）
+│   ├── database.md              # DB 增量（实体/读写模型变更）
+│   └── api.md                   # API 增量（Command/Read/Query 分流）
+│
+└── prototype/                   # 原型（prototype skill）
+```
+
+**修订理由**：
+- **语义分离**：架构设计与行为规格是不同专业领域，混在 `specs/<cap>/` 下语义不对
+- **可选性清晰**：目录存在 = 有架构产出，目录不存在 = 判定为不需要
+- **消费方显式读取**：spec-writer 明确读取 `architecture/` 作为约束输入
+- **arch-merge 逻辑简洁**：整个 `architecture/` 目录统一回写全局 `docs/architecture/`
+
+### 26.4 上下游衔接关系
+
+```
+上游输入                         architecture-design              下游消费
+────────                        ────────────────                ──────
+change-brief.md (scope/AC)  ──→                                  ──→ spec-writer: design.md Decisions 约束
+plan.md (高阶技术方向)       ──→  判断 + 执行一体化  ──→ architecture/architecture.md ──→ spec-writer: design.md Decisions 约束
+全局 docs/architecture/     ──→                                  ──→ architecture/database.md     ──→ spec-writer: design.md + tasks.md 数据层约束
+                                                                 ──→ architecture/api.md          ──→ spec-writer: tasks.md 接口定义约束
+                                                                           ↓
+                                                              release-archivist → arch-merge
+                                                                           ↓
+                                                              全局 docs/architecture/ 回写
+```
+
+### 26.5 需修订的文件清单
+
+| 文件 | 修订内容 |
+|------|---------|
+| `skills/workflow-start/SKILL.md` | 路由表增加 architecture-design 调用 + 确认机制 + yaml 字段写入 |
+| `skills/architecture-design/SKILL.md` | 增加判断+执行一体化 SOP + 结构化输出契约 + 产出目录改为 `architecture/` |
+| `skills/architecture-design/chapters/ch06-integration.md` | 产物布局修正（`specs/<cap>/` → `architecture/`） |
+| `skills/spec-writer/SKILL.md` | Required Inputs 增加 `architecture/` 读取段 |
+| `skills/contract-builder/SKILL.md` | 检查是否需要读取 architecture/ 作为约束 |
+| `docs/roadmap-and-todos.md` | 新增待办条目 |
+
+---
+
+*v0.9 §26 由 CC 基于 LT 讨论结论增量修订。核心为「architecture-design 由 workflow-start 显式编排 + 判断执行一体化 + 产出独立目录 + 上下游衔接闭环」，全案零脚本逻辑改动。*

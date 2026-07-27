@@ -63,6 +63,7 @@
 | P1-12 | 原型 Wave 2：token 四层模型 + reviewer rubric 扩展 + direction-picker + guard 脚本 | ✅ 2026-07-25 | v0.18.0 | 来源：P2-6 升级提案（Wave 1+2 合并实施） |
 | P1-13 | 产出型子代理质量闸门（横展全部产出型 agent，prototype-builder 首发）：① 产物落盘硬闸门——声明的 deliverable 文件已 `Write` 落盘且非空，否则禁止返回 `done`，改返回带 `blockers` 的非终态 ② 决策点/阻断点不结束、先经 `SendMessage` 反馈主代理（推广为 team-flow 全部子代理统一交互协议；子代理不能阻塞提问，由主代理自决或 `AskUserQuestion`）③ 大产出默认分片（先 Write 主体骨架 → Edit 分段追加数据层/渲染层，规避单次 Write 截断与预算峰值）④ 主代理交接后强制 `ls`/`test -f` 校验入口文件存在且非空再派 reviewer，缺失则 resume builder | ✅ 2026-07-25 | v0.20.0 | 来源：workflow-feedback 2026-07-25（VRM mgmt-dashboard S2，agent-quality，反馈级 P1） |
 | P1-14 | 子代理决策点 SendMessage stop-and-resume 交互协议（**完成 P1-13 的 SendMessage 子项**）：子代理（无 AskUserQuestion）决策点经 `SendMessage(to: main)` 发问即停 → 主代理收 `task-notification` 代问用户 → 回传自动 resume 续跑；主代理维护请求-应答匹配纪律 + 子代理应答校验；修订 §18.1.2（不引入常驻 agent team 不变，结构化返回仍为终态主协议）。落点 prototype-builder/env-scout + prototype orchestration-flow（主代理中继）+ AGENTS.md | ✅ 2026-07-25 | v0.21.0 | 来源：LT 实证（Session d6801ab4）+ workflow-feedback agent-quality 改进建议2 |
+| P1-15 | 架构设计显式编排与产物独立化（v0.9 §26）：① workflow-start 路由表增加 architecture-design 子代理调用（exploring→specifying 之间） ② architecture-design 判断+执行一体化 SOP + 结构化输出契约 ③ 产出目录从 `specs/<cap>/` 提升为独立 `architecture/` ④ spec-writer Required Inputs 增加 `architecture/` 读取 ⑤ workflow-start 合理性确认机制 + yaml 字段 + 硬阻断 ⑥ hotfix/tweak 不豁免 | 🔲 待实施 | v0.23.0 | 来源：LT+CC 讨论（2026-07-27） |
 
 ### P2（改善，按节奏推进）
 
@@ -82,6 +83,7 @@
 | P2-12 | S1 路由表新增第 7 种入口「**原型补跑/重跑**」：触发条件（PRD 已冻结 `frozen_downstream` ∧ `prototype/` 缺失/为空，或用户显式要求重做原型）→ **部分重入 S2 原型循环**（S2 步骤 2 判断→3 原型循环→4 冻结），PRD 不修改、保留有效的 S3 plan / S4 changes、闭环后恢复原 phase；`replan_log` 记录往返。同步改 ① SKILL.md「增量入口」路由表补第 7 行 ② `s1-path-router.md` 补「PRD 冻结 ∧ prototype 缺失/需重做」判据分支（与重新计划/续版区分）③ `state-model.md` 补部分重入冻结语义与状态转换规则 | ✅ 2026-07-25 | v0.20.0 | 来源：workflow-feedback 2026-07-25（VRM mgmt-dashboard S1，sop-flow，反馈级 P2） |
 | P2-13 | references/ 版本引用漂移清理 + check-versions 扫描盲区扩展：① 清理 references/ 下陈旧 `spec-superflow@0.15.0/@0.16.0` npx 引用（27+3 处，分布 release-archivist / workflow-orchestrator s2/s4/s5 / workflow-start / build-executor）至当前版本 ② `check-version-consistency.mjs` 扫描范围从顶层 SKILL.md 扩展到 `references/**`，杜绝再漂移 | 🔲 待实施 | v1.0.0 | 来源：v0.21.0 plugin-validator W2（门禁盲区横展） |
 | P2-14 | pre-commit hook 同步范围扩展：将 `.claude-plugin/marketplace.json` 的 skill/agent 计数描述纳入 pre-commit 自动同步（当前仅覆盖 plugin.json / AGENTS.md / README.md，marketplace.json 在 17→23 skills 扩容时漏同步，v0.22.0 P3 验证发现并手动修正文本，但自动化同步规则未补） | 🔲 待实施 | v0.22.0+ | 来源：v0.22.0 plugin-validator 横展 |
+| P2-15 | change-brief frontmatter schema 对齐：v0.22.0 E2E 测试发现无头 Claude 落盘 brief 时未写入 `upstream_source: orchestrator` 字段，导致 workflow-start DP-0 继承判定伪代码中 `brief 存在 AND upstream_source == orchestrator` 条件不满足、走 else 手动路径而非继承分支。建议修正：① workflow-start 判定逻辑改为"brief 存在即继承"（不依赖字段值，更贴合 CC 自己写的'以 brief 存在为主信号'设计意图）或 ② s4-split-validate.md brief 模板强制含 upstream_source 字段。CC 倾向方案① | 🔲 待实施 | v0.22.0+ | 来源：v0.22.0 E2E 测试（VRM S3→S4 重跑发现） |
 
 ### P3（低优先级，时机成熟再做）
 

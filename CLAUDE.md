@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 本工作区的核心目标是**开发和测试 team-flow 工作流**。team-flow 是一个统一插件（23 skills + 8 agents），整合了 spec-superflow（9）、compound-engineering（6）、architecture-design（1）、prototype（1）、design-system（1）、workflow-orchestrator（1）、workflow-bootstrap（1）、e2e（1）、session-handoff（1）、workflow-feedback（1）。
 
 - **设计增强方案当前权威版本**：`docs/architecture-api-db-design-enhancement-v0.9.md`
-- **插件版本**：`v0.22.0`（23 skills + 8 agents）
+- **插件版本**：`v0.22.2`（23 skills + 8 agents）
 
 ## 工作区结构
 
