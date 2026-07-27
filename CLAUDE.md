@@ -88,6 +88,18 @@ team-flow-workspace/
 1. **子仓库**：`npm version <new> --no-git-tag-version`（自动同步所有文件）+ 提交
 2. **主项目空间**：更新 CLAUDE.md（版本号、skills 数量等）+ 提交
 
+### 版本发布 Checklist
+
+版本发布时（`npm version` 之后），**必须**完成以下事项：
+
+1. **Roadmap 更新**：在 `docs/roadmap-and-todos.md` 中
+   - 更新里程碑状态（标记 ✅ + 完成版本/日期）
+   - 完成的待办标记 ✅ + 日期
+   - 新增待办追加行（注明优先级和来源）
+2. **CHANGELOG 更新**：记录本版本的变更内容
+3. **设计文档检查**：如涉及重大设计变更，创建新版本设计文档（v0.8 → v0.9）
+4. **一致性验证**：`npm run check-versions` + `npm test` 全部通过
+
 ## 插件迭代工作流（强制规则）
 
 ```
