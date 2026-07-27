@@ -81,6 +81,7 @@
 | P2-11 | 编排层低消耗等待范式：派发后台子代理后**依赖完成通知（`<task-notification>`）再行动**，禁止反复 `TaskOutput(block=true)` 阻塞轮询（超时返回会倾泻完整子代理 transcript，撑爆主上下文、抵消"主代理只编排"的轻上下文优势）；确需中途观察用 `block=false` 轻量查询。明文进 workflow-orchestrator / prototype 等编排 skill。（harness 层"TaskOutput 对 local_agent 超时不倾泻转录、只返末态摘要+文件路径"另向 Claude Code 反馈，非 team-flow 可控） | ✅ 2026-07-25 | v0.20.0 | 来源：workflow-feedback 2026-07-25（VRM mgmt-dashboard S2，performance，反馈级 P2） |
 | P2-12 | S1 路由表新增第 7 种入口「**原型补跑/重跑**」：触发条件（PRD 已冻结 `frozen_downstream` ∧ `prototype/` 缺失/为空，或用户显式要求重做原型）→ **部分重入 S2 原型循环**（S2 步骤 2 判断→3 原型循环→4 冻结），PRD 不修改、保留有效的 S3 plan / S4 changes、闭环后恢复原 phase；`replan_log` 记录往返。同步改 ① SKILL.md「增量入口」路由表补第 7 行 ② `s1-path-router.md` 补「PRD 冻结 ∧ prototype 缺失/需重做」判据分支（与重新计划/续版区分）③ `state-model.md` 补部分重入冻结语义与状态转换规则 | ✅ 2026-07-25 | v0.20.0 | 来源：workflow-feedback 2026-07-25（VRM mgmt-dashboard S1，sop-flow，反馈级 P2） |
 | P2-13 | references/ 版本引用漂移清理 + check-versions 扫描盲区扩展：① 清理 references/ 下陈旧 `spec-superflow@0.15.0/@0.16.0` npx 引用（27+3 处，分布 release-archivist / workflow-orchestrator s2/s4/s5 / workflow-start / build-executor）至当前版本 ② `check-version-consistency.mjs` 扫描范围从顶层 SKILL.md 扩展到 `references/**`，杜绝再漂移 | 🔲 待实施 | v1.0.0 | 来源：v0.21.0 plugin-validator W2（门禁盲区横展） |
+| P2-14 | pre-commit hook 同步范围扩展：将 `.claude-plugin/marketplace.json` 的 skill/agent 计数描述纳入 pre-commit 自动同步（当前仅覆盖 plugin.json / AGENTS.md / README.md，marketplace.json 在 17→23 skills 扩容时漏同步，v0.22.0 P3 验证发现并手动修正文本，但自动化同步规则未补） | 🔲 待实施 | v0.22.0+ | 来源：v0.22.0 plugin-validator 横展 |
 
 ### P3（低优先级，时机成熟再做）
 
