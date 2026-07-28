@@ -614,3 +614,164 @@ npm view @xulthekl/team-flow@0.22.4
 - *第三阶段 v0.22.4：npm 包 scope 化 `@xulthekl/team-flow`（解决 npm publish 权限冲突）179 处引用同步*
 
 *全案 900+ 处引用同步，零功能逻辑改动。存量项目通过 `tf doctor` 自动迁移。*
+
+---
+
+## 二十八、制品链评审与修复（v0.22.5）
+
+### 28.0 问题诊断
+
+> 触发来源：LT 要求"对所有阶段的制品的关联、衔接进行评审，评审设计是否合理、制品链的约束是否完整，输入输出制品是否明确"。CC 组织 Workflow 编排 7 个并行代理（4 组 Skill IO 提取 + 2 个代码验证 + 1 个交叉验证），对 23 个 skill 的输入/输出/上下游/触发条件/约束/状态写入进行系统性评审，产出 16 条 findings（2 Critical + 6 Major + 4 Minor + 4 Info）。
+
+> CC 作为 team-flow 负责人逐条验证后，最终接纳 5 条、不接纳 2 条、部分接纳 1 条。
+
+#### 不接纳的误报
+
+| ID | 评审结论 | 不接纳原因 |
+|----|---------|-----------|
+| F01 (Critical) | dp_4_result 写入路径断裂 | **误报**：评审代理只检查了 `cmd-state.mjs` 的 SETTABLE_FIELDS，未发现 `cmd-execution.mjs:151-152` 通过 `writeState()` 直接写入 dp_4_result（绕过 SETTABLE_FIELDS 白名单）。这是有意设计——dp_4 是 execution plan 的产物，由 `tf execution plan` 命令专门处理 |
+| F04 (Major) | artifact-contract.md 孤儿输入 | **误报**：评审代理误解了 "artifact-contract" 的含义。contract-builder 实际读取的是 `templates/execution-contract.md`（模板文件，3.4KB），不是 `docs/artifact-contract.md` |
+
+### 28.1 接纳的问题与修复方案
+
+#### F02 + F06 (Critical): arch_design_* 字段无代码支持 + 权责矛盾
+
+**根因**：
+- `architecture-design` SKILL.md 的 `state_writes: []`（未声明）
+- `workflow-start` SKILL.md 的 `state_writes` 包含 `arch_design_*`（声明了但不执行判断）
+- `cmd-state.mjs` SETTABLE_FIELDS 不包含这些字段
+- 代码层无任何脚本写入这些字段
+- 权责矛盾：workflow-start 声明写入但不执行判断，architecture-design 执行判断但不声明写入
+
+**修复方案**（v0.22.5 P0）：
+
+1. **state-loader.mjs**：BUILTIN_DEFAULTS 增加 4 个字段 + writeState 序列化
+   ```javascript
+   // BUILTIN_DEFAULTS
+   arch_design_decision: null,
+   arch_design_reason: null,
+   arch_design_timestamp: null,
+   arch_design_artifacts: null,
+   
+   // writeState 序列化
+   lines.push('');
+   lines.push('# === Architecture design gate (v0.9 §26) ===');
+   lines.push(`arch_design_decision: ${state.arch_design_decision ?? 'null'}`);
+   lines.push(`arch_design_reason: ${state.arch_design_reason ?? 'null'}`);
+   lines.push(`arch_design_timestamp: ${state.arch_design_timestamp ?? 'null'}`);
+   lines.push(`arch_design_artifacts: ${state.arch_design_artifacts ?? 'null'}`);
+   ```
+
+2. **cmd-state.mjs**：SETTABLE_FIELDS 增加 4 个字段
+   ```javascript
+   'arch_design_decision', 'arch_design_reason',
+   'arch_design_timestamp', 'arch_design_artifacts',
+   ```
+
+3. **architecture-design/SKILL.md**：移除错误的"状态写入"章节，明确职责边界为"判断+产出"
+4. **workflow-start/SKILL.md**：增加"State Writes"章节，声明负责 `arch_design_*` 的 reasonableness check + 状态写入
+
+**职责边界（修正后）**：
+- architecture-design：负责**判断+产出**（五项检查判断是否涉及架构变更，涉及则产出架构设计文档）
+- workflow-start：负责**reasonableness check + 状态写入**（确认判断合理性后写入 yaml）
+
+**验证方法**：
+```bash
+# 1. 初始化 change
+mkdir -p changes/test-arch && npx tf state init changes/test-arch
+
+# 2. 写入 arch_design_decision
+npx tf state set changes/test-arch arch_design_decision "skipped"
+npx tf state set changes/test-arch arch_design_reason "不涉及架构变更"
+npx tf state set changes/test-arch arch_design_timestamp "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+npx tf state set changes/test-arch arch_design_artifacts ""
+
+# 3. 验证字段写入
+npx tf state get changes/test-arch arch_design_decision
+# 期望输出：skipped
+
+cat changes/test-arch/.team-flow.yaml | grep arch_design
+# 期望输出：4 个 arch_design_* 字段及其值
+```
+
+#### F07 (Major): change-brief.md 缺少模板
+
+**根因**：
+- `s4-split-validate.md` 有详细的 brief_schema 定义（5 个 frontmatter 字段 + 6 个 body sections）
+- 但 `templates/` 目录无对应模板文件
+- orchestrator S4 每次生成 brief 都是 LLM 自由发挥，结构可能不一致
+
+**修复方案**（v0.22.5 P1）：
+- 创建 `templates/change-brief.md`，内容基于 `s4-split-validate.md` 的 brief_schema
+- frontmatter：`upstream_source` / `upstream_req_id` / `upstream_plan_ref` / `upstream_change_id` / `plan_hash`
+- body：`# Change Brief` / `## Scope` / `## 约束` / `## AC 列表` / `## 全局技术方向` / `## PRD & plan 引用`
+
+#### F08 (Major): architecture/*.md 缺少模板
+
+**根因**：
+- `architecture-design` SKILL.md 要求产出 `architecture.md` / `database.md` / `api.md`
+- 基于 4A+DDD 框架有复杂结构要求（聚合、限界上下文、CQRS、API 分流等）
+- 但 `templates/` 目录无对应模板
+
+**修复方案**（v0.22.5 P1）：
+- 创建 `templates/architecture.md`：包含 As-Is 基线冻结、To-Be DDD 增量设计（聚合/限界上下文/Context Map/CQRS）、变更分叉级联分析、跨域一致性检查、演进日志
+- 创建 `templates/database.md`：包含 As-Is 基线冻结、To-Be 增量设计（写模型/读模型/Schema 变更/实体关系/数据迁移脚本）、演进日志
+- 创建 `templates/api.md`：包含 As-Is 基线冻结、To-Be 增量设计（Command API/Read API/Query API/端点详细设计/跨域一致性检查）、演进日志
+
+#### F05 (Major): ce-ideate → ce-brainstorm 制品链断裂
+
+**根因**：
+- `ce-ideate` SKILL.md 声明 outputs 包含 `docs/ideation/*.md`
+- `ce-ideate` downstream 声明 `ce-brainstorm`
+- 但 `ce-brainstorm` SKILL.md 的 inputs 未声明消费 `docs/ideation/*.md`
+
+**修复方案**（v0.22.5 P2）：
+- 在 `ce-brainstorm` SKILL.md 的 "Feature Description" 前增加 "Optional Inputs" 章节
+- 声明：`docs/ideation/*.md`（可选）——如果 ce-ideate 已产出 ideation artifact，读取作为 brainstorm 的起点
+- 在 Feature Description 段增加：`If docs/ideation/*.md exists, read it first and use its ranked ideation content as the starting point for the brainstorm.`
+
+#### F03 (Major, 部分接纳): DP-0 多路径不一致
+
+**根因**：
+- hotfix/tweak 路径跳过 need-explorer 和 spec-writer
+- 但 workflow-start SKILL.md 未明确说明 DP-0 的处理策略
+
+**修复方案**（v0.22.5 P3）：
+- 在 `workflow-start` SKILL.md 的 "Fast-Path Routing" 段增加说明：
+  > **DP-0 处理**（v0.22.5 F03 修复）：hotfix/tweak 路径隐式跳过 DP-0（`dp_0_confirmed` 保持 `null`），因为意图已明确（修复/微调），无需从零探索。contract-builder 的 DP-3 审批成为唯一门禁。
+
+### 28.2 修复优先级与工作量
+
+| 优先级 | Finding | 修复工作量 | 影响范围 | 状态 |
+|--------|---------|-----------|----------|------|
+| **P0** | F02+F06 (arch_design_*) | 30 分钟 | architecture-design 门控 | ✅ 已修复 |
+| **P1** | F07 (brief 模板) | 45 分钟 | orchestrator → change 衔接 | ✅ 已修复 |
+| **P1** | F08 (architecture 模板) | 60 分钟 | architecture-design 产出一致性 | ✅ 已修复 |
+| **P2** | F05 (ideation 链) | 10 分钟 | ce-ideate → ce-brainstorm 衔接 | ✅ 已修复 |
+| **P3** | F03 (DP-0 说明) | 15 分钟 | hotfix/tweak 路径清晰度 | ✅ 已修复 |
+
+### 28.3 需修订的文件清单
+
+| 文件 | 修订内容 |
+|------|---------|
+| `scripts/lib/state-loader.mjs` | BUILTIN_DEFAULTS 增加 4 个 arch_design_* 字段 + writeState 序列化 |
+| `scripts/lib/cmd-state.mjs` | SETTABLE_FIELDS 增加 4 个 arch_design_* 字段 |
+| `skills/architecture-design/SKILL.md` | 移除错误的"状态写入"章节，明确职责边界为"判断+产出" |
+| `skills/workflow-start/SKILL.md` | 增加"State Writes"章节（声明 arch_design_* 写入权责）+ Fast-Path Routing 增加 DP-0 处理说明 |
+| `skills/ce-brainstorm/SKILL.md` | 增加"Optional Inputs"章节（声明消费 `docs/ideation/*.md`） |
+| `templates/change-brief.md` | 新增模板（基于 s4-split-validate.md 的 brief_schema） |
+| `templates/architecture.md` | 新增模板（4A+DDD 增量设计结构） |
+| `templates/database.md` | 新增模板（CQRS 增量设计结构） |
+| `templates/api.md` | 新增模板（Command/Read/Query 增量设计结构） |
+
+### 28.4 风险与缓解
+
+| 风险 | 缓解 |
+|------|------|
+| arch_design_* 字段写入后，存量 change 的 .team-flow.yaml 缺少这些字段 | `readState()` 合并 BUILTIN_DEFAULTS，缺失字段默认为 `null`，不影响存量项目 |
+| 新增模板与现有 LLM 产出不一致 | 模板基于 SKILL.md 和 s4-split-validate.md 的结构定义，LLM 应遵循模板生成 |
+| routing-rules.md 中的 `tf state set` 命令版本号为 0.22.4 | pre-commit hook 自动同步所有 npx 引用版本号到 0.22.5 |
+
+---
+
+*v0.9 §28 由 CC 基于制品链评审（Workflow 编排 7 代理并行，401k tokens，82 tool calls）产出 16 条 findings，逐条代码验证后接纳 5 条、不接纳 2 条误报、部分接纳 1 条。P0-P3 全部修复，涉及 3 个脚本文件 + 3 个 SKILL.md + 4 个模板文件。*

@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 本工作区的核心目标是**开发和测试 team-flow 工作流**。team-flow 是一个统一插件（23 skills + 8 agents），整合了 spec-superflow（9）、compound-engineering（6）、architecture-design（1）、prototype（1）、design-system（1）、workflow-orchestrator（1）、workflow-bootstrap（1）、e2e（1）、session-handoff（1）、workflow-feedback（1）。
 
 - **设计增强方案当前权威版本**：`docs/architecture-api-db-design-enhancement-v0.9.md`
-- **插件版本**：`v0.22.4`（23 skills + 8 agents）
+- **插件版本**：`v0.22.5`（23 skills + 8 agents）
 
 ## 工作区结构
 
@@ -51,11 +51,77 @@ team-flow-workspace/
   → S1 路径路由器 → 需求选择（.team-flow/registry.yaml）+ 判断入口路径
   → S2 PRD + 原型 → ce-brainstorm + prd-completeness-reviewer + prototype 内部编排器 → 冻结
   → S3 计划 → ce-plan（plan_mode 入口问定）→ plan.md（change 拆分+依赖+高阶技术方向，不含接口清单）
-  → S4 拆分验证与分发 → change-split-auditor 审计（必选）→ 创建 changes/<name>/ → 进入 spec-superflow
+  → S4 拆分验证与分发 → change-split-auditor 审计（必选）→ 创建 changes/<name>/ + change-brief.md
   → S5 全局监控（change≥2 必选）→ 跨 change 一致性 + 复利晋升 + 动态重规划
   → [复利贯穿层] 每个阶段转换点：检测→捕获→索引→注入
   → change 完成：arch-merge → prototype-sync + 复利晋升
 ```
+
+### 变更级状态机（workflow-start 编排，state-loader.mjs 驱动）
+
+```
+exploring → [architecture-design 判断门 ★设计层面] → specifying → bridging → approved-for-build → executing → closing
+              (五项检查→required/skipped)                                                              ↕ debugging
+```
+
+**代码强制执行点**：
+- `.team-flow.yaml` 的 `state` 字段（guard.mjs 校验状态转换合法性）
+- `artifacts_hash`（proposal + specs + design + tasks 的 hash）
+- `contract_hash`（execution-contract.md 的 hash）
+- `spec_merged` + `test_result`（closing 前置条件）
+
+**设计层面约定（SKILL.md 文档约束，代码层不可执行）**：
+- architecture-design 判断门——routing-rules.md 给出的 `tf state set arch_design_*` 命令被 cmd-state.mjs SETTABLE_FIELDS 白名单拒绝，**实际报错**
+- change-brief.md 交接——orchestrator S4 prompt 指示 LLM 手写，无脚本、无模板
+- architecture/ 三件套产出与消费——无 hash、无 guard、无脚本校验
+
+## 产物结构（代码验证版）
+
+### 代码强制执行的制品（state-loader.mjs + hash.mjs）
+
+| 产物 | 路径 | 校验机制 |
+|------|------|---------|
+| 状态文件 | `changes/<name>/.team-flow.yaml` | state-loader 硬编码 `STATE_FILE` |
+| 提案 | `changes/<name>/proposal.md` | hash.mjs → `artifacts_hash` |
+| 规格 | `changes/<name>/specs/*.md` | hash.mjs → `artifacts_hash` |
+| 设计 | `changes/<name>/design.md` | hash.mjs → `artifacts_hash` |
+| 任务 | `changes/<name>/tasks.md` | hash.mjs → `artifacts_hash` |
+| 执行契约 | `changes/<name>/execution-contract.md` | hash.mjs → `contract_hash` |
+
+### 设计层面约定的制品（SKILL.md 文档引用，无代码强制校验）
+
+| 产物 | 路径 | 状态 |
+|------|------|------|
+| 产品级 PRD | `prd/vN/prd.md` | ce-brainstorm 引用 |
+| 产品级计划 | `prd/vN/plan.md` | ce-plan 引用 |
+| 变更简报 | `changes/<name>/change-brief.md` | orchestrator S4 产出，hash.mjs 显式排除 |
+| 架构设计 | `changes/<name>/architecture/{architecture,database,api}.md` | architecture-design SKILL.md 引用，无 hash/guard |
+| SDD 执行计划 | `changes/<name>/.superpowers/sdd/execution-plan.json` | 代码创建但不在 guard |
+| 需求注册表 | `.team-flow/registry.yaml` | workflow-orchestrator 引用 |
+| 全局架构基线 | `docs/architecture/baseline.md` | workflow-bootstrap 引用 |
+
+### 状态文件内置字段（state-loader.mjs BUILTIN_DEFAULTS）
+
+**核心状态**：`state` / `workflow` / `revision`
+**哈希校验**：`artifacts_hash` / `contract_hash`
+**执行进度**：`execution_mode` / `execution_plan_hash` / `execution_plan_revision` / `batches_completed` / `test_result` / `spec_merged`
+**变更标识**：`change_name` / `last_transition` / `last_transition_from` / `last_transition_to`
+**决策点**：`dp_0_result` ~ `dp_7_result` + 对应 `_timestamp` / `dp_0_decisions` / `dp_0_confirmed`
+
+**注意**：`arch_design_decision` / `arch_design_reason` / `arch_design_artifacts` / `arch_design_timestamp` 等字段在 SKILL.md / routing-rules.md 中提及但**不在**内置字段中。更严重的是：`cmd-state.mjs` 的 `SETTABLE_FIELDS` 白名单不包含这些字段，routing-rules.md 中给出的 `tf state set arch_design_*` 命令实际执行会报错 `⛔ Field is not settable`——**这是死命令，无法落盘**。`writeState()` 也只序列化内置字段，即使手动写入也会被下次写操作丢弃。
+
+### 关键差异说明
+
+CLAUDE.md 和 AGENTS.md 中描述的工作流包含 architecture-design 门控（v0.9 §26）和 change-brief.md 交接等设计，但代码实现与文档存在显著差距：
+
+| 设计承诺 | 代码现实 |
+|----------|----------|
+| `arch_design_*` 字段持久化 | state-loader 无字段、cmd-state SETTABLE_FIELDS 拒绝写入、writeState 丢弃 |
+| architecture-design 门控 BLOCK | guard.mjs `exploring:specifying` 只查 `artifacts-exist`，无 arch 维度 |
+| `architecture/*.md` 产出 | 无 hash、无 guard、无脚本校验 |
+| `change-brief.md` 交接 | 无脚本创建、无模板（hash 排除是有意设计） |
+
+**当前强制执行**的仅为核心 4+1 制品（proposal/specs/design/tasks + execution-contract）的状态管理。architecture-design 门控完全依赖 LLM prompt 层自觉，且文档提供的落盘命令在代码里不可执行。若要使其真正强制，需同时改：state-loader.mjs（加字段+序列化）、cmd-state.mjs（SETTABLE_FIELDS 白名单）、guard.mjs（新增 arch 维度挂到 `exploring:specifying`）。
 
 ## 文档治理规则
 
@@ -130,7 +196,7 @@ P1 设计 → P2 实施 → P3 验证 → P4 提交
 
 ## 关键路径约束
 
-- **change 目录位置**：项目根 `changes/<name>/`（不是 `.team-flow/changes/`），由 S4 创建，内含 `.spec-superflow.yaml`
+- **change 目录位置**：项目根 `changes/<name>/`（不是 `.team-flow/changes/`），由 S4 创建，内含 `.team-flow.yaml`
 - `**.team-flow/` 只存产品级编排状态**：registry.yaml / requirements/ / handoffs/ / feedback/
 - **设计增强方案是唯一真相源**：定义 WHY + WHAT；AGENTS.md 定义 HOW；SKILL.md 是执行指令
 - **历史版本保留不删**：设计增强方案旧版文件仅供追溯
