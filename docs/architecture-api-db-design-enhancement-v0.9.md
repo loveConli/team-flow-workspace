@@ -349,9 +349,12 @@ plan.md (高阶技术方向)       ──→  判断 + 执行一体化  ──�
 
 ---
 
-## 二十七、身份统一：spec-superflow → team-flow 全量迁移（v0.23.0）
+## 二十七、身份统一：spec-superflow → team-flow → @xulthekl/team-flow 全量迁移（v0.15.0 → v0.22.3 → v0.22.4）
 
-> 触发来源：P1-6 第二阶段（v0.22.2 版本错位问题实证暴露——npx 找不到本地包 @0.22.2 而回退到 npm 公共 @0.11.0，根因为身份分裂：产品名 team-flow 与底座包名 spec-superflow 并存）。
+> 触发来源：P1-6 三阶段
+> - **第一阶段 v0.15.0**：产品级状态文件 `.team-flow/` 化
+> - **第二阶段 v0.22.3**：spec-superflow → team-flow 全量迁移（v0.22.2 版本错位问题实证暴露——npx 找不到本地包 @0.22.2 而回退到 npm 公共 @0.11.0，根因为身份分裂：产品名 team-flow 与底座包名 spec-superflow 并存）
+> - **第三阶段 v0.22.4**：npm 包 scope 化（npm publish 权限冲突——`team-flow` 包名被占 + 2FA/OTP 机制不匹配 macOS 密码 App，改用 scoped package `@xulthekl/team-flow` 绕过）
 
 ### 27.0 问题诊断
 
@@ -496,11 +499,118 @@ cd team-flow && npm publish
 
 | 风险 | 缓解 |
 |------|------|
-| npm 发布后用户仍在用旧 `spec-superflow` 包 | 在 `spec-superflow` 包发布 deprecation notice，指引迁移到 `team-flow` |
+| npm 发布后用户仍在用旧 `spec-superflow` 包 | 在 `spec-superflow` 包发布 deprecation notice，指引迁移到 `@xulthekl/team-flow` |
 | 存量项目 `.spec-superflow.yaml` 未迁移导致 workflow 断裂 | `tf doctor` 自动检测 + `--migrate` 一键迁移 |
 | 99 处 npx 引用替换遗漏 | `check-version-consistency.mjs` 扩展扫描 + pre-commit hook 拦截 |
 | pre-commit hook 误报（本地开发未 publish 时阻断） | 默认 advisory 模式，可通过环境变量 `TF_SKIP_PUBLISH_CHECK=1` 跳过 |
 
+### 27.6 第三阶段：npm 包 scope 化（v0.22.4，2026-07-27）
+
+#### 27.6.0 问题诊断
+
+| 断点 | 现象 | 根因 |
+|------|------|------|
+| npm publish E403 | `npm publish team-flow@0.22.3` 报 403 Forbidden: "Two-factor authentication required" | npm 强制 scoped/unscoped public package 发布需 2FA 或 Granular Access Token (bypass 2FA) |
+| macOS 密码 App 不生成 TOTP | 用户 macOS 密码 App 绑定 npm 2FA，但 CLI publish 时浏览器跳转 passkey 认证后仍报 E402 | npm CLI `--otp` 需要 TOTP 6 位验证码，passkey 浏览器授权是另一套机制，CLI 不识别 |
+| `team-flow` 包名被占 | 即便解决 2FA，`team-flow` 作为 unscoped 包名可能已被其他用户/组织注册 | npm 全局命名空间冲突 |
+
+#### 27.6.1 迁移决策（LT 确认）
+
+| 维度 | 现状 | 目标 | 策略 |
+|------|------|------|------|
+| npm 包名 | `team-flow` | `@xulthekl/team-flow` | Scoped package（用户 npm 账号 `xulthekl` 下，天然私有命名空间） |
+| author | `MageByte` | `xulthekl` | 与 npm 账号对齐 |
+| 认证方式 | npm login + TOTP | Granular Access Token（bypass 2FA） | Token 保存在 `docs/npm-token`，已加入 `.gitignore` |
+
+#### 27.6.2 影响面评估（179 处引用）
+
+| 类别 | 引用数 | 分布 | 迁移动作 |
+|------|--------|------|---------|
+| npx 包引用 | 179 | skills/ + scripts/ + tests/ 中所有 `npx --package team-flow@X.Y.Z` | `--package team-flow@X.Y.Z` → `--package @xulthekl/team-flow@X.Y.Z` |
+| 正则字面量 | 6 | `check-version-consistency.mjs` / `cmd-version.mjs` / `install.mjs` / `cmd-install-workbuddy.mjs` / `install-zcode.mjs` / `install-cursor.mjs` | 正则中 `/` 需转义为 `\/`（`/@xulthekl\/team-flow@/g`） |
+| 版本文件 | 15 | `plugin.json` / `marketplace.json` / `phase-guard.md` / `llms.txt` / `INSTALL.md` / `README.md` / `GEMINI.md` 等 | bump 0.22.3 → 0.22.4 |
+
+#### 27.6.3 迁移步骤（P2 实施清单）
+
+**步骤 1：package.json 改名 + 改 author**
+
+```json
+{
+  "name": "@xulthekl/team-flow",
+  "version": "0.22.4",
+  "author": "xulthekl"
+}
+```
+
+**步骤 2：npx 引用全量替换（179 处）**
+
+```bash
+# skills/ + scripts/ + tests/ 中所有
+# `npx --yes --package team-flow@X.Y.Z tf`
+# → `npx --yes --package @xulthekl/team-flow@X.Y.Z tf`
+```
+
+**步骤 3：正则字面量转义（6 个脚本文件）**
+
+```javascript
+// 旧：/npx --yes --package team-flow@(\d+\.\d+\.\d+) tf/g
+// 新：/npx --yes --package @xulthekl\/team-flow@(\d+\.\d+\.\d+) tf/g
+// 注：正则字面量中 / 必须转义为 \/
+```
+
+**步骤 4：版本号 bump（15 个文件）**
+
+```bash
+# plugin.json / marketplace.json / phase-guard.md / llms.txt / INSTALL.md / README.md / GEMINI.md 等
+# 0.22.3 → 0.22.4
+```
+
+**步骤 5：npm publish（scoped + public）**
+
+```bash
+cd team-flow && npm publish --access public --registry https://registry.npmjs.org
+```
+
+注：scoped package 默认 private，需显式 `--access public`。
+
+**步骤 6：验证**
+
+```bash
+npm view @xulthekl/team-flow@0.22.4
+# 输出：name = '@xulthekl/team-flow', version = '0.22.4', author = 'xulthekl'
+```
+
+#### 27.6.4 需修订的文件清单
+
+| 文件 | 修订内容 |
+|------|---------|
+| `package.json` | `name` 改 `@xulthekl/team-flow`、`author` 改 `xulthekl`、`version` bump `0.22.4` |
+| `scripts/check-version-consistency.mjs` | 正则 `team-flow@` → `@xulthekl\/team-flow@` |
+| `scripts/lib/cmd-version.mjs` | 12 个 skill 文件版本替换正则更新 |
+| `scripts/lib/install.mjs` / `cmd-install-workbuddy.mjs` | npx 正则更新 |
+| `scripts/install-zcode.mjs` / `install-cursor.mjs` | npx 正则更新 |
+| `skills/**/SKILL.md` + `skills/**/references/*.md` | 179 处 npx 引用 `package team-flow@` → `package @xulthekl/team-flow@` |
+| `tests/lib/platform-runtime-distribution.test.mjs` | PREFIX 常量更新 |
+| `plugin.json` / `.claude-plugin/plugin.json` / `.cursor-plugin/plugin.json` 等 9 个安装面 | version bump 0.22.4 |
+| `.claude/always/phase-guard.md` / `GEMINI.md` / `llms.txt` | 版本戳 bump 0.22.4 |
+| `INSTALL.md` / `README.md` / `docs/README_en.md` | 版本戳 bump 0.22.4 |
+| `CHANGELOG.md` | 新增 `[0.22.4]` 条目 |
+| `docs/npm-token` | 新增文件，保存 Granular Access Token，已加入 `.gitignore` |
+
+#### 27.6.5 风险与缓解
+
+| 风险 | 缓解 |
+|------|------|
+| scoped package 默认 private，用户安装失败 | `npm publish --access public` 显式公开；INSTALL.md 已更新为新包名 |
+| 存量项目仍引用旧 `team-flow@`（无 scope） | `tf doctor` 扩展检测：发现 `package team-flow@` 无 scope 即提示升级 |
+| Granular Access Token 泄露 | `docs/npm-token` 已加入 `.gitignore`；Token 设置 30 天过期 + 仅 write scope |
+| 正则 `/` 未转义导致 SyntaxError | 6 个脚本文件已全部 `\/` 转义；`check-version-consistency.mjs` 跑通验证 |
+
 ---
 
-*v0.9 §27 由 CC 基于 LT 确认的 4 项决策增量修订。核心为「spec-superflow → team-flow 全量一刀切迁移（npm 包名 + CLI 前缀 + 状态文件 + 脚本文件 + 配置文件 + 文档描述）+ 存量项目自动迁移 + pre-commit 发布状态检查」，全案 721 处引用同步，零功能逻辑改动。*
+*v0.9 §27 由 CC 基于 LT 确认的决策增量修订，覆盖 P1-6 三阶段：*
+- *第一阶段 v0.15.0：产品级状态文件 `.team-flow/` 化*
+- *第二阶段 v0.22.3：spec-superflow → team-flow 全量一刀切迁移（npm 包名 + CLI 前缀 + 状态文件 + 脚本文件 + 配置文件 + 文档描述）721 处引用同步*
+- *第三阶段 v0.22.4：npm 包 scope 化 `@xulthekl/team-flow`（解决 npm publish 权限冲突）179 处引用同步*
+
+*全案 900+ 处引用同步，零功能逻辑改动。存量项目通过 `tf doctor` 自动迁移。*
