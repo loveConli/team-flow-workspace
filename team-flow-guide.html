@@ -1,0 +1,1421 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Team-Flow 工作流指南与制品链详解</title>
+  <style>
+    /* ============================================
+       DESIGN TOKENS
+       ============================================ */
+    :root {
+      /* 色彩系统 - 阶段编码 */
+      --color-bootstrap: #3b82f6;      /* 蓝色 - 初始化阶段 */
+      --color-orchestrator: #8b5cf6;   /* 紫色 - 产品级编排 */
+      --color-workflow: #10b981;       /* 绿色 - 变更级工作流 */
+      --color-architecture: #f59e0b;   /* 橙色 - 架构设计 */
+      --color-compound: #ec4899;       /* 粉色 - 复利贯穿 */
+
+      /* 背景与表面 */
+      --bg-primary: #0f172a;
+      --bg-secondary: #1e293b;
+      --bg-tertiary: #334155;
+      --bg-code: #1e293b;
+
+      /* 文本 */
+      --text-primary: #f1f5f9;
+      --text-secondary: #cbd5e1;
+      --text-muted: #94a3b8;
+
+      /* 边框 */
+      --border-subtle: #334155;
+      --border-default: #475569;
+
+      /* 间距系统 (8px 基准) */
+      --space-1: 0.25rem;
+      --space-2: 0.5rem;
+      --space-3: 0.75rem;
+      --space-4: 1rem;
+      --space-6: 1.5rem;
+      --space-8: 2rem;
+      --space-12: 3rem;
+      --space-16: 4rem;
+
+      /* 字体 */
+      --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+      /* 圆角 */
+      --radius-sm: 0.25rem;
+      --radius-md: 0.5rem;
+      --radius-lg: 0.75rem;
+    }
+
+    /* ============================================
+       BASE STYLES
+       ============================================ */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      padding: var(--space-8);
+    }
+
+    /* ============================================
+       TYPOGRAPHY
+       ============================================ */
+    h1, h2, h3, h4 {
+      font-weight: 600;
+      line-height: 1.3;
+      margin-bottom: var(--space-4);
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      background: linear-gradient(135deg, var(--color-orchestrator), var(--color-workflow));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    h2 {
+      font-size: 1.75rem;
+      color: var(--text-primary);
+      margin-top: var(--space-12);
+      padding-bottom: var(--space-3);
+      border-bottom: 2px solid var(--border-subtle);
+    }
+
+    h3 {
+      font-size: 1.25rem;
+      color: var(--text-secondary);
+      margin-top: var(--space-8);
+    }
+
+    h4 {
+      font-size: 1rem;
+      color: var(--text-muted);
+      margin-top: var(--space-6);
+    }
+
+    p {
+      margin-bottom: var(--space-4);
+      color: var(--text-secondary);
+    }
+
+    code {
+      font-family: var(--font-mono);
+      background: var(--bg-code);
+      padding: var(--space-1) var(--space-2);
+      border-radius: var(--radius-sm);
+      font-size: 0.875em;
+      color: #fbbf24;
+    }
+
+    pre {
+      background: var(--bg-code);
+      padding: var(--space-4);
+      border-radius: var(--radius-md);
+      overflow-x: auto;
+      margin-bottom: var(--space-4);
+      border: 1px solid var(--border-subtle);
+    }
+
+    pre code {
+      background: none;
+      padding: 0;
+    }
+
+    /* ============================================
+       LAYOUT
+       ============================================ */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .section {
+      margin-bottom: var(--space-16);
+    }
+
+    .card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: var(--space-6);
+      margin-bottom: var(--space-6);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      margin-bottom: var(--space-4);
+    }
+
+    .card-badge {
+      display: inline-block;
+      padding: var(--space-1) var(--space-3);
+      border-radius: var(--radius-sm);
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .badge-bootstrap { background: var(--color-bootstrap); color: white; }
+    .badge-orchestrator { background: var(--color-orchestrator); color: white; }
+    .badge-workflow { background: var(--color-workflow); color: white; }
+    .badge-architecture { background: var(--color-architecture); color: white; }
+    .badge-compound { background: var(--color-compound); color: white; }
+
+    /* ============================================
+       ARTIFACT CHAIN
+       ============================================ */
+    .artifact-flow {
+      display: flex;
+      align-items: stretch;
+      gap: var(--space-2);
+      margin: var(--space-6) 0;
+      overflow-x: auto;
+      padding: var(--space-4);
+    }
+
+    .artifact-node {
+      flex-shrink: 0;
+      min-width: 180px;
+      background: var(--bg-tertiary);
+      border: 2px solid var(--border-default);
+      border-radius: var(--radius-md);
+      padding: var(--space-4);
+      position: relative;
+    }
+
+    .artifact-node::after {
+      content: '→';
+      position: absolute;
+      right: -1rem;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 1.5rem;
+      color: var(--text-muted);
+    }
+
+    .artifact-node:last-child::after {
+      display: none;
+    }
+
+    .artifact-node.bootstrap { border-color: var(--color-bootstrap); }
+    .artifact-node.orchestrator { border-color: var(--color-orchestrator); }
+    .artifact-node.workflow { border-color: var(--color-workflow); }
+    .artifact-node.architecture { border-color: var(--color-architecture); }
+
+    .artifact-title {
+      font-weight: 600;
+      font-size: 0.875rem;
+      margin-bottom: var(--space-2);
+    }
+
+    .artifact-desc {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    /* ============================================
+       DETAILS/SUMMARY (INTERACTIVE)
+       ============================================ */
+    details {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      margin-bottom: var(--space-4);
+    }
+
+    summary {
+      padding: var(--space-4);
+      cursor: pointer;
+      font-weight: 600;
+      user-select: none;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+    }
+
+    summary::before {
+      content: '▶';
+      font-size: 0.75rem;
+      transition: transform 0.2s;
+    }
+
+    details[open] summary::before {
+      transform: rotate(90deg);
+    }
+
+    summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .details-content {
+      padding: 0 var(--space-4) var(--space-4);
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    /* ============================================
+       TABLES
+       ============================================ */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: var(--space-4);
+    }
+
+    th {
+      background: var(--bg-tertiary);
+      padding: var(--space-3);
+      text-align: left;
+      font-weight: 600;
+      font-size: 0.875rem;
+      border-bottom: 2px solid var(--border-default);
+    }
+
+    td {
+      padding: var(--space-3);
+      border-bottom: 1px solid var(--border-subtle);
+      font-size: 0.875rem;
+    }
+
+    tr:hover {
+      background: var(--bg-tertiary);
+    }
+
+    /* ============================================
+       COMMAND REFERENCE
+       ============================================ */
+    .cmd-group {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: var(--space-4);
+      margin-bottom: var(--space-4);
+    }
+
+    .cmd-title {
+      font-weight: 600;
+      margin-bottom: var(--space-2);
+    }
+
+    .cmd-desc {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      margin-bottom: var(--space-3);
+    }
+
+    /* ============================================
+       STATE MACHINE DIAGRAM
+       ============================================ */
+    .state-diagram {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: var(--space-4);
+      margin: var(--space-6) 0;
+    }
+
+    .state-box {
+      background: var(--bg-secondary);
+      border: 2px solid var(--border-default);
+      border-radius: var(--radius-md);
+      padding: var(--space-4);
+      text-align: center;
+      position: relative;
+    }
+
+    .state-box.active {
+      border-color: var(--color-workflow);
+      box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
+    }
+
+    .state-name {
+      font-weight: 600;
+      margin-bottom: var(--space-2);
+    }
+
+    .state-desc {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    /* ============================================
+       RESPONSIVE
+       ============================================ */
+    @media (max-width: 768px) {
+      body {
+        padding: var(--space-4);
+      }
+
+      h1 {
+        font-size: 2rem;
+      }
+
+      h2 {
+        font-size: 1.5rem;
+      }
+
+      .artifact-flow {
+        flex-direction: column;
+      }
+
+      .artifact-node::after {
+        content: '↓';
+        right: 50%;
+        top: auto;
+        bottom: -1rem;
+        transform: translateX(50%);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <!-- ============================================
+         HEADER
+         ============================================ -->
+    <header>
+      <h1>Team-Flow 工作流指南与制品链详解</h1>
+      <p>版本 0.22.5 | 完整的 AI 驱动开发工作流系统</p>
+      <p style="margin-top: var(--space-6);">
+        Team-Flow 是一个 23 skills + 8 agents 的统一插件系统，通过明确的制品链和状态机，
+        将模糊需求转化为可执行的代码实现。本文档帮助你快速理解如何使用 Team-Flow，
+        以及每个阶段会产出什么制品、依赖什么制品。
+      </p>
+    </header>
+
+    <!-- ============================================
+         QUICK START
+         ============================================ -->
+    <section class="section">
+      <h2>🚀 快速入门</h2>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-badge badge-bootstrap">安装</span>
+          <h3 style="margin: 0;">1. 安装 Team-Flow</h3>
+        </div>
+        <p>Team-Flow 作为 Claude Code 插件安装：</p>
+        <pre><code># 在 Claude Code 中安装
+/plugin install team-flow</code></pre>
+        <p>安装后，你会获得 23 个 skills 和 8 个 agents，覆盖从需求澄清到代码实施的完整流程。</p>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-badge badge-bootstrap">初始化</span>
+          <h3 style="margin: 0;">2. 首次使用：Bootstrap 阶段</h3>
+        </div>
+        <p>首次使用 Team-Flow 时，需要执行 Bootstrap 阶段建立基线：</p>
+        <pre><code># 在 Claude Code 中
+/tf workflow-bootstrap</code></pre>
+        <p>Bootstrap 会执行：</p>
+        <ul style="margin-left: var(--space-6); color: var(--text-secondary);">
+          <li>B1: 代码库侦察（扫描项目结构、技术栈）</li>
+          <li>B2: 架构基线文档化（生成 <code>docs/architecture/baseline.md</code>）</li>
+          <li>B3: 领域词汇提取（生成 <code>CONCEPTS.md</code>）</li>
+          <li>B4: 目录初始化（创建 <code>.team-flow/</code> 目录）</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-badge badge-orchestrator">启动</span>
+          <h3 style="margin: 0;">3. 开始新需求：产品级编排</h3>
+        </div>
+        <p>当你有新需求时，使用产品级编排器：</p>
+        <pre><code># 在 Claude Code 中
+/tf workflow-orchestrator</code></pre>
+        <p>然后描述你的需求，编排器会自动引导你完成 S1-S5 阶段。</p>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-badge badge-workflow">执行</span>
+          <h3 style="margin: 0;">4. 实施变更：变更级工作流</h3>
+        </div>
+        <p>当产品级编排完成后，进入具体的变更实施：</p>
+        <pre><code># 在 Claude Code 中
+/tf workflow-start</code></pre>
+        <p>变更级工作流会引导你通过 8 个状态完成实施。</p>
+      </div>
+    </section>
+
+    <!-- ============================================
+         WORKFLOW OVERVIEW
+         ============================================ -->
+    <section class="section">
+      <h2>📊 工作流全景图</h2>
+
+      <p>Team-Flow 的工作流分为四个层次，每个层次有明确的职责和产出：</p>
+
+      <div class="artifact-flow">
+        <div class="artifact-node bootstrap">
+          <div class="artifact-title">Bootstrap</div>
+          <div class="artifact-desc">初始化阶段<br/>一次性执行</div>
+        </div>
+        <div class="artifact-node orchestrator">
+          <div class="artifact-title">Orchestrator (S1-S5)</div>
+          <div class="artifact-desc">产品级编排<br/>需求澄清→拆分</div>
+        </div>
+        <div class="artifact-node workflow">
+          <div class="artifact-title">Workflow-Start (8态)</div>
+          <div class="artifact-desc">变更级工作流<br/>状态机驱动</div>
+        </div>
+        <div class="artifact-node architecture">
+          <div class="artifact-title">Architecture-Design</div>
+          <div class="artifact-desc">架构门控<br/>4A+DDD</div>
+        </div>
+      </div>
+
+      <h3>层次关系说明</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>层次</th>
+            <th>职责</th>
+            <th>触发条件</th>
+            <th>关键产出</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Bootstrap</strong></td>
+            <td>建立项目基线</td>
+            <td>首次使用</td>
+            <td><code>baseline.md</code>, <code>CONCEPTS.md</code></td>
+          </tr>
+          <tr>
+            <td><strong>Orchestrator</strong></td>
+            <td>需求澄清与拆分</td>
+            <td>新需求/迭代</td>
+            <td>PRD, plan, change-brief.md</td>
+          </tr>
+          <tr>
+            <td><strong>Workflow-Start</strong></td>
+            <td>变更实施</td>
+            <td>每个 change</td>
+            <td>proposal, specs, design, tasks, contract</td>
+          </tr>
+          <tr>
+            <td><strong>Architecture-Design</strong></td>
+            <td>架构决策</td>
+            <td>涉及架构变更</td>
+            <td>architecture/*.md</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ============================================
+         DETAILED WORKFLOW PHASES
+         ============================================ -->
+    <section class="section">
+      <h2>🔍 各阶段详解</h2>
+
+      <!-- BOOTSTRAP -->
+      <details>
+        <summary>
+          <span class="card-badge badge-bootstrap">Bootstrap</span>
+          初始化阶段 - 建立项目基线
+        </summary>
+        <div class="details-content">
+          <h4>目标</h4>
+          <p>分析现有项目，建立架构基线和领域词汇，为后续工作流提供基础。</p>
+
+          <h4>步骤详解</h4>
+          <table>
+            <thead>
+              <tr>
+                <th>步骤</th>
+                <th>动作</th>
+                <th>产出</th>
+                <th>说明</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>B1</strong></td>
+                <td>代码库侦察</td>
+                <td>-</td>
+                <td>运行 <code>recon-probe.sh</code> 扫描项目结构、技术栈、依赖</td>
+              </tr>
+              <tr>
+                <td><strong>B2</strong></td>
+                <td>架构基线文档化</td>
+                <td><code>docs/architecture/baseline.md</code></td>
+                <td>记录当前架构状态，作为增量设计的 As-Is 基线</td>
+              </tr>
+              <tr>
+                <td><strong>B3</strong></td>
+                <td>领域词汇提取</td>
+                <td><code>CONCEPTS.md</code></td>
+                <td>提取项目领域词汇，建立统一语言</td>
+              </tr>
+              <tr>
+                <td><strong>B4</strong></td>
+                <td>目录初始化</td>
+                <td><code>.team-flow/</code></td>
+                <td>创建工作流状态目录</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <h4>判断标准</h4>
+          <p>如果 <code>docs/architecture/baseline.md</code> 已存在，Bootstrap 会自动跳过。</p>
+        </div>
+      </details>
+
+      <!-- ORCHESTRATOR -->
+      <details>
+        <summary>
+          <span class="card-badge badge-orchestrator">Orchestrator</span>
+          产品级编排 - S1-S5 阶段
+        </summary>
+        <div class="details-content">
+          <h4>目标</h4>
+          <p>将模糊需求转化为明确的变更列表，每个 change 都有清晰的 scope、AC 和依赖关系。</p>
+
+          <h4>S1: 路径路由器</h4>
+          <table>
+            <thead>
+              <tr>
+                <th>输入</th>
+                <th>动作</th>
+                <th>输出</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>用户需求描述</td>
+                <td>判断入口路径（7种路径）</td>
+                <td>确定执行策略</td>
+              </tr>
+            </tbody>
+          </table>
+          <p><strong>7种入口路径：</strong></p>
+          <ol style="margin-left: var(--space-6); color: var(--text-secondary);">
+            <li>新需求（完整 S1-S5）</li>
+            <li>续版（跳过 S1-S2）</li>
+            <li>快速迭代（跳过 S1-S3）</li>
+            <li>单个 change（跳过 S4）</li>
+            <li>hotfix（简化流程）</li>
+            <li>tweak（微调）</li>
+            <li>原型补跑/重跑</li>
+          </ol>
+
+          <h4>S2: PRD 产出</h4>
+          <table>
+            <thead>
+              <tr>
+                <th>输入</th>
+                <th>动作</th>
+                <th>输出</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>需求描述</td>
+                <td>ce-brainstorm + prd-completeness-reviewer</td>
+                <td><code>prd/vN/prd.md</code></td>
+              </tr>
+            </tbody>
+          </table>
+          <p><strong>关键约束：</strong>PRD 冻结前必须通过 5 维度完整性评审。</p>
+
+          <h4>S3: 计划阶段</h4>
+          <table>
+            <thead>
+              <tr>
+                <th>输入</th>
+                <th>动作</th>
+                <th>输出</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>PRD</td>
+                <td>ce-plan（入口问定 plan_mode）</td>
+                <td><code>prd/vN/plan.md</code></td>
+              </tr>
+            </tbody>
+          </table>
+          <p><strong>plan.md 内容：</strong>change 拆分方案 + 依赖关系 + 高阶技术方向（不含接口清单）。</p>
+
+          <h4>S4: 拆分验证与分发</h4>
+          <table>
+            <thead>
+              <tr>
+                <th>输入</th>
+                <th>动作</th>
+                <th>输出</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>plan.md</td>
+                <td>change-split-auditor 审计</td>
+                <td><code>changes/&lt;name&gt;/</code> 目录 + <code>change-brief.md</code></td>
+              </tr>
+            </tbody>
+          </table>
+          <p><strong>关键约束：</strong>必须通过拆分审计（PASS 才能创建 changes/ 目录）。</p>
+          <p><strong>change-brief.md 结构：</strong></p>
+          <ul style="margin-left: var(--space-6); color: var(--text-secondary);">
+            <li>Frontmatter: upstream_source, upstream_req_id, upstream_plan_ref, upstream_change_id, plan_hash</li>
+            <li>Body: Scope, 约束, AC 列表, 全局技术方向, PRD & plan 引用</li>
+          </ul>
+
+          <h4>S5: 全局监控（可选）</h4>
+          <table>
+            <thead>
+              <tr>
+                <th>触发条件</th>
+                <th>动作</th>
+                <th>输出</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>change 数量 ≥ 2</td>
+                <td>跨 change 一致性检查 + 复利晋升</td>
+                <td>监控报告</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </details>
+
+      <!-- WORKFLOW-START -->
+      <details>
+        <summary>
+          <span class="card-badge badge-workflow">Workflow-Start</span>
+          变更级工作流 - 8 态状态机
+        </summary>
+        <div class="details-content">
+          <h4>目标</h4>
+          <p>引导每个 change 通过 8 个状态，从探索到实施完成。</p>
+
+          <h4>8 态状态机</h4>
+          <div class="state-diagram">
+            <div class="state-box">
+              <div class="state-name">exploring</div>
+              <div class="state-desc">需求澄清</div>
+            </div>
+            <div class="state-box">
+              <div class="state-name">specifying</div>
+              <div class="state-desc">规格定义</div>
+            </div>
+            <div class="state-box">
+              <div class="state-name">bridging</div>
+              <div class="state-desc">契约构建</div>
+            </div>
+            <div class="state-box">
+              <div class="state-name">approved-for-build</div>
+              <div class="state-desc">等待批准</div>
+            </div>
+            <div class="state-box active">
+              <div class="state-name">executing</div>
+              <div class="state-desc">实施中</div>
+            </div>
+            <div class="state-box">
+              <div class="state-name">debugging</div>
+              <div class="state-desc">调试</div>
+            </div>
+            <div class="state-box">
+              <div class="state-name">closing</div>
+              <div class="state-desc">收尾</div>
+            </div>
+            <div class="state-box">
+              <div class="state-name">abandoned</div>
+              <div class="state-desc">放弃</div>
+            </div>
+          </div>
+
+          <h4>状态转换详解</h4>
+
+          <details style="margin-top: var(--space-4);">
+            <summary>exploring → specifying</summary>
+            <div class="details-content">
+              <p><strong>触发条件：</strong>需求已清晰，需要定义规格</p>
+              <p><strong>Guard 检查：</strong>artifacts-exist（proposal.md, specs/, design.md, tasks.md）</p>
+              <p><strong>关键动作：</strong>调用 architecture-design 子代理，判断是否涉及架构变更</p>
+              <p><strong>状态写入：</strong></p>
+              <pre><code>dp_0_decisions, dp_0_result, dp_0_confirmed, dp_0_timestamp
+arch_design_decision, arch_design_reason, arch_design_timestamp, arch_design_artifacts</code></pre>
+            </div>
+          </details>
+
+          <details>
+            <summary>specifying → bridging</summary>
+            <div class="details-content">
+              <p><strong>触发条件：</strong>规格已定义，需要构建执行契约</p>
+              <p><strong>Guard 检查：</strong>artifacts-exist, schema-valid</p>
+            </div>
+          </details>
+
+          <details>
+            <summary>bridging → approved-for-build</summary>
+            <div class="details-content">
+              <p><strong>触发条件：</strong>执行契约已构建，等待批准</p>
+              <p><strong>Guard 检查：</strong>artifacts-exist, schema-valid, contract-fresh, dp-gate-passed</p>
+            </div>
+          </details>
+
+          <details>
+            <summary>approved-for-build → executing</summary>
+            <div class="details-content">
+              <p><strong>触发条件：</strong>用户批准执行契约</p>
+              <p><strong>Guard 检查：</strong>artifacts-exist, contract-fresh, dp-gate-passed, execution-plan-ready</p>
+              <p><strong>状态写入：</strong>dp_4_result, dp_4_timestamp（通过 <code>tf execution plan</code> 命令）</p>
+            </div>
+          </details>
+
+          <details>
+            <summary>executing → closing</summary>
+            <div class="details-content">
+              <p><strong>触发条件：</strong>实施完成，准备收尾</p>
+              <p><strong>Guard 检查：</strong>tasks-complete, tests-passing, specs-merged, execution-plan-ready, execution-reviews-passed</p>
+            </div>
+          </details>
+
+          <details>
+            <summary>executing ↔ debugging</summary>
+            <div class="details-content">
+              <p><strong>触发条件：</strong>实施过程中遇到 bug 或测试失败</p>
+              <p><strong>executing → debugging：</strong>无 guard 检查（紧急通道）</p>
+              <p><strong>debugging → executing：</strong>contract-fresh, execution-plan-ready</p>
+            </div>
+          </details>
+
+          <h4>Fast-Path 路由</h4>
+          <p>对于简单的变更，可以走快速路径：</p>
+          <ul style="margin-left: var(--space-6); color: var(--text-secondary);">
+            <li><strong>hotfix：</strong>跳过 need-explorer 和 spec-writer，直接到 contract-builder</li>
+            <li><strong>tweak：</strong>跳过 need-explorer、spec-writer、contract-builder，直接到 build-executor</li>
+            <li><strong>DP-0 处理：</strong>hotfix/tweak 隐式跳过 DP-0（dp_0_confirmed 保持 null），因为意图已明确</li>
+          </ul>
+        </div>
+      </details>
+
+      <!-- ARCHITECTURE-DESIGN -->
+      <details>
+        <summary>
+          <span class="card-badge badge-architecture">Architecture-Design</span>
+          架构设计门控 - 4A+DDD
+        </summary>
+        <div class="details-content">
+          <h4>目标</h4>
+          <p>判断变更是否涉及架构变更，如果涉及则执行 4A+DDD 增量设计。</p>
+
+          <h4>五项检查</h4>
+          <p>architecture-design 子代理会执行五项检查，判断是否涉及架构变更：</p>
+          <ol style="margin-left: var(--space-6); color: var(--text-secondary);">
+            <li><strong>聚合变更：</strong>是否新增/修改聚合或聚合根？</li>
+            <li><strong>限界上下文变更：</strong>是否涉及限界上下文边界变化？</li>
+            <li><strong>读写模型变更：</strong>是否涉及 CQRS 写模型或读模型变化？</li>
+            <li><strong>API 变更：</strong>是否涉及 API 新增/变更？</li>
+            <li><strong>DB schema 变更：</strong>是否涉及数据库表结构、字段、索引变更？</li>
+          </ol>
+
+          <h4>输出结构</h4>
+          <pre><code>changes/&lt;name&gt;/architecture/
+├── architecture.md   # DDD 增量设计（聚合、限界上下文、Context Map）
+├── database.md       # 数据库增量设计（写模型、读模型、Schema 变更）
+└── api.md            # API 增量设计（Command、Read、Query）</code></pre>
+
+          <h4>职责边界（v0.22.5 修复）</h4>
+          <table>
+            <thead>
+              <tr>
+                <th>角色</th>
+                <th>职责</th>
+                <th>状态写入</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>architecture-design</strong></td>
+                <td>判断 + 产出（五项检查 + 架构设计文档）</td>
+                <td>❌ 不负责状态写入</td>
+              </tr>
+              <tr>
+                <td><strong>workflow-start</strong></td>
+                <td>reasonableness check + 状态写入</td>
+                <td>✅ 写入 arch_design_* 字段</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <h4>下游消费</h4>
+          <p>architecture/*.md 会被 spec-writer 消费，用于约束 design.md 和 tasks.md 的设计。</p>
+        </div>
+      </details>
+
+      <!-- COMPOUND ENGINEERING -->
+      <details>
+        <summary>
+          <span class="card-badge badge-compound">Compound</span>
+          复利贯穿 - 全局知识沉淀
+        </summary>
+        <div class="details-content">
+          <h4>目标</h4>
+          <p>将每个 change 的经验沉淀为全局知识，形成复利效应。</p>
+
+          <h4>关键 Skills</h4>
+          <table>
+            <thead>
+              <tr>
+                <th>Skill</th>
+                <th>职责</th>
+                <th>产出</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>ce-compound</strong></td>
+                <td>经验沉淀</td>
+                <td><code>docs/solutions/*.md</code>, <code>CONCEPTS.md</code></td>
+              </tr>
+              <tr>
+                <td><strong>ce-strategy</strong></td>
+                <td>策略锚定</td>
+                <td><code>STRATEGY.md</code></td>
+              </tr>
+            </tbody>
+          </table>
+
+          <h4>触发时机</h4>
+          <ul style="margin-left: var(--space-6); color: var(--text-secondary);">
+            <li>每个阶段转换点：检测→捕获→索引→注入</li>
+            <li>change 完成：arch-merge + prototype-sync + 复利晋升</li>
+          </ul>
+        </div>
+      </details>
+    </section>
+
+    <!-- ============================================
+         ARTIFACT CHAIN
+         ============================================ -->
+    <section class="section">
+      <h2>🔗 完整制品链</h2>
+
+      <p>以下是 Team-Flow 工作流中的所有制品，按层次和阶段组织：</p>
+
+      <h3>产品级制品（Orchestrator 产出）</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>制品</th>
+            <th>路径</th>
+            <th>生产者</th>
+            <th>消费者</th>
+            <th>说明</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>PRD</strong></td>
+            <td><code>prd/vN/prd.md</code></td>
+            <td>ce-brainstorm</td>
+            <td>ce-plan, change-brief.md</td>
+            <td>产品需求文档，包含 scope、AC、功能清单</td>
+          </tr>
+          <tr>
+            <td><strong>Plan</strong></td>
+            <td><code>prd/vN/plan.md</code></td>
+            <td>ce-plan</td>
+            <td>change-brief.md, architecture-design</td>
+            <td>实施方案，包含 change 拆分、依赖、技术方向</td>
+          </tr>
+          <tr>
+            <td><strong>Change-Brief</strong></td>
+            <td><code>changes/&lt;name&gt;/change-brief.md</code></td>
+            <td>orchestrator S4</td>
+            <td>need-explorer, spec-writer, architecture-design</td>
+            <td>变更简报，产品级→变更级的交接物</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>变更级制品（Workflow-Start 产出）</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>制品</th>
+            <th>路径</th>
+            <th>生产者</th>
+            <th>消费者</th>
+            <th>Hash 检查</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Proposal</strong></td>
+            <td><code>proposal.md</code></td>
+            <td>need-explorer</td>
+            <td>spec-writer, contract-builder</td>
+            <td>✅ artifacts_hash</td>
+          </tr>
+          <tr>
+            <td><strong>Specs</strong></td>
+            <td><code>specs/*.md</code></td>
+            <td>spec-writer</td>
+            <td>contract-builder, build-executor</td>
+            <td>✅ artifacts_hash</td>
+          </tr>
+          <tr>
+            <td><strong>Design</strong></td>
+            <td><code>design.md</code></td>
+            <td>spec-writer</td>
+            <td>contract-builder</td>
+            <td>✅ artifacts_hash</td>
+          </tr>
+          <tr>
+            <td><strong>Tasks</strong></td>
+            <td><code>tasks.md</code></td>
+            <td>spec-writer</td>
+            <td>contract-builder, build-executor</td>
+            <td>✅ artifacts_hash</td>
+          </tr>
+          <tr>
+            <td><strong>Execution-Contract</strong></td>
+            <td><code>execution-contract.md</code></td>
+            <td>contract-builder</td>
+            <td>build-executor</td>
+            <td>✅ contract_hash</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>架构设计制品（Architecture-Design 产出）</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>制品</th>
+            <th>路径</th>
+            <th>生产者</th>
+            <th>消费者</th>
+            <th>说明</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Architecture</strong></td>
+            <td><code>architecture/architecture.md</code></td>
+            <td>architecture-design</td>
+            <td>spec-writer (design.md)</td>
+            <td>DDD 增量设计（聚合、限界上下文）</td>
+          </tr>
+          <tr>
+            <td><strong>Database</strong></td>
+            <td><code>architecture/database.md</code></td>
+            <td>architecture-design</td>
+            <td>spec-writer (design.md, tasks.md)</td>
+            <td>数据库增量设计（写模型、读模型）</td>
+          </tr>
+          <tr>
+            <td><strong>API</strong></td>
+            <td><code>architecture/api.md</code></td>
+            <td>architecture-design</td>
+            <td>spec-writer (tasks.md)</td>
+            <td>API 增量设计（Command、Read、Query）</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>状态文件</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>文件</th>
+            <th>路径</th>
+            <th>关键字段</th>
+            <th>说明</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>变更级状态</strong></td>
+            <td><code>changes/&lt;name&gt;/.team-flow.yaml</code></td>
+            <td>state, artifacts_hash, contract_hash, arch_design_*</td>
+            <td>变更级工作流状态</td>
+          </tr>
+          <tr>
+            <td><strong>产品级状态</strong></td>
+            <td><code>.team-flow/</code></td>
+            <td>-</td>
+            <td>产品级编排状态目录</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>全局知识制品（Compound 产出）</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>制品</th>
+            <th>路径</th>
+            <th>生产者</th>
+            <th>说明</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>CONCEPTS</strong></td>
+            <td><code>CONCEPTS.md</code></td>
+            <td>ce-compound, workflow-bootstrap</td>
+            <td>领域词汇与概念定义</td>
+          </tr>
+          <tr>
+            <td><strong>STRATEGY</strong></td>
+            <td><code>STRATEGY.md</code></td>
+            <td>ce-strategy</td>
+            <td>产品策略锚点</td>
+          </tr>
+          <tr>
+            <td><strong>Solutions</strong></td>
+            <td><code>docs/solutions/*.md</code></td>
+            <td>ce-compound</td>
+            <td>解决方案库</td>
+          </tr>
+          <tr>
+            <td><strong>Baseline</strong></td>
+            <td><code>docs/architecture/baseline.md</code></td>
+            <td>workflow-bootstrap</td>
+            <td>架构基线</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ============================================
+         COMMAND REFERENCE
+         ============================================ -->
+    <section class="section">
+      <h2>⌨️ 关键命令速查</h2>
+
+      <div class="cmd-group">
+        <div class="cmd-title">初始化与启动</div>
+        <div class="cmd-desc">开始使用 Team-Flow 的基本命令</div>
+        <pre><code>/tf workflow-bootstrap        # 首次使用，建立项目基线
+/tf workflow-orchestrator     # 开始新需求（产品级编排）
+/tf workflow-start            # 开始变更实施（变更级工作流）</code></pre>
+      </div>
+
+      <div class="cmd-group">
+        <div class="cmd-title">状态管理</div>
+        <div class="cmd-desc">查看和管理工作流状态</div>
+        <pre><code># 初始化状态文件
+tf state init &lt;change-dir&gt;
+
+# 查看当前状态
+tf state get &lt;change-dir&gt;
+
+# 更新状态字段
+tf state set &lt;change-dir&gt; &lt;field&gt; &lt;value&gt;
+
+# 状态转换（通过 guard 检查）
+tf state transition &lt;change-dir&gt; &lt;from-state&gt; &lt;to-state&gt;</code></pre>
+      </div>
+
+      <div class="cmd-group">
+        <div class="cmd-title">Guard 检查</div>
+        <div class="cmd-desc">验证状态转换的前置条件</div>
+        <pre><code># 执行 guard 检查
+tf runtime guard check &lt;change-dir&gt; &lt;from-state&gt; &lt;to-state&gt; --json
+
+# 示例：检查 exploring → specifying 转换
+tf runtime guard check changes/my-feature exploring specifying --json</code></pre>
+      </div>
+
+      <div class="cmd-group">
+        <div class="cmd-title">执行计划</div>
+        <div class="cmd-desc">管理执行计划和评审</div>
+        <pre><code># 生成执行推荐
+tf execution recommend &lt;change-dir&gt;
+
+# 创建执行计划（需要 --confirm 参数）
+tf execution plan &lt;change-dir&gt; --mode &lt;mode&gt; --confirm --reason &lt;reason&gt; --wave &lt;wave-def&gt;
+
+# 查看执行计划
+tf execution show &lt;change-dir&gt; --json
+
+# 修订执行计划
+tf execution revise &lt;change-dir&gt; --mode &lt;mode&gt; --confirm --reason &lt;reason&gt; --wave &lt;wave-def&gt;
+
+# 记录评审
+tf execution review &lt;change-dir&gt; --wave &lt;id&gt; --base &lt;sha&gt; --head &lt;sha&gt; --report &lt;path&gt; --verdict &lt;pass|fail&gt;</code></pre>
+      </div>
+
+      <div class="cmd-group">
+        <div class="cmd-title">Handoff 与 Checkpoint</div>
+        <div class="cmd-desc">管理交接和检查点</div>
+        <pre><code># 创建交接
+tf handoff create &lt;change-dir&gt; --type &lt;type&gt; --objective &lt;text&gt; --expected-output &lt;text&gt; --acceptance &lt;text&gt;
+
+# 列出交接
+tf handoff list &lt;change-dir&gt; --json
+
+# 解决交接
+tf handoff resolve &lt;change-dir&gt; --id &lt;id&gt;
+
+# 列出检查点
+tf checkpoint list &lt;change-dir&gt; --json</code></pre>
+      </div>
+
+      <div class="cmd-group">
+        <div class="cmd-title">资源管理</div>
+        <div class="cmd-desc">读取和写入资源文件</div>
+        <pre><code># 读取资源
+tf runtime asset read &lt;path&gt;
+
+# 写入资源
+tf runtime asset write &lt;path&gt; &lt;content&gt;</code></pre>
+      </div>
+    </section>
+
+    <!-- ============================================
+         BEST PRACTICES
+         ============================================ -->
+    <section class="section">
+      <h2>💡 最佳实践</h2>
+
+      <div class="card">
+        <h3>1. 遵循制品链依赖关系</h3>
+        <p>每个制品都有明确的生产者和消费者，不要跳过必要的制品产出。</p>
+        <pre><code># ✅ 正确流程
+PRD → Plan → Change-Brief → Proposal → Specs → Design → Tasks → Execution-Contract → 实施
+
+# ❌ 错误流程
+直接开始实施，跳过设计和规格定义</code></pre>
+      </div>
+
+      <div class="card">
+        <h3>2. 重视 Guard 检查</h3>
+        <p>Guard 检查是工作流的质量门禁，确保每个状态转换都满足前置条件。</p>
+        <pre><code># 在状态转换前，先运行 guard 检查
+tf runtime guard check changes/my-feature exploring specifying --json
+
+# 如果检查失败，根据错误信息补充缺失的制品或条件</code></pre>
+      </div>
+
+      <div class="card">
+        <h3>3. 充分利用架构设计门控</h3>
+        <p>architecture-design 子代理会自动判断是否涉及架构变更，如果涉及则产出架构设计文档。</p>
+        <pre><code># architecture-design 会执行五项检查：
+# 1. 聚合变更
+# 2. 限界上下文变更
+# 3. 读写模型变更
+# 4. API 变更
+# 5. DB schema 变更
+
+# 如果任一检查为"是"，则产出 architecture/*.md
+# 如果全部为"否"，则返回 skipped</code></pre>
+      </div>
+
+      <div class="card">
+        <h3>4. 合理使用 Fast-Path</h3>
+        <p>对于简单的变更（hotfix 或 tweak），可以走快速路径，但仍然需要遵循基本的 guard 检查。</p>
+        <pre><code># hotfix: 跳过 need-explorer 和 spec-writer
+# 但仍然需要：contract-builder (minimal) + DP-3 批准 + execution-plan
+
+# tweak: 跳过 need-explorer, spec-writer, contract-builder
+# 但仍然需要：architecture-design 门控检查</code></pre>
+      </div>
+
+      <div class="card">
+        <h3>5. 重视复利沉淀</h3>
+        <p>每个 change 完成后，使用 ce-compound 和 ce-strategy 将经验沉淀为全局知识。</p>
+        <pre><code># 在 change 完成后，执行复利晋升
+/tf ce-compound
+
+# 这会产出：
+# - docs/solutions/*.md（解决方案）
+# - CONCEPTS.md（更新领域词汇）
+# - STRATEGY.md（更新产品策略）</code></pre>
+      </div>
+
+      <div class="card">
+        <h3>6. 使用模板保证一致性</h3>
+        <p>v0.22.5 新增了 4 个标准模板，使用它们可以保证制品结构一致。</p>
+        <pre><code># 使用 change-brief 模板
+tf runtime asset write changes/my-feature/change-brief.md --template change-brief
+
+# 使用 architecture 模板
+tf runtime asset write changes/my-feature/architecture/architecture.md --template architecture
+tf runtime asset write changes/my-feature/architecture/database.md --template database
+tf runtime asset write changes/my-feature/architecture/api.md --template api</code></pre>
+      </div>
+    </section>
+
+    <!-- ============================================
+         FAQ
+         ============================================ -->
+    <section class="section">
+      <h2>❓ 常见问题</h2>
+
+      <details>
+        <summary>Q1: 为什么我的状态转换被阻断了？</summary>
+        <div class="details-content">
+          <p><strong>原因：</strong>状态转换需要通过 guard 检查，检查失败会被阻断。</p>
+          <p><strong>解决方法：</strong></p>
+          <ol style="margin-left: var(--space-6); color: var(--text-secondary);">
+            <li>运行 guard 检查，查看具体的失败原因：<br/><code>tf runtime guard check &lt;change-dir&gt; &lt;from-state&gt; &lt;to-state&gt; --json</code></li>
+            <li>根据错误信息补充缺失的制品或条件</li>
+            <li>重新尝试状态转换</li>
+          </ol>
+        </div>
+      </details>
+
+      <details>
+        <summary>Q2: arch_design_* 字段无法写入？</summary>
+        <div class="details-content">
+          <p><strong>原因：</strong>v0.22.5 之前的版本，arch_design_* 字段不在 SETTABLE_FIELDS 中，无法通过 <code>tf state set</code> 写入。</p>
+          <p><strong>解决方法：</strong>升级到 v0.22.5 或更高版本。</p>
+          <p><strong>临时方案（v0.22.4）：</strong>直接编辑 <code>.team-flow.yaml</code> 文件，手动添加字段。</p>
+        </div>
+      </details>
+
+      <details>
+        <summary>Q3: dp_4_result 无法写入？</summary>
+        <div class="details-content">
+          <p><strong>说明：</strong>这是设计意图，不是 bug。</p>
+          <p><strong>正确做法：</strong>使用 <code>tf execution plan</code> 命令，它会自动写入 dp_4_result 和 dp_4_timestamp。</p>
+          <pre><code># ✅ 正确做法
+tf execution plan changes/my-feature --mode full --confirm --reason "实施完整功能" --wave "w1:parallel:task1,task2"
+
+# ❌ 错误做法
+tf state set changes/my-feature dp_4_result "..."  # 这会失败</code></pre>
+        </div>
+      </details>
+
+      <details>
+        <summary>Q4: change-brief.md 应该由谁产出？</summary>
+        <div class="details-content">
+          <p><strong>生产者：</strong>orchestrator S4 阶段</p>
+          <p><strong>消费者：</strong>need-explorer, spec-writer, architecture-design</p>
+          <p><strong>产出时机：</strong>S4 拆分验证通过后，为每个 change 创建 change-brief.md</p>
+          <p><strong>关键内容：</strong></p>
+          <ul style="margin-left: var(--space-6); color: var(--text-secondary);">
+            <li>Frontmatter: upstream_source, upstream_req_id, upstream_plan_ref, upstream_change_id, plan_hash</li>
+            <li>Body: Scope, 约束, AC 列表, 全局技术方向, PRD & plan 引用</li>
+          </ul>
+        </div>
+      </details>
+
+      <details>
+        <summary>Q5: 什么时候需要产出 architecture/*.md？</summary>
+        <div class="details-content">
+          <p><strong>判断标准：</strong>architecture-design 子代理会执行五项检查</p>
+          <ul style="margin-left: var(--space-6); color: var(--text-secondary);">
+            <li>聚合变更</li>
+            <li>限界上下文变更</li>
+            <li>读写模型变更</li>
+            <li>API 变更</li>
+            <li>DB schema 变更</li>
+          </ul>
+          <p>如果任一检查为"是"，则需要产出 architecture/*.md。</p>
+          <p>如果全部为"否"，则返回 skipped，不需要产出。</p>
+        </div>
+      </details>
+
+      <details>
+        <summary>Q6: hotfix 和 tweak 有什么区别？</summary>
+        <div class="details-content">
+          <table>
+            <thead>
+              <tr>
+                <th>维度</th>
+                <th>hotfix</th>
+                <th>tweak</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>适用场景</strong></td>
+                <td>紧急修复</td>
+                <td>微调</td>
+              </tr>
+              <tr>
+                <td><strong>跳过阶段</strong></td>
+                <td>need-explorer, spec-writer</td>
+                <td>need-explorer, spec-writer, contract-builder</td>
+              </tr>
+              <tr>
+                <td><strong>仍需执行</strong></td>
+                <td>contract-builder (minimal), DP-3, execution-plan</td>
+                <td>architecture-design 门控</td>
+              </tr>
+              <tr>
+                <td><strong>DP-0 处理</strong></td>
+                <td>隐式跳过（dp_0_confirmed 保持 null）</td>
+                <td>隐式跳过（dp_0_confirmed 保持 null）</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </details>
+
+      <details>
+        <summary>Q7: 如何查看完整的制品依赖关系？</summary>
+        <div class="details-content">
+          <p><strong>方法 1：</strong>查看本文档的"完整制品链"部分</p>
+          <p><strong>方法 2：</strong>查看设计增强方案文档</p>
+          <pre><code>docs/architecture-api-db-design-enhancement-v0.9.md</code></pre>
+          <p><strong>方法 3：</strong>查看 AGENTS.md</p>
+          <pre><code>team-flow/AGENTS.md</code></pre>
+        </div>
+      </details>
+
+      <details>
+        <summary>Q8: 模板文件在哪里？</summary>
+        <div class="details-content">
+          <p><strong>v0.22.5 新增的模板：</strong></p>
+          <pre><code>team-flow/templates/
+├── change-brief.md      # 变更简报模板
+├── architecture.md      # 架构设计模板（DDD 增量设计）
+├── database.md          # 数据库设计模板（CQRS 增量设计）
+└── api.md               # API 设计模板（Command/Read/Query）</code></pre>
+          <p><strong>使用方法：</strong></p>
+          <pre><code>tf runtime asset write &lt;path&gt; --template &lt;template-name&gt;</code></pre>
+        </div>
+      </details>
+    </section>
+
+    <!-- ============================================
+         FOOTER
+         ============================================ -->
+    <footer>
+      <h2>📚 相关文档</h2>
+      <ul style="margin-left: var(--space-6); color: var(--text-secondary);">
+        <li><strong>设计增强方案：</strong><code>docs/architecture-api-db-design-enhancement-v0.9.md</code></li>
+        <li><strong>插件说明：</strong><code>team-flow/AGENTS.md</code></li>
+        <li><strong>变更日志：</strong><code>team-flow/CHANGELOG.md</code></li>
+        <li><strong>安装指南：</strong><code>team-flow/INSTALL.md</code></li>
+        <li><strong>安全说明：</strong><code>team-flow/SECURITY.md</code></li>
+      </ul>
+
+      <div style="margin-top: var(--space-12); padding-top: var(--space-6); border-top: 1px solid var(--border-subtle); text-align: center; color: var(--text-muted); font-size: 0.875rem;">
+        <p>Team-Flow v0.22.5 | 本文档最后更新于 2026-07-28</p>
+        <p>由 Claude Code 生成，基于制品链评审（v0.9 §28）</p>
+      </div>
+    </footer>
+
+  </div>
+</body>
+</html>

@@ -6,16 +6,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 本工作区的核心目标是**开发和测试 team-flow 工作流**。team-flow 是一个统一插件（23 skills + 8 agents），整合了 spec-superflow（9）、compound-engineering（6）、architecture-design（1）、prototype（1）、design-system（1）、workflow-orchestrator（1）、workflow-bootstrap（1）、e2e（1）、session-handoff（1）、workflow-feedback（1）。
 
-- **设计增强方案当前权威版本**：`docs/architecture-api-db-design-enhancement-v0.9.md`
-- **插件版本**：`v0.22.5`（23 skills + 8 agents）
+- **设计增强方案当前权威版本**：`docs/architecture-api-db-design-enhancement-v0.10.md`
+- **插件版本**：`v0.23.0`（23 skills + 8 agents）
 
 ## 工作区结构
 
 ```
 team-flow-workspace/
 ├── docs/                          # 设计文档（工作区级）
-│   ├── architecture-api-db-design-enhancement-v0.9.md  # ★ 当前权威版本
-│   ├── architecture-api-db-design-enhancement-v0.8.md  # 历史保留版本
+│   ├── architecture-api-db-design-enhancement-v0.10.md # ★ 当前权威版本
+│   ├── architecture-api-db-design-enhancement-v0.9.md  # 历史保留版本
 │   ├── roadmap-and-todos.md       # Roadmap + 待办列表（从本文件抽取）
 │   ├── design-doc-system.md       # 设计文档体系 + 版本规则（从本文件抽取）
 │   ├── doc-maintenance.md         # 文档维护规范 + 同步清单（从本文件抽取）
@@ -166,6 +166,7 @@ CLAUDE.md 和 AGENTS.md 中描述的工作流包含 architecture-design 门控�
 2. **CHANGELOG 更新**：记录本版本的变更内容
 3. **设计文档检查**：如涉及重大设计变更，创建新版本设计文档（v0.8 → v0.9）
 4. **一致性验证**：`npm run check-versions` + `npm test` 全部通过
+5. **npm 发布**：`npm publish --registry=https://registry.npmjs.org --//registry.npmjs.org/:_authToken="$(cat docs/npm-token)"`（本地 `.npmrc` 指向 npmmirror 镜像不支持发布，必须显式指定官方 registry + token 文件）
 
 ## 插件迭代工作流（强制规则）
 
