@@ -167,8 +167,8 @@ CLAUDE.md 和 AGENTS.md 中描述的工作流包含 architecture-design 门控�
 3. **设计文档检查**：如涉及重大设计变更，创建新版本设计文档（v0.8 → v0.9）
 4. **一致性验证**：`npm run check-versions` + `npm test` 全部通过
 5. **子仓库提交**：`cd team-flow && git add -A && git commit -m "vX.Y.Z: ..."`
-6. **npm 发布**：`cd team-flow && npm publish --registry=https://registry.npmjs.org --//registry.npmjs.org/:_authToken="$(cat docs/npm-token)"`
-   - 本地 `.npmrc` 指向 npmmirror 镜像不支持发布，必须显式指定官方 registry + token 文件
+6. **npm 发布**：`cd team-flow && npm publish --registry=https://registry.npmjs.org --//registry.npmjs.org/:_authToken="$(cat /Users/litong/Documents/work/code/practice/team-flow-workspace/docs/npm-token)"`
+   - 本地 `.npmrc` 指向 npmmirror 镜像不支持发布，必须显式指定官方 registry + token 文件（绝对路径）
    - 发布成功后会自动创建 git tag
 7. **主项目提交**：更新 CLAUDE.md 版本号 + 提交
 
