@@ -24,6 +24,7 @@
 | v0.21.0    | 子代理决策点 SendMessage stop-and-resume 交互协议（设计 §22.1.1 转采纳 + §18.1.2 修订，P1-14）：子代理发问即停 → 主代理 task-notification 代问用户 → 回传自动 resume 续跑；请求-应答匹配纪律 + 子代理应答校验；完成 P1-13 的 SendMessage 子项；横展修 AGENTS.md Skills 索引缺 design-system 行（W1）；LT 实证（Session d6801ab4）；421/421 + plugin-validator PASS | ✅ 2026-07-25 |
 | v0.24.0    | 复利工程强制化补强（5项P0-P2修复）：① hooks 旧名修复（spec-superflow→team-flow，恢复状态机编辑守卫）② compound-captured guard 维度（executing:closing 强制 learnings.md 或显式 skip）③ Bootstrap DDL 提取（recon-probe.sh 三策略：SQL文件/Java Entity/占位兜底）④ Bootstrap 模板初始化（B2 Step 0 从 architecture-design/templates/ 复制 5 个模板）⑤ solutions 脚本测试覆盖（29 个新测试，capture/inject/promote/index-gen 从 0%→100%）；457/457 测试全过 | ✅ 2026-07-28 |
 | v0.24.1    | prototype skill 体系补强（5项P0-P2修复）：① design-system-architect.md 重复维护→迁移指针 ② Open Design 命名歧义消解（GUI工具 vs 开源方法论）③ prototype-sync 从 SOP 升级为 release-archivist closing 自动触发+执行校验 ④ 新增交互原型/线框图方法论（零依赖适配）⑤ C 端骨架扩展（6 个新 section + CSS + 节奏表）；来源：baoyu-design vs open-design 深度评估 | ✅ 2026-07-28 |
+| v0.25.0    | brainstorm profile 机制 + PRD 模板交互式选择（3 新增+4 改动）：① 新增 templates/prd-brainstorm-profile.md（核心维度7项+扩展维度6项+反例边界7项+正/反示例）② Phase 0 模板解析改为 MANDATORY STEP+AskUserQuestion 强制交互 ③ Phase 2 新增 profile 驱动方案探索（替代 mechanism/product shape）④ config-loader DEFAULTS 增加 prd.template 默认值 ⑤ orchestrated 模式明确仅跳过 Phase 3.5；来源：workflow-feedback P1+P2（2026-07-29） | ✅ 2026-07-29 |
 
 ## 规划中里程碑
 
