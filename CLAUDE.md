@@ -166,7 +166,11 @@ CLAUDE.md 和 AGENTS.md 中描述的工作流包含 architecture-design 门控�
 2. **CHANGELOG 更新**：记录本版本的变更内容
 3. **设计文档检查**：如涉及重大设计变更，创建新版本设计文档（v0.8 → v0.9）
 4. **一致性验证**：`npm run check-versions` + `npm test` 全部通过
-5. **npm 发布**：`npm publish --registry=https://registry.npmjs.org --//registry.npmjs.org/:_authToken="$(cat docs/npm-token)"`（本地 `.npmrc` 指向 npmmirror 镜像不支持发布，必须显式指定官方 registry + token 文件）
+5. **子仓库提交**：`cd team-flow && git add -A && git commit -m "vX.Y.Z: ..."`
+6. **npm 发布**：`cd team-flow && npm publish --registry=https://registry.npmjs.org --//registry.npmjs.org/:_authToken="$(cat docs/npm-token)"`
+   - 本地 `.npmrc` 指向 npmmirror 镜像不支持发布，必须显式指定官方 registry + token 文件
+   - 发布成功后会自动创建 git tag
+7. **主项目提交**：更新 CLAUDE.md 版本号 + 提交
 
 ## 插件迭代工作流（强制规则）
 
@@ -179,7 +183,7 @@ P1 设计 → P2 实施 → P3 验证 → P4 提交
 | **P1 设计** | 更新设计增强方案 + LT 确认决策                                                                                                                                                | —                      |
 | **P2 实施** | 新 skill→`/plugin-dev:skill-development`；新 agent→`/plugin-dev:agent-development`；新 hook→`/plugin-dev:hook-development`；新 command→`/plugin-dev:command-development` | plugin-dev 技能集         |
 | **P3 验证** | ① plugin-validator ② skill-reviewer ③ `npm run check-versions` ④ `npm test`                                                                                       | plugin-dev agent + npm |
-| **P4 提交** | 子仓库 `npm version` + commit（pre-commit hook 自动同步）→ 父仓库 commit                                                                                                 | 见 Git 管理规则             |
+| **P4 提交** | 子仓库 `npm version` + commit → `npm publish`（官方 registry）→ 父仓库 commit + 更新版本号                                                                            | 见 Git 管理规则 + 版本发布 Checklist |
 
 **约束**：
 
