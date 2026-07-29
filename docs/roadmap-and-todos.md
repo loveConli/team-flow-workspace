@@ -68,11 +68,15 @@
 | P1-13 | 产出型子代理质量闸门（横展全部产出型 agent，prototype-builder 首发）：① 产物落盘硬闸门——声明的 deliverable 文件已 `Write` 落盘且非空，否则禁止返回 `done`，改返回带 `blockers` 的非终态 ② 决策点/阻断点不结束、先经 `SendMessage` 反馈主代理（推广为 team-flow 全部子代理统一交互协议；子代理不能阻塞提问，由主代理自决或 `AskUserQuestion`）③ 大产出默认分片（先 Write 主体骨架 → Edit 分段追加数据层/渲染层，规避单次 Write 截断与预算峰值）④ 主代理交接后强制 `ls`/`test -f` 校验入口文件存在且非空再派 reviewer，缺失则 resume builder | ✅ 2026-07-25 | v0.20.0 | 来源：workflow-feedback 2026-07-25（VRM mgmt-dashboard S2，agent-quality，反馈级 P1） |
 | P1-14 | 子代理决策点 SendMessage stop-and-resume 交互协议（**完成 P1-13 的 SendMessage 子项**）：子代理（无 AskUserQuestion）决策点经 `SendMessage(to: main)` 发问即停 → 主代理收 `task-notification` 代问用户 → 回传自动 resume 续跑；主代理维护请求-应答匹配纪律 + 子代理应答校验；修订 §18.1.2（不引入常驻 agent team 不变，结构化返回仍为终态主协议）。落点 prototype-builder/env-scout + prototype orchestration-flow（主代理中继）+ AGENTS.md | ✅ 2026-07-25 | v0.21.0 | 来源：LT 实证（Session d6801ab4）+ workflow-feedback agent-quality 改进建议2 |
 | P1-15 | 架构设计显式编排与产物独立化（v0.9 §26）：① workflow-start 路由表增加 architecture-design 子代理调用（exploring→specifying 之间） ② architecture-design 判断+执行一体化 SOP + 结构化输出契约 ③ 产出目录从 `specs/<cap>/` 提升为独立 `architecture/` ④ spec-writer Required Inputs 增加 `architecture/` 读取 ⑤ workflow-start 合理性确认机制 + yaml 字段 + 硬阻断 ⑥ hotfix/tweak 不豁免 | 🔲 待实施 | v0.23.0 | 来源：LT+CC 讨论（2026-07-27） |
+| P1-16 | ce-brainstorm Phase 0.0 增加 tf CLI 可用性检查和显式降级逻辑：① 先检查 `which tf` ② 不可用时走 fallback（询问用户：默认模板 or 自定义路径）③ 在工作区创建模板（`.team-flow/templates/`）④ 维护配置文件到 `.team-flow/team-flow.config.json` | 🔲 待实施 | v0.26.0 | 来源：workflow-feedback 2026-07-29（P1） |
+| P1-17 | ce-brainstorm SKILL.md 增加 guardrail：禁止写入 skill 目录（显式声明项目级制品只在项目工作区创建/修改） | 🔲 待实施 | v0.26.0 | 来源：workflow-feedback 2026-07-29（P1） |
 
 ### P2（改善，按节奏推进）
 
 | ID   | 待办                                                                                           | 状态                | 目标版本    | 备注                                                       |
 | ---- | -------------------------------------------------------------------------------------------- | ----------------- | ------- | -------------------------------------------------------- |
+| P2-16 | config-loader.mjs 增加 `.team-flow/` 目录查找优先级（查找顺序：① .team-flow/ → ② 根目录 → ③ git 根 → ④ home） | 🔲 待实施 | v0.26.0 | 来源：workflow-feedback 2026-07-29（P2） |
+| P2-17 | 项目配置文件迁移至 `.team-flow/` 目录（team-flow.config.json → .team-flow/team-flow.config.json） | 🔲 待实施 | v0.26.0 | 来源：workflow-feedback 2026-07-29（P2） |
 | P2-1 | 触发词去重：分层触发域（方案C）                                        | ✅ 2026-07-24      | v1.0.0  | 方案C：产品级收敛到orchestrator，步骤级保留受限独立触发    |
 | P2-2 | PreToolUse hook 执行期状态守护（14/14 测试通过，~22ms）                                              | ✅ 2026-07-24      | v1.0.0  | 来源：v0.11.0 设计评审 W5                                       |
 | P2-3 | 13 个 skill 补 references/ | ✅ 2026-07-24      | v0.13.0 | 来源：v0.11.0 设计评审 W1                                       |

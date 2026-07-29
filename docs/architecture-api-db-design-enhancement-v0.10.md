@@ -417,6 +417,112 @@ v0.22.5 已修复 `arch_design_decision/reason/timestamp/artifacts` 字段的代
 
 ---
 
+## 三十二、配置管理与 Skill 降级逻辑补强（v0.26.0）
+
+> 来源：workflow-feedback 2026-07-29（VRM 项目 SOP 流程反馈）
+> 目标插件版本：**v0.26.0**
+
+### 32.1 config-loader 查找顺序优化（P2）
+
+#### 32.1.1 问题现状
+
+当前 `config-loader.mjs` 的查找顺序为：
+1. 项目根目录（`startDir/team-flow.config.json`）
+2. git 根目录（`gitRoot/team-flow.config.json`）
+3. home 目录（`~/team-flow.config.json`）
+
+**问题**：配置文件直接放在项目根目录，与其他项目配置文件混杂，不符合"team-flow 相关配置集中管理"原则。
+
+#### 32.1.2 改进方案
+
+修改 `findConfigFile` 函数，将 `.team-flow/team-flow.config.json` 加入查找路径（**优先于项目根目录**）：
+
+```
+新查找顺序：
+1. .team-flow/team-flow.config.json（startDir 下）
+2. team-flow.config.json（startDir 下，兼容旧路径）
+3. git 根目录
+4. home 目录
+```
+
+**理由**：`.team-flow/` 是 team-flow 的专属目录，已有 `registry.yaml`、`requirements/`、`feedback/` 等结构，配置文件理应归属此处。
+
+#### 32.1.3 涉及文件
+
+| 文件 | 修改内容 |
+|------|---------|
+| `scripts/lib/config-loader.mjs` | `findConfigFile` 函数增加 `.team-flow/` 路径查找 |
+| `scripts/lib/config-loader.test.mjs` | 新增测试用例验证 `.team-flow/` 路径优先级 |
+
+---
+
+### 32.2 ce-brainstorm Phase 0.0 降级逻辑补强（P1）
+
+#### 32.2.1 问题现状
+
+ce-brainstorm Phase 0.0 直接运行 `tf runtime config --get prd.template`，存在以下问题：
+
+| 问题 | 影响 |
+|------|------|
+| 未检查 `tf` CLI 是否可用 | 命令失败后无降级处理 |
+| 未按 SKILL.md 定义的降级逻辑执行 | 跳过用户选择，自行决定 |
+| 在 skill 目录写入文件 | 违反"不修改 skill 源码目录"原则 |
+
+#### 32.2.2 改进方案
+
+**2.2.2.1 Phase 0.0 增加 tf CLI 可用性检查**
+
+```markdown
+**Resolve PRD template — MANDATORY STEP, DO NOT SKIP.**
+
+1. **检查 tf CLI 是否可用**：运行 `which tf`
+   - ✅ 可用：继续执行 `tf runtime config --get prd.template`
+   - ❌ 不可用：走降级逻辑（见下方）
+
+2. **降级逻辑（tf 不可用时）**：
+   - 通知用户：`tf` 命令不可用，将使用默认配置
+   - **询问用户**：默认模板 or 自定义路径？
+     - 默认模板：使用 skill 内置 `templates/prd.md`
+     - 自定义路径：验证文件存在，在项目工作区记录配置
+   - 在 `.team-flow/templates/` 目录创建/使用模板（绝不在 skill 目录写入）
+   - **维护配置文件**：在 `.team-flow/team-flow.config.json` 中记录配置（如文件不存在则创建）
+```
+
+**2.2.2.2 增加 guardrail：禁止写入 skill 目录**
+
+在 Phase 0.0 开头增加显式 guardrail：
+
+```markdown
+> **⛔ GUARDRAIL：禁止写入 skill 源码目录**
+>
+> 项目级制品（PRD 模板、配置文件等）只在**项目工作区**创建/修改：
+> - 模板文件：`.team-flow/templates/`
+> - 配置文件：`.team-flow/team-flow.config.json`
+>
+> **绝不写入 skill 源码目录**（`skills/ce-brainstorm/` 等）。
+```
+
+#### 32.2.3 涉及文件
+
+| 文件 | 修改内容 |
+|------|---------|
+| `skills/ce-brainstorm/SKILL.md` | Phase 0.0 增加 tf CLI 检查 + 降级逻辑 + guardrail |
+| `skills/ce-brainstorm/references/phase0-routing.md` | 同步更新降级逻辑说明 |
+
+---
+
+### 32.3 配置文件迁移
+
+#### 32.3.1 当前项目迁移
+
+将当前项目的 `team-flow.config.json` 从项目根目录迁移到 `.team-flow/team-flow.config.json`。
+
+#### 32.3.2 新项目默认路径
+
+新项目创建时，默认配置文件路径为 `.team-flow/team-flow.config.json`。
+
+---
+
 ## 实施计划
 
 ### 优先级排序
