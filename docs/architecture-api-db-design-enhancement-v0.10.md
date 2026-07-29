@@ -551,6 +551,135 @@ arch-design 产出变为"文档+可执行制品"双轨后，下游 skill 的输�
 
 ---
 
+## 三十三、workflow-orchestrator S4 阶段强制化（v0.27.0）
+
+### 33.0 问题诊断（2026-07-29 feedback 批量分析）
+
+vrm4teamflow 项目在执行 S3→S4 过渡时，暴露 4 个关联问题（1 P0 + 1 P1 + 2 P2），根因均指向 **orchestrator SKILL.md 的 S4 阶段设计缺陷**：
+
+| 编号 | 问题 | 严重性 | 现象 | 根因 |
+|------|------|--------|------|------|
+| P0-1 | S4 跳过必选门禁 | P0 | change-split-auditor 未执行、tf state init 未执行、CLAUDE.md 替代 change-brief.md、change_dag 格式错误 | agent 未读取 `references/s4-split-validate.md`，凭"常识"执行 |
+| P1-1 | change 制品格式错误 | P1 | CLAUDE.md 替代 change-brief.md，内容含文件清单（越界） | 同上 |
+| P2-1 | 状态不一致 | P2 | orchestrator.yaml 顶层 workflow_phase 未同步更新 | SKILL.md 未明确阶段转换原子性操作 |
+| P2-2 | plan.md 编号混乱 | P2 | change 合并后 §1.1 与 §4 引用不对应 | 合并操作后缺乏同步更新机制 |
+
+**共同根因**：SKILL.md S4 节正文描述过于简略（仅 2 段概述），关键规范全在 `references/s4-split-validate.md` 中，agent 容易跳过 references 直接凭既有知识执行。这与 S2 节已有 `⛔ MANDATORY` 指令形成对比——S2 的模式有效，S4 缺乏此机制。
+
+### 33.1 改进方案
+
+#### 33.1.1 S4 正文强制化（类比 S2 模式）
+
+在 SKILL.md S4 节正文开头增加：
+
+```markdown
+**⛔ MANDATORY：执行S4阶段前，必须先读取 `references/s4-split-validate.md`**
+```
+
+此指令为 **硬约束**，agent 必须在执行任何 S4 步骤前读取完整参考文档。
+
+#### 33.1.2 S4 步骤 checklist 化
+
+将 S4 的 5 个核心步骤以 checklist 形式写入正文（而非仅在 references 中）：
+
+```markdown
+**S4 步骤清单（必须按顺序执行，不可跳过）**：
+
+- [ ] **Step 1: 拆分质量审计**（必选门禁）
+  - 调用 `change-split-auditor` agent
+  - verdict = PASS 是后续步骤的硬前置条件
+  - verdict = FAIL → 回退 S3，不可绕过
+
+- [ ] **Step 2: 反馈环路检查点**
+  - 依赖图是否可执行？粒度是否合理？
+  - 否 → 回退 S3
+
+- [ ] **Step 3: 创建 change 脚手架**
+  - 为每个 change 执行 `tf state init`
+  - 验证 `.team-flow.yaml` 已创建
+
+- [ ] **Step 3.5: 落盘 change-brief.md**
+  - 为每个 change 写 frontmattered change-brief.md
+  - 验证文件存在且格式正确
+
+- [ ] **Step 4: 写入 change_dag**
+  - 更新 orchestrator.yaml 的 change_dag 字段
+
+- [ ] **Step 5: 分发**
+  - 告知用户执行顺序建议
+```
+
+#### 33.1.3 S4 完成校验
+
+S4 标记完成前，必须执行以下校验（可作为 agent 自查或 guard 检查）：
+
+```markdown
+**S4 完成校验（必须全部通过）**：
+
+1. ✅ change-split-auditor verdict = PASS（审计报告已生成）
+2. ✅ 所有 change 目录存在于 `changes/` 下（非 `.team-flow/`）
+3. ✅ 每个 change 目录包含 `.team-flow.yaml`（`tf state init` 已执行）
+4. ✅ 每个 change 目录包含 `change-brief.md`（含 YAML frontmatter）
+5. ✅ orchestrator.yaml 的 `change_dag` 已填充（格式正确）
+6. ✅ orchestrator.yaml 顶层 `workflow_phase` 已更新为 `s4_split`（单一真相源）
+```
+
+#### 33.1.4 workflow_phase 单一真相源
+
+明确 `orchestrator.yaml` 顶层 `workflow_phase` 为唯一真相源：
+
+```markdown
+**workflow_phase 同步规则**：
+
+- **单一真相源**：`orchestrator.yaml` 顶层 `workflow_phase` 字段
+- **阶段转换时**：必须同步更新顶层 `workflow_phase` + 对应 phase 子节点的 `status`
+- **registry.yaml**：引用 `orchestrator.yaml` 的 `workflow_phase`，不独立维护
+```
+
+#### 33.1.5 change-brief.md 规范强调
+
+在 S4 正文增加 change-brief 的必要字段和反模式说明：
+
+```markdown
+**change-brief.md 规范**：
+
+**必要字段（YAML frontmatter）**：
+- `upstream_source`: orchestrator | manual | null
+- `upstream_req_id`: 对应 requirement ID
+- `upstream_plan_ref`: 对应 plan.md 路径
+- `upstream_change_id`: 对应 change_dag.id
+- `plan_hash`: sha256:<plan.md 摘要>
+
+**内容段**：
+- Scope（功能级）
+- 约束
+- AC 列表（取自 auditor 报告 Dim1 覆盖矩阵）
+- 全局技术方向（指针，非完整设计）
+- PRD & plan 引用
+
+**⛔ 反模式（禁止）**：
+- 使用 CLAUDE.md 替代 change-brief.md
+- 在 change-brief 中写完整文件清单（这是 spec-writer 的职责）
+- 省略 YAML frontmatter
+```
+
+### 33.2 影响范围
+
+| 修改项 | 涉及文件 | 说明 |
+|--------|---------|------|
+| S4 正文强制化 | `skills/workflow-orchestrator/SKILL.md` | 增加 MANDATORY 指令 + checklist + 校验 + 规范 |
+| 设计文档 | 本文件 | 记录改进决策 |
+
+### 33.3 验证标准
+
+- [ ] SKILL.md S4 节包含 `⛔ MANDATORY` 指令
+- [ ] S4 步骤 checklist 清晰列出 6 个步骤
+- [ ] S4 完成校验清单包含 6 项检查
+- [ ] workflow_phase 单一真相源规则明确
+- [ ] change-brief.md 规范和反模式说明完整
+
+---
+
 ## 第二十章决策落实状态——新增条目
 
 | 序号 | 决策 | 本版落实 |
