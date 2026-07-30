@@ -711,28 +711,28 @@ vrm4teamflow 项目在执行 S4 阶段时，所有 `npx --yes --package @xulthek
 
 **机制**：
 ```
-plugin 发布时：
-    开发团队在 plugin.json 中写入 { "version": "0.27.0" }
-        ↓
-用户安装 plugin：
-    plugin.json 随 plugin 一起部署到 .cursor/ 或 .claude/ 目录
-        ↓
-session-start hook：
-    读取 plugin.json 的 version
+session-start hook（每次 session 自动执行）：
+    读取 hook 脚本中的 PLUGIN_VERSION（硬编码）
     与本地 tf --version 比较
-    不一致 → 自动执行 npm install -g @xulthekl/team-flow@0.27.0
+    不一致 → 自动执行 npm install -g @xulthekl/team-flow@X.Y.Z
         ↓
 ✅ 版本自动同步，用户零干预
 ```
+
+**关键设计决策**：
+- **版本来源**：hook 脚本中直接维护 `PLUGIN_VERSION` 变量（硬编码）
+- **不依赖 plugin.json**：避免 plugin.json 不存在导致同步失败
+- **发布时更新**：每次发布新版本时，更新 hook 脚本中的 `PLUGIN_VERSION`
 
 **优势**：
 - **简洁**：所有 skill/agent 调用简化为 `tf <subcommand>`（105 处替换）
 - **自动同步**：session-start hook 自动检查并更新版本
 - **零手动操作**：用户无需记住更新命令
 - **版本一致**：plugin 版本与 CLI 版本始终匹配
+- **可靠**：不依赖外部文件（plugin.json）
 
 **实现细节**：
-1. **版本来源**：plugin.json 的 `version` 字段（plugin 发布时写入）
+1. **版本来源**：hook 脚本中的 `PLUGIN_VERSION` 变量（硬编码）
 2. **检查时机**：session-start hook（每次 session 开始时自动执行）
 3. **更新方式**：`npm install -g @xulthekl/team-flow@X.Y.Z`（自动执行）
 4. **调用格式**：`tf <subcommand>`（全局安装后直接可用）
@@ -741,17 +741,17 @@ session-start hook：
 
 | 修改项 | 涉及文件 | 数量 | 说明 |
 |--------|---------|------|------|
-| session-start hook | `hooks/session-start` | 1 处 | 添加版本检查和自动同步逻辑 |
+| session-start hook | `hooks/session-start` | 1 处 | 添加版本检查和自动同步逻辑（硬编码版本号） |
 | CLI 调用替换 | `skills/**/*.md` | ~105 处 | 批量替换 `npx ... tf` 为 `tf` |
 | 设计文档 | 本文件 | 1 处 | 记录改进决策 |
 
 ### 34.3 验证标准
 
-- [ ] session-start hook 自动检查版本并同步
-- [ ] `tf --help` 正常输出（全局安装后）
+- [x] session-start hook 自动检查版本并同步（已验证）
+- [x] `tf --help` 正常输出（全局安装后，已验证）
 - [ ] `tf state init changes/test/` 正常执行
-- [ ] 所有 skill/agent 中的 CLI 调用已替换为 `tf <subcommand>`
-- [ ] 版本号已同步到所有文件
+- [x] 所有 skill/agent 中的 CLI 调用已替换为 `tf <subcommand>`（105 处）
+- [x] 版本号已同步到所有文件
 
 ---
 
