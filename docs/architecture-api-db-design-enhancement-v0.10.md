@@ -680,6 +680,81 @@ S4 标记完成前，必须执行以下校验（可作为 agent 自查或 guard 
 
 ---
 
+## 三十四、npx 10.x 兼容性修复（v0.27.0）
+
+### 34.0 问题诊断（2026-07-29 feedback P0）
+
+vrm4teamflow 项目在执行 S4 阶段时，所有 `npx --yes --package @xulthekl/team-flow@0.26.1 tf <subcommand>` 调用均失败，返回 `Unknown command: "tf"`。
+
+**根因**：
+1. **npx 10.x 行为变更**：Node 22 自带 npm 10.9.x，npx 10.x 对 `--package @scope/pkg bin-name` 的解析逻辑与旧版本不同
+2. **package 名与 bin 名不一致**：`@xulthekl/team-flow` → `tf`，npx 无法正确关联
+3. **影响范围极广**：整个 team-flow 插件的所有 skill/agent 都用此模式调用 CLI
+
+**复现条件**：
+- Node 22（npm 10.9.x / npx 10.x）
+- 未全局安装 `@xulthekl/team-flow`
+- 执行 `npx --yes --package @xulthekl/team-flow@0.26.1 tf --help`
+
+### 34.1 解决方案
+
+#### 34.1.1 方案对比
+
+| 方案 | 描述 | 优点 | 缺点 | 选择 |
+|------|------|------|------|------|
+| A | 全局安装 + session-start hook 自动同步 | 最简洁，版本自动同步 | 需要全局安装 | ✅ 采用 |
+| B | npx fallback 逻辑 | 兼容性好 | 改动量大（105处） | ❌ |
+| C | node 直接执行 + 缓存解包 | 不依赖 npx | 需要解包缓存 | ❌ |
+| D | 发布独立 CLI 包 | 包更小、npx 更可靠 | 需要额外维护 | ❌ 长期方案 |
+
+#### 34.1.2 最终方案：全局安装 + session-start hook 自动同步
+
+**机制**：
+```
+plugin 发布时：
+    开发团队在 plugin.json 中写入 { "version": "0.27.0" }
+        ↓
+用户安装 plugin：
+    plugin.json 随 plugin 一起部署到 .cursor/ 或 .claude/ 目录
+        ↓
+session-start hook：
+    读取 plugin.json 的 version
+    与本地 tf --version 比较
+    不一致 → 自动执行 npm install -g @xulthekl/team-flow@0.27.0
+        ↓
+✅ 版本自动同步，用户零干预
+```
+
+**优势**：
+- **简洁**：所有 skill/agent 调用简化为 `tf <subcommand>`（105 处替换）
+- **自动同步**：session-start hook 自动检查并更新版本
+- **零手动操作**：用户无需记住更新命令
+- **版本一致**：plugin 版本与 CLI 版本始终匹配
+
+**实现细节**：
+1. **版本来源**：plugin.json 的 `version` 字段（plugin 发布时写入）
+2. **检查时机**：session-start hook（每次 session 开始时自动执行）
+3. **更新方式**：`npm install -g @xulthekl/team-flow@X.Y.Z`（自动执行）
+4. **调用格式**：`tf <subcommand>`（全局安装后直接可用）
+
+### 34.2 影响范围
+
+| 修改项 | 涉及文件 | 数量 | 说明 |
+|--------|---------|------|------|
+| session-start hook | `hooks/session-start` | 1 处 | 添加版本检查和自动同步逻辑 |
+| CLI 调用替换 | `skills/**/*.md` | ~105 处 | 批量替换 `npx ... tf` 为 `tf` |
+| 设计文档 | 本文件 | 1 处 | 记录改进决策 |
+
+### 34.3 验证标准
+
+- [ ] session-start hook 自动检查版本并同步
+- [ ] `tf --help` 正常输出（全局安装后）
+- [ ] `tf state init changes/test/` 正常执行
+- [ ] 所有 skill/agent 中的 CLI 调用已替换为 `tf <subcommand>`
+- [ ] 版本号已同步到所有文件
+
+---
+
 ## 第二十章决策落实状态——新增条目
 
 | 序号 | 决策 | 本版落实 |
@@ -688,3 +763,4 @@ S4 标记完成前，必须执行以下校验（可作为 agent 自查或 guard 
 | 17 | arch-merge 脚本化 | §28.4 完整脚本实现 + CLI 注册 |
 | 18 | 上下文治理 | §29 INDEX.md + 按域分段 + 按需加载 |
 | 19 | API 定位调整 | §31 架构路由表 + Swagger 协同 |
+| 20 | npx 10.x 兼容性修复 | §34 node 直接执行 + 缓存解包 |
