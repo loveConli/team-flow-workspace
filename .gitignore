@@ -28,3 +28,4 @@ tests/output/
 dist/
 build/
 docs/npm-token
+docs/external-references
