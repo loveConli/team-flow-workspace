@@ -27,6 +27,7 @@
 | v0.25.0    | brainstorm profile 机制 + PRD 模板交互式选择（3 新增+4 改动）：① 新增 templates/prd-brainstorm-profile.md（核心维度7项+扩展维度6项+反例边界7项+正/反示例）② Phase 0 模板解析改为 MANDATORY STEP+AskUserQuestion 强制交 ③ Phase 2 新增 profile 驱动方案探索（替代 mechanism/product shape）④ config-loader DEFAULTS 增加 prd.template 默认值 ⑤ orchestrated 模式明确仅跳过 Phase 3.5；来源：workflow-feedback P1+P2（2026-07-29） | ✅ 2026-07-29 |
 | v0.25.1    | P1-9 三个 SKILL.md 渐进式披露拆分：ce-proof(346→88) + ce-brainstorm(458→122) + ce-ideate(402→85)，提取 9 个 reference 文件，SKILL.md 只保留骨架 + Phase 摘要 + reference 引用指针；457/457 测试全过 | ✅ 2026-07-29 |
 | v0.28.0    | Agent 补全 + 架构自动审查 + 项目级规范被动沉淀（设计增强方案 v0.11）：① architecture-design agent 创建（P1-18）② architecture-reviewer agent 创建（6 维度审查 + ≤3 轮循环修正，P1-20/21）③ conventions 配置段 schema + 4 个 skill 上下文注入 + 4 个模板 + 阶段转换前规范建议协议（P2-18~21）④ routing-rules.md 审查增强；agents 8→10；来源：workflow-feedback 2026-07-31 + LT 需求 | ✅ 2026-07-31 |
+| v0.28.1    | Agent/Skill 职责分离修正 + 主干补强 auto-review + 横展三 agent 精简（设计增强方案 v0.11 §35/§36/§37）：① architecture-design agent 精简（WHO/WHAT only，229→~100 行）+ `skills:` 字段预加载 Skill 完整知识库（P1-22）② workflow-start SKILL.md 主干补强三步协议摘要（dispatch→auto-review→reasonableness check）+ Guardrails/State Writes 同步（P1-23）③ 横展修复 bug-investigator（180→~85 行）+ code-reviewer（171→~100 行）+ prototype-builder（230→~95 行）三个 Category A2 agent，HOW 内容迁移至对应 Skill（P1-25/26/27）；来源：workflow-feedback 2026-07-31（P1-1 agent-quality + P1-2 sop-flow）+ LT 横展需求 | ✅ 2026-07-31 |
 
 ## 规划中里程碑
 
@@ -71,6 +72,12 @@
 | P1-15 | 架构设计显式编排与产物独立化（v0.9 §26）：① workflow-start 路由表增加 architecture-design 子代理调用（exploring→specifying 之间） ② architecture-design 判断+执行一体化 SOP + 结构化输出契约 ③ 产出目录从 `specs/<cap>/` 提升为独立 `architecture/` ④ spec-writer Required Inputs 增加 `architecture/` 读取 ⑤ workflow-start 合理性确认机制 + yaml 字段 + 硬阻断 ⑥ hotfix/tweak 不豁免 | 🔲 待实施 | v0.23.0 | 来源：LT+CC 讨论（2026-07-27） |
 | P1-16 | ce-brainstorm Phase 0.0 增加 tf CLI 可用性检查和显式降级逻辑：① 先检查 `which tf` ② 不可用时走 fallback（询问用户：默认模板 or 自定义路径）③ 在工作区创建模板（`.team-flow/templates/`）④ 维护配置文件到 `.team-flow/team-flow.config.json` | 🔲 待实施 | v0.26.0 | 来源：workflow-feedback 2026-07-29（P1） |
 | P1-17 | ce-brainstorm SKILL.md 增加 guardrail：禁止写入 skill 目录（显式声明项目级制品只在项目工作区创建/修改） | 🔲 待实施 | v0.26.0 | 来源：workflow-feedback 2026-07-29（P1） |
+| P1-22 | architecture-design agent 精简（WHO/WHAT only，229→~100 行）+ `skills:` 字段预加载 Skill 完整知识库 | ✅ 2026-07-31 | v0.28.1 | 来源：workflow-feedback 2026-07-31（P1-1 agent-quality）+ 设计增强方案 v0.11 §35 |
+| P1-23 | workflow-start SKILL.md 主干补强三步协议摘要（dispatch→auto-review→reasonableness check）+ Guardrails/State Writes 同步 | ✅ 2026-07-31 | v0.28.1 | 来源：workflow-feedback 2026-07-31（P1-2 sop-flow）+ 设计增强方案 v0.11 §36 |
+| P1-24 | 横展验证：扫描 10 个 agent 是否存在同样的"Agent 堆 HOW"反模式 | ✅ 2026-07-31 | v0.28.1 | 来源：LT 横展需求 + 设计增强方案 v0.11 §35.4；结果：3 个 Category A2（bug-investigator/code-reviewer/prototype-builder）需修复，5 个 Category B 无对应 Skill 暂不修复，1 个 Category C 轻量级无需修复 |
+| P1-25 | bug-investigator agent 精简（180→~85 行）+ `skills:` 字段预加载 + HOW 内容迁移至 SKILL.md（Report Format / Quality Standards / Edge Cases） | ✅ 2026-07-31 | v0.28.1 | 来源：P1-24 横展验证 + 设计增强方案 v0.11 §37 |
+| P1-26 | code-reviewer agent 精简（171→~100 行）+ `skills:` 字段预加载 + HOW 内容迁移至 SKILL.md（6 步 Review Process / Severity Levels / Calibration Rules） | ✅ 2026-07-31 | v0.28.1 | 来源：P1-24 横展验证 + 设计增强方案 v0.11 §37 |
+| P1-27 | prototype-builder agent 精简（230→~95 行）+ `skills:` 字段预加载 + HOW 内容迁移至 references/builder-methodology.md（Build Process Steps 0-4 / Hard Constraints / Seed Composition / P0-P2 自检 / Deliverable Hard Gate / Decision-Point Interaction） | ✅ 2026-07-31 | v0.28.1 | 来源：P1-24 横展验证 + 设计增强方案 v0.11 §37 |
 
 ### P2（改善，按节奏推进）
 

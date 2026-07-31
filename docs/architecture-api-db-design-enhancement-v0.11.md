@@ -463,6 +463,286 @@ architecture-design 产出完成
 
 ---
 
+## 三十五、architecture-design Agent 精简 + Skill 预加载（v0.28.1）
+
+### 35.0 问题诊断
+
+**来源**：workflow-feedback 2026-07-31（P1-1）
+
+architecture-design agent 被 workflow-start dispatch 时，只加载了 `agents/architecture-design.md` 中的 system prompt（~229 行），其中堆满了 HOW 内容：
+
+- Context Loading Protocol（加载哪些项目文件）
+- Conventions Injection（如何注入项目规范）
+- Execution Flow（执行步骤详情）
+- F1-F8 核心框架详情（每条一段话）
+
+但 Skill 的完整知识库（6 个 chapters + templates + conventions 模板 + glossary/cheatsheet）**完全没有被加载**。Agent prompt 中的 F1-F8 只是概要，缺少 chapters 中的详细方法论指导、worked examples 和 anti-pattern catalogs。
+
+**根因**：Agent 和 Skill 的职责被混淆了。Agent 里堆了大量 HOW（怎么做），违反了 Claude Code 官方文档的核心分层原则：
+
+| 层 | 职责 | 文件 |
+|----|------|------|
+| Agent (.md) | **WHO**（角色人设）+ **WHAT**（职责范围、输出契约） | `agents/*.md` |
+| Skill (SKILL.md) | **HOW**（步骤流程、方法论、模板、规范） | `skills/*/SKILL.md` + `references/` + `chapters/` |
+
+两条反模式（官方与课程都点名）：
+- ❌ Agent prompt 里堆 SOP → 流程应抽成 Skill 再预加载
+- ❌ Skill 里写角色设定 → 角色属于 Agent 文件
+
+### 35.1 方案设计
+
+采用 **写法 2**（自定义 Agent 预加载 Skill）：在 `agents/architecture-design.md` 的 frontmatter 中增加 `skills:` 字段：
+
+```yaml
+---
+name: architecture-design
+model: inherit
+color: blue
+tools: ["Read", "Bash", "Grep", "Glob", "Write", "Edit"]
+skills:
+  - architecture-design    # ← 启动时全文注入 SKILL.md
+---
+```
+
+**确定性保证**：`skills:` 字段在 agent 启动时将指定 Skill 的完整 SKILL.md 注入上下文（100% 确定性），不依赖语义匹配发现。Agent 的 system prompt 中用一句话指向：
+
+> "Your preloaded Skill contains the detailed methodology (F1-F8 frameworks, chapter knowledge, templates, conventions protocol, context loading protocol). Follow it for HOW. This prompt defines WHO you are and WHAT you must deliver."
+
+### 35.2 Agent 精简结果
+
+| 维度 | 修改前 | 修改后 |
+|------|--------|--------|
+| 行数 | 229 行 | ~100 行 |
+| 包含内容 | WHO + WHAT + HOW（加载协议、F1-F8 详情、执行流程、conventions 注入） | WHO + WHAT + 输出契约 + 红线 |
+| Skill 知识注入 | 无（Agent prompt 中的概要是唯一来源） | `skills: [architecture-design]` 预加载完整 SKILL.md |
+| Chapters 可访问 | 否（Agent 不知道 chapters 存在） | 是（通过预加载的 SKILL.md 的 Chapter Index 得知路径，按需 Read） |
+| Templates 可访问 | 仅文字引用 | 是（SKILL.md 中的产出目录 + templates/ 路径） |
+
+**Agent 保留的内容**（WHO/WHAT 层）：
+- Iron Law（角色定义 + 职责边界）
+- Inputs（输入参数表）
+- Five-Check Gate（五项检查判定门——这是 WHAT，不是 HOW）
+- Output Directory（产出目录结构）
+- Structured Output Contract（YAML 输出契约）
+- api.md Positioning（产出定位说明）
+- Red Lines（DO/DON'T 红线）
+
+**Agent 移除的内容**（全部在 Skill 中有更详细版本）：
+- Context Loading Protocol → Skill 的「上下文加载协议」段
+- Conventions Injection → Skill 的「Conventions Injection」段
+- Execution Flow → Skill 的「执行流程」段
+- F1-F8 框架详情 → Skill 的 Core Frameworks + chapters/
+- Skill Knowledge Loading 段（之前错误的 HOW 堆砌） → `skills:` 字段预加载
+
+### 35.3 对比：三种 Agent + Skill 协作模式
+
+| 模式 | Agent 复杂度 | Skill 注入方式 | 确定性 | 适用场景 |
+|------|------------|--------------|--------|---------|
+| 写法 1：纯 fork | 中（prompt 含任务指令） | context: fork 注入 SKILL.md | 100% | 一次性重任务 |
+| **写法 2：自定义 Agent + skills 预加载** | **低（WHO/WHAT only）** | **skills: 字段全文注入** | **100%** | **反复出现的角色（本方案采用）** |
+| 写法 3：叠加 | 中 | fork + skills 双重 | 100% | 角色稳定 + 任务多变 |
+
+### 35.4 横展验证
+
+检查所有其他 agent 是否存在同样的"Agent 堆 HOW"反模式：
+
+| Agent | 行数 | 是否堆了 HOW | 是否有对应 Skill | 建议 |
+|-------|------|-------------|----------------|------|
+| architecture-reviewer | ~252 行 | 是（6 维度检查流程详情） | 无独立 Skill | 暂不改——reviewer 的 HOW 就是检查流程，无独立 Skill 可预加载 |
+| bug-investigator | ~180 行 | 待评估 | bug-investigator Skill 存在 | 后续迭代 |
+| change-split-auditor | ~260 行 | 待评估 | 无独立 Skill | 暂不改 |
+| code-reviewer | ~144 行 | 待评估 | code-reviewer Skill 存在 | 后续迭代 |
+| prototype-builder | ~324 行 | 待评估 | prototype Skill 存在 | 后续迭代 |
+
+**结论**：architecture-design 是第一个被修正的，其他 agent 可作为后续迭代。当前不阻塞本次发布。
+
+---
+
+## 三十六、workflow-start 主干补强 auto-review 三步协议（v0.28.1）
+
+### 36.0 问题诊断
+
+**来源**：workflow-feedback 2026-07-31（P1-2）
+
+architecture-design agent 完成架构设计产出后，workflow-start 仅做了**人肉 reasonableness check**（CC 自己 Read 产出文件并总结），**未启动** `architecture-reviewer` agent 执行 6 维度自动审查。
+
+**根因**：routing-rules.md **已经**包含 Step 2 auto-review（§34 审查增强），但 workflow-start SKILL.md **主干**的 Route to architecture-design 段落只写了一句 "Dispatch + reasonableness check"，漏掉了中间的 auto-review 步骤。主干太简略 → LLM 执行时跳过了 reference 中的详细步骤。
+
+**信息层次问题**：
+
+```
+SKILL.md 主干（LLM 首先看到的）     references/routing-rules.md（按需加载）
+┌──────────────────────────────┐   ┌──────────────────────────────┐
+│ Route to architecture-design  │   │ Route to architecture-design  │
+│ Dispatch → reasonableness     │   │ Step 1: Dispatch              │
+│ check → write yaml            │   │ Step 2: Auto-review ← 缺失!  │
+│                               │   │ Step 3: Reasonableness check  │
+│ （一句话概括，无 auto-review） │   │ （完整三步协议）              │
+└──────────────────────────────┘   └──────────────────────────────┘
+```
+
+LLM 先看到主干的简略描述就开始执行，根本没去加载 routing-rules.md 的详细步骤。
+
+### 36.1 方案设计
+
+在 workflow-start SKILL.md **主干**中展开三步协议摘要，而不是只在 reference 中保留：
+
+**修改前**（主干）：
+```
+Dispatch `architecture-design` as sub-agent; after return, run reasonableness check and write yaml.
+```
+
+**修改后**（主干）：
+```
+**Three-step protocol (MUST execute in order)**:
+1. **Dispatch**: `architecture-design` as sub-agent → returns `decision` + `reason` + `artifacts`
+2. **Auto-review** (decision=required 时触发): 校验产物文件存在且非空 → dispatch `architecture-reviewer` sub-agent → FAIL 则循环修正（≤3 轮 + 收敛检测，不收敛转人工）→ 报告落盘 `changes/<name>/architecture/auto-review.md`
+3. **Reasonableness check + state write**: skipped + brief 含架构关键词 → BLOCK; required + artifacts 缺失 → BLOCK; required + auto-review FAIL → BLOCK
+```
+
+**设计决策**：主干放摘要（三步 + 关键阻断条件），routing-rules.md 保留详细命令和完整协议。这确保 LLM 即使不加载 reference 也能执行正确的三步流程。
+
+### 36.2 配套变更
+
+**Guardrails 新增**：
+```
+No arch state write without auto-review PASS (v0.28.1 §36):
+when decision: required, auto-review MUST complete with PASS or PASS_WITH_WARNINGS
+before writing arch_design_decision to yaml. FAIL → loop fix (≤3 rounds) or escalate.
+```
+
+**State Writes 新增字段**（decision=required 时写入）：
+- `arch_review_verdict`：`PASS` | `PASS_WITH_WARNINGS`
+- `arch_review_rounds`：审查轮次（1-3）
+- `arch_review_report`：`architecture/auto-review.md` 路径
+
+**routing-rules.md 补充**：Step 3 的 state set 命令增加 `arch_review_*` 三个字段的写入命令。
+
+### 36.3 职责分离确认
+
+| 角色 | 职责 | 不做什么 |
+|------|------|---------|
+| architecture-design agent | 判断 + 产出 | 不自我审查、不写 yaml |
+| architecture-reviewer agent | 6 维度只读审查 | 不修改文件、不做判断门 |
+| workflow-start skill | 编排三步协议 + reasonableness check + 状态写入 | 不产出架构设计、不做 6 维度审查 |
+
+---
+
+## 三十七、横展修复：bug-investigator / code-reviewer / prototype-builder Agent 精简（v0.28.1 §35 横展）
+
+### 37.0 问题诊断
+
+**来源**：v0.28.1 §35 Agent/Skill 职责分离修正的横展验证
+
+横展扫描发现 3 个 agent 存在与 architecture-design 同样的反模式——Agent prompt 中堆砌了大量 HOW 内容（方法论、流程、模板），而对应的 Skill 中已有或应有这些内容。
+
+| Agent | 行数 | 对应 Skill | Skill 行数 | Agent/Skill 比例 | 问题 |
+|-------|------|-----------|-----------|----------------|------|
+| bug-investigator | 180 | bug-investigator | 77 | 2.34x | Agent 堆砌 Phase 1-4 详细调查流程、Report Format、Quality Standards、Edge Cases |
+| code-reviewer | 171 | code-reviewer | 88 | 1.94x | Agent 堆砌 6 步 Review Process、Calibration Rules、Severity Definitions |
+| prototype-builder | 230 | prototype | 112 | 2.05x | Agent 堆砌 Build Process Steps 0-4、Hard Constraints、Seed Composition、P0/P1/P2 自检、Deliverable Hard Gate |
+
+**对比基准**：architecture-design agent 修复前 229 行（Skill 210 行，比例 1.09x），修复后 ~100 行（比例 0.48x）。上述 3 个 agent 的比例均 >1.9x，严重违反 Agent=WHO/WHAT、Skill=HOW 的职责分离原则。
+
+### 37.1 修复方案
+
+采用与 §35 一致的 **写法 2**（自定义 Agent + skills 预加载）：
+
+1. **Agent 精简**：移除所有 HOW 内容（方法论、流程、模板），只保留 WHO/WHAT（角色定义、Iron Law、输入参数、输出契约、Red Lines）
+2. **Skill 增强**：将移除的 HOW 内容迁移至对应 Skill 的 SKILL.md 或 references/ 目录
+3. **skills: 字段预加载**：Agent frontmatter 增加 `skills: [skill-name]`，启动时全文注入 SKILL.md
+4. **一句话指向**：Agent prompt 增加 "Your preloaded Skill contains the detailed methodology. Follow it for HOW."
+
+### 37.2 修复详情
+
+#### bug-investigator（180 → ~85 行）
+
+**移除内容**（迁移至 `skills/bug-investigator/SKILL.md`）：
+- Phase 1-4 详细调查流程（Root Cause Investigation → Pattern Analysis → Hypothesis and Testing → Report）
+- Report Format 模板（Summary / Symptom / Investigation Trail / Root Cause / Recommended Fix / DP-5 Escalation）
+- Writing Investigation Notes 指南
+- Quality Standards（5 项：Evidence over intuition / Specificity / Completeness / Actionability / Honesty）
+- Edge Cases（Environmental / Timing/race / External dependencies / Cannot reproduce）
+
+**保留内容**：
+- Iron Law（"No conclusions without evidence"）
+- Inputs（symptom_description / reproduction_steps / context）
+- Output Contract（报告必须包含的 5 个段落摘要）
+- DP-5: Debug Escalation（3+ Failed Hypotheses 的架构问题信号）
+- Red Lines（DO/DON'T 列表）
+
+**新增**：
+- `skills: [bug-investigator]` frontmatter 字段
+- 一句话指向："Your preloaded Skill contains the detailed methodology (Phase 1-4 investigation process, report template, quality standards, edge case handling). Follow it for HOW."
+
+#### code-reviewer（171 → ~100 行）
+
+**移除内容**（迁移至 `skills/code-reviewer/SKILL.md`）：
+- 6 步 Review Process（Gather Context → Spec Compliance Check → Code Quality Review → Architecture Review → Test Coverage Review → Documentation Review）
+- Severity Levels 表格（Critical / Important / Minor）
+- Verdict Criteria 表格（PASS / PASS_WITH_WARNINGS / FAIL）
+- Calibration Rules（5 项）
+- Critical Rules（DO/DON'T 详细列表）
+
+**保留内容**：
+- Iron Law（"You are a read-only reviewer"）
+- Inputs（change_dir / specs_dir / design_path / implementation_files）
+- Output Contract（报告必须包含的 5 个段落摘要）
+- Verdict Criteria（简化的 3 条判定规则）
+- Red Lines（DO/DON'T 精简列表）
+
+**新增**：
+- `skills: [code-reviewer]` frontmatter 字段
+- 一句话指向："Your preloaded Skill contains the detailed methodology (6-step review process, calibration rules, severity definitions, critical rules). Follow it for HOW."
+
+#### prototype-builder（230 → ~95 行）
+
+**移除内容**（迁移至 `skills/prototype/references/builder-methodology.md`）：
+- Hard Constraints（零外部依赖 + 防漂移的 3 条详细规则）
+- Build Process Steps 0-4（Precondition Gate → Render Design Tokens → Seed Composition → Build Structure → Flow + Consistency → P0/P1/P2 Quality Self-Check → 修正轮）
+- data-testid Discipline（可选配置驱动规则）
+- Structured Handoff 格式（JSON 风格交接协议）
+- Deliverable Hard Gate（v0.20.0 禁止谎报完成的详细规则）
+- Decision-Point Interaction（v0.21.0 stop-and-resume 中继协议的 3 步流程）
+
+**保留内容**：
+- Iron Law（"You are a write-focused builder"）
+- Inputs（design_files_dir / design_system_dir / output_dir / requirements）
+- Output Contract（产出结构的 5 项要求）
+- Quality Standards（简要列出 5 项：Accessibility / Performance / Responsiveness / Code quality / Design system compliance）
+- Red Lines（DO/DON'T 精简列表）
+
+**新增**：
+- `skills: [prototype]` frontmatter 字段
+- 一句话指向："Your preloaded Skill contains the detailed methodology (HTML/CSS construction patterns, design system integration, quality assurance process). Follow it for HOW."
+- `skills/prototype/SKILL.md` 增加"prototype-builder agent 方法论（v0.28.1 §37）"段落，指向 `references/builder-methodology.md`
+
+### 37.3 修复效果对比
+
+| Agent | 修复前 | 修复后 | 缩减比例 | Skill 增强 |
+|-------|--------|--------|---------|-----------|
+| bug-investigator | 180 行 | ~85 行 | 53% | SKILL.md 增加 Report Format / Quality Standards / Edge Cases 段落 |
+| code-reviewer | 171 行 | ~100 行 | 42% | SKILL.md 增加 Review Process / Severity Levels / Calibration Rules 段落 |
+| prototype-builder | 230 行 | ~95 行 | 59% | 新增 references/builder-methodology.md（~180 行）+ SKILL.md 指向段落 |
+
+**核心收益**：
+1. **职责清晰**：Agent 只定义"谁来做、做什么、交付什么、禁止什么"，Skill 定义"怎么做"
+2. **知识复用**：Skill 的方法论可被多个 agent 共享（如 code-reviewer 的 Review Process 也可被其他 reviewer agent 参考）
+3. **上下文优化**：Agent prompt 精简后，子代理上下文窗口有更多空间加载项目文件和 Skill 知识库
+4. **一致性保证**：通过 `skills:` 字段预加载，Agent 启动时 100% 注入 SKILL.md，无需运行时自主发现
+
+### 37.4 横展验证结论
+
+本次横展修复了 3 个 Category A2 agent（有对应 Skill 且内容重复），加上 §35 修复的 architecture-design，共计 **4 个 agent 完成 Agent/Skill 职责分离修正**。
+
+**剩余未修复的 agent**：
+- **Category B（5 个）**：architecture-reviewer / change-split-auditor / cross-change-consistency-checker / prd-completeness-reviewer / prototype-reviewer —— 无对应 Skill，方法论是 agent 独有核心价值，暂不修复
+- **Category C（1 个）**：prototype-env-scout —— 轻量级内部编排 agent，职责清晰，无需修复
+
+**未来迭代建议**：
+- 若 Category B 的 5 个 reviewer/auditor agent 的方法论未来被多个 agent 复用，可考虑提取为独立 Skill
+- 当前不修复是合理的：这些 agent 的方法论是专属的（如 architecture-reviewer 的 6 维度审查、change-split-auditor 的 5 维度审计），提取为 Skill 反而增加复杂度
+
 ## 待办列表
 
 | 编号 | 待办 | 状态 | 版本 | 来源 |
@@ -475,3 +755,9 @@ architecture-design 产出完成
 | P2-19 | architecture-design / spec-writer / build-executor / workflow-orchestrator 上下文加载协议增加 conventions 注入 | ✅ 2026-07-31 | v0.28.0 | workflow-feedback 2026-07-31（P2-4） |
 | P2-20 | 提供 conventions 模板（db-design.md / backend-patterns.md 等） | ✅ 2026-07-31 | v0.28.0 | workflow-feedback 2026-07-31（P2-5） |
 | P2-21 | 各阶段 SKILL.md 增加"阶段转换前规范建议"协议（被动式自动沉淀） | ✅ 2026-07-31 | v0.28.0 | workflow-feedback 2026-07-31（P2 新需求） |
+| P1-22 | architecture-design agent 精简 + Skill 预加载（`skills:` 字段注入，Agent 只保留 WHO/WHAT，229→~100 行） | ✅ 2026-07-31 | v0.28.1 | workflow-feedback 2026-07-31（P1-1 agent-quality） |
+| P1-23 | workflow-start SKILL.md 主干补强三步协议摘要（dispatch→auto-review→reasonableness check）+ Guardrails 新增 auto-review PASS 前置条件 + State Writes 新增 arch_review_* 字段 | ✅ 2026-07-31 | v0.28.1 | workflow-feedback 2026-07-31（P1-2 sop-flow） |
+| P1-24 | 横展验证：扫描 10 个 agent 是否存在同样的"Agent 堆 HOW"反模式 | ✅ 2026-07-31 | v0.28.1 | LT 横展需求 + §35.4 横展验证；结果：3 个 Category A2 需修复，5 个 Category B 无对应 Skill 暂不修复，1 个 Category C 轻量级无需修复 |
+| P1-25 | bug-investigator agent 精简（180→~85 行）+ `skills:` 字段预加载 + HOW 内容迁移至 SKILL.md | ✅ 2026-07-31 | v0.28.1 | P1-24 横展验证 + §37 |
+| P1-26 | code-reviewer agent 精简（171→~100 行）+ `skills:` 字段预加载 + HOW 内容迁移至 SKILL.md | ✅ 2026-07-31 | v0.28.1 | P1-24 横展验证 + §37 |
+| P1-27 | prototype-builder agent 精简（230→~95 行）+ `skills:` 字段预加载 + HOW 内容迁移至 references/builder-methodology.md | ✅ 2026-07-31 | v0.28.1 | P1-24 横展验证 + §37 |

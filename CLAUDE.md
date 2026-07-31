@@ -7,15 +7,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 本工作区的核心目标是**开发和测试 team-flow 工作流**。team-flow 是一个统一插件（23 skills + 10 agents），整合了 spec-superflow（9）、compound-engineering（6）、architecture-design（1）、prototype（1）、design-system（1）、workflow-orchestrator（1）、workflow-bootstrap（1）、e2e（1）、session-handoff（1）、workflow-feedback（1）。
 
 - **设计增强方案当前权威版本**：`docs/architecture-api-db-design-enhancement-v0.11.md`
-- **插件版本**：`v0.28.0`（23 skills + 10 agents）
+- **插件版本**：`v0.28.1`（23 skills + 10 agents）
 
 ## 工作区结构
 
 ```
 team-flow-workspace/
 ├── docs/                          # 设计文档（工作区级）
-│   ├── architecture-api-db-design-enhancement-v0.10.md # ★ 当前权威版本
-│   ├── architecture-api-db-design-enhancement-v0.9.md  # 历史保留版本
+│   ├── architecture-api-db-design-enhancement-v0.11.md # ★ 当前权威版本
+│   ├── architecture-api-db-design-enhancement-v0.10.md # 历史保留版本
 │   ├── roadmap-and-todos.md       # Roadmap + 待办列表（从本文件抽取）
 │   ├── design-doc-system.md       # 设计文档体系 + 版本规则（从本文件抽取）
 │   ├── doc-maintenance.md         # 文档维护规范 + 同步清单（从本文件抽取）
@@ -127,7 +127,7 @@ CLAUDE.md 和 AGENTS.md 中描述的工作流包含 architecture-design 门控�
 
 ### 设计增强方案版本管理
 
-- **当前权威版本**：`docs/architecture-api-db-design-enhancement-v0.9.md`
+- **当前权威版本**：`docs/architecture-api-db-design-enhancement-v0.11.md`
 - **历史版本**：v0.8 保留不删；v0.2/v0.3/v0.5/v0.7 已删除，可通过 `git log --all -- "docs/architecture-api-db-design-enhancement-v0.*.md"` 追溯
 - **新版本规则**：重大设计变更时创建新版本文件，旧版本保留不删
 
@@ -206,7 +206,46 @@ P1 设计 → P2 实施 → P3 验证 → P4 提交
 - **设计增强方案是唯一真相源**：定义 WHY + WHAT；AGENTS.md 定义 HOW；SKILL.md 是执行指令
 - **历史版本保留不删**：设计增强方案旧版文件仅供追溯
 
+## Agent 与 Skill 协作规范
 
+### 职责分离（第一性原理）
+
+| 层 | 职责 | 文件 |
+|----|------|------|
+| Agent (.md) | **WHO**（角色人设）+ **WHAT**（职责范围、输入、输出契约、红线） | `agents/*.md` |
+| Skill (SKILL.md) | **HOW**（步骤流程、方法论、模板、规范、上下文加载协议） | `skills/*/SKILL.md` + `references/` + `chapters/` |
+
+Agent prompt 保持精简（目标 ≤100 行），只定义"谁来做、做什么、交付什么、禁止什么"。所有"怎么做"的细节属于 Skill。
+
+### 反模式（强制禁止）
+
+- ❌ **Agent 里堆 SOP/方法论/加载流程** → 流程应抽成 Skill，通过 `skills:` 字段预加载
+- ❌ **Skill 里写角色设定** → 角色属于 Agent 文件
+- ❌ **Agent prompt 中重复 Skill 已有的内容** → Agent 只引用，Skill 是唯一真相源
+
+### 三种协作写法
+
+| 写法 | 适用场景 | Agent frontmatter | 确定性 |
+|------|---------|-------------------|--------|
+| **写法 1：纯 fork** | 一次性重任务，无需建 agent 文件 | `context: fork` + `agent: general-purpose` | 100%（SKILL.md 作为任务 prompt） |
+| **写法 2：自定义 Agent + skills 预加载**（推荐） | 反复出现的角色 | `skills: [skill-name]`（启动时全文注入 SKILL.md） | 100% |
+| **写法 3：叠加** | 角色稳定 + 任务多变 | `context: fork` + `agent: custom` + `skills:` | 100% |
+
+**当前项目采用写法 2**：`agents/architecture-design.md` 通过 `skills: [architecture-design]` 预加载完整 SKILL.md 知识库。
+
+### 子代理知识注入通道（确定性从高到低）
+
+1. **`skills:` 字段预加载**（推荐）：启动时把 SKILL.md 全文注入上下文，确定性 100%
+2. **`context: fork` 注入**：SKILL.md 成为子 agent 的任务 prompt，确定性 100%
+3. **运行时自主发现**：靠语义匹配触发，不保证，不可依赖
+4. **Agent prompt 中硬写指令**：作为兜底，优先级最低
+
+### 注意事项
+
+- 子代理**不继承**主 Agent 的 Skills（上下文隔离是有意设计）
+- `skills:` 预加载是全量注入 SKILL.md，`references/` 和 `chapters/` **不会自动带上**——Agent 需在执行中按需 Read
+- Agent prompt 中用一句话指向 Skill："Your preloaded Skill contains the detailed methodology. Follow it for HOW."
+- 措辞强度决定遵循度：关键指令用 MUST/DO NOT，放 prompt 开头
 
 # 约束
 
