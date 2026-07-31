@@ -26,6 +26,7 @@
 | v0.24.1    | prototype skill 体系补强（5项P0-P2修复）：① design-system-architect.md 重复维护→迁移指针 ② Open Design 命名歧义消解（GUI工具 vs 开源方法论）③ prototype-sync 从 SOP 升级为 release-archivist closing 自动触发+执行校验 ④ 新增交互原型/线框图方法论（零依赖适配）⑤ C 端骨架扩展（6 个新 section + CSS + 节奏表）；来源：baoyu-design vs open-design 深度评估 | ✅ 2026-07-28 |
 | v0.25.0    | brainstorm profile 机制 + PRD 模板交互式选择（3 新增+4 改动）：① 新增 templates/prd-brainstorm-profile.md（核心维度7项+扩展维度6项+反例边界7项+正/反示例）② Phase 0 模板解析改为 MANDATORY STEP+AskUserQuestion 强制交 ③ Phase 2 新增 profile 驱动方案探索（替代 mechanism/product shape）④ config-loader DEFAULTS 增加 prd.template 默认值 ⑤ orchestrated 模式明确仅跳过 Phase 3.5；来源：workflow-feedback P1+P2（2026-07-29） | ✅ 2026-07-29 |
 | v0.25.1    | P1-9 三个 SKILL.md 渐进式披露拆分：ce-proof(346→88) + ce-brainstorm(458→122) + ce-ideate(402→85)，提取 9 个 reference 文件，SKILL.md 只保留骨架 + Phase 摘要 + reference 引用指针；457/457 测试全过 | ✅ 2026-07-29 |
+| v0.28.0    | Agent 补全 + 架构自动审查 + 项目级规范被动沉淀（设计增强方案 v0.11）：① architecture-design agent 创建（P1-18）② architecture-reviewer agent 创建（6 维度审查 + ≤3 轮循环修正，P1-20/21）③ conventions 配置段 schema + 4 个 skill 上下文注入 + 4 个模板 + 阶段转换前规范建议协议（P2-18~21）④ routing-rules.md 审查增强；agents 8→10；来源：workflow-feedback 2026-07-31 + LT 需求 | ✅ 2026-07-31 |
 
 ## 规划中里程碑
 
@@ -92,6 +93,7 @@
 | P2-13 | references/ 版本引用漂移清理 + check-versions 扫描盲区扩展：① 清理 references/ 下陈旧 `spec-superflow@0.15.0/@0.16.0` npx 引用（27+3 处，分布 release-archivist / workflow-orchestrator s2/s4/s5 / workflow-start / build-executor）至当前版本 ② `check-version-consistency.mjs` 扫描范围从顶层 SKILL.md 扩展到 `references/**`，杜绝再漂移 | 🔲 待实施 | v1.0.0 | 来源：v0.21.0 plugin-validator W2（门禁盲区横展） |
 | P2-14 | pre-commit hook 同步范围扩展：将 `.claude-plugin/marketplace.json` 的 skill/agent 计数描述纳入 pre-commit 自动同步（当前仅覆盖 plugin.json / AGENTS.md / README.md，marketplace.json 在 17→23 skills 扩容时漏同步，v0.22.0 P3 验证发现并手动修正文本，但自动化同步规则未补） | 🔲 待实施 | v0.22.0+ | 来源：v0.22.0 plugin-validator 横展 |
 | P2-15 | change-brief frontmatter schema 对齐：v0.22.0 E2E 测试发现无头 Claude 落盘 brief 时未写入 `upstream_source: orchestrator` 字段，导致 workflow-start DP-0 继承判定伪代码中 `brief 存在 AND upstream_source == orchestrator` 条件不满足、走 else 手动路径而非继承分支。建议修正：① workflow-start 判定逻辑改为"brief 存在即继承"（不依赖字段值，更贴合 CC 自己写的'以 brief 存在为主信号'设计意图）或 ② s4-split-validate.md brief 模板强制含 upstream_source 字段。CC 倾向方案①。**v0.22.5 进展**：新增 `templates/change-brief.md` 标准模板（含 `upstream_source` 字段），部分解决方案②；但 workflow-start 判定逻辑仍检查字段值，方案①未实施 | 🟡 部分完成 | v0.22.5+ | 来源：v0.22.0 E2E 测试（VRM S3→S4 重跑发现）；v0.22.5 制品链评审 F07 |
+| P2-22 | Agent color 无效值修复：`cross-change-consistency-checker` 和 `prototype-builder` 使用了 `orange`（不在有效颜色列表 blue/cyan/green/yellow/magenta/red 中），改为 `yellow` 或 `red` | 🔲 待实施 | v0.28.0+ | 来源：v0.28.0 plugin-validator |
 
 ### P3（低优先级，时机成熟再做）
 
