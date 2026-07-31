@@ -743,6 +743,100 @@ before writing arch_design_decision to yaml. FAIL → loop fix (≤3 rounds) or 
 - 若 Category B 的 5 个 reviewer/auditor agent 的方法论未来被多个 agent 复用，可考虑提取为独立 Skill
 - 当前不修复是合理的：这些 agent 的方法论是专属的（如 architecture-reviewer 的 6 维度审查、change-split-auditor 的 5 维度审计），提取为 Skill 反而增加复杂度
 
+## 三十八、v0.29.0 已发布内容回写（v0.29.0）
+
+### 38.0 问题诊断
+
+**来源**：v0.29.0 已发布（2026-07-31）但内容从未回写设计文档，形成文档债（设计文档停留在 §37/v0.28.1，与 roadmap v0.29.0 里程碑脱节）。本节为简洁回写，详情见 CHANGELOG [0.29.0]。
+
+v0.29.0 主题为「DP-A 用户确认门 + 产物权限规则 + A4 审查增强」，来源 workflow-feedback 2026-07-31 ×7。
+
+### 38.1 已发布内容摘要
+
+| 特性 | 落点 | 说明 |
+|------|------|------|
+| **DP-A 用户确认门** | workflow-start 四步协议 Step 4 + `.team-flow.yaml` 新增 `dp_a_result/dp_a_timestamp/dp_a_adjustments` | v0.28.1 三步协议为全自动闭环，缺人工审批；DP-A 在 reasonableness check 后、路由 spec-writer 前插入 AskUserQuestion 确认门 |
+| **产物权限规则（Artifact Ownership）** | workflow-start Guardrails + 各 agent | 子代理是其产物唯一负责人；主代理不得 Read+Edit 直接修改子代理产物，修改须 SendMessage 恢复原子代理 |
+| **循环修正复用原子代理** | routing-rules Step 1-2 + Step 4 | 记录子代理 ID；循环修正/DP-A 调整必须 SendMessage 恢复原子代理，禁止启动新子代理（上下文断裂 + token 浪费） |
+| **A4 审查 PRD 功能清单交叉验证** | architecture-design agent Red Lines + architecture-reviewer | api.md 必须含「PRD Feature → API Endpoint」映射表；子实体须有独立 CRUD 端点 |
+| **change 命名版本前缀** | workflow-orchestrator S4 | change 命名规范增强 |
+
+### 38.2 状态字段沉淀
+
+`state-loader.mjs` BUILTIN_DEFAULTS + `cmd-state.mjs` SETTABLE_FIELDS + `writeState` 序列化新增 `dp_a_result` / `dp_a_timestamp` / `dp_a_adjustments` 三字段；DP-A 由 workflow-start 编排层把关（AskUserQuestion），非状态转换 guard 维度。
+
+## 三十九、workflow 健壮性增强：9 个 feedback 四根因修复（v0.30.0）
+
+### 39.0 问题诊断
+
+**来源**：workflow-feedback 2026-08-01 批次 ×9（P1×5 / P2×3 / P3×1），来自 VRM 项目 C2-policy-management 的 workflow-start 全流程实测。
+
+9 个 feedback 按「问题出在哪一层」收敛为 **4 个根因**（A 与 B 相互放大，但修复手段不同，必须分开）：
+
+| 根因 | 层 | 覆盖 feedback | 边界判据 |
+|------|-----|--------------|---------|
+| **RC-A 行为规范内容缺失** | 文档/SKILL/agent | #100000 跨 change 隔离 / #100002 实事求是 / #100003 修复→审查串行 / #100004 state 禁写 / #100008 结果协议 | 规范在权威文件里**根本没写**，即便完美投递也无效 |
+| **RC-B 子代理知识投递不可靠** | agent 注册 + 验证门 | #100001 SKILL.md 未加载 / #100006 未注册 agent | 内容**写了但送不到**子代理（5 skill 无 agent 定义 → general-purpose 手写 prompt） |
+| **RC-C CLI 工具缺陷** | scripts | #100005 transition 试错（+ #100004 纵深防御） | 工具本身的 bug 与人机工程 |
+| **RC-D isolate 设计错误** | scripts | #100009 worktree 基于空仓库 | ensure-branch 把 change-dir 当代码仓库 |
+
+**根因证据**（择要）：
+- RC-A：workflow-start 全目录 grep「cross-change/隔离」0 命中；architecture-design 无「查证→独立判断→存疑上报」原则（对照 ce-brainstorm `settled-decisions.md` 有此原则）；三个子代理 skill 均无 state 禁写指令；workflow-start State Writes 的 DP 编号清单与 skill 实际写入（need-explorer→dp_1 / spec-writer→dp_2 / contract-builder→dp_3 / build-executor+bug-investigator→dp_5）错位一格。
+- RC-B：agents/ 仅 10 个，spec-writer/contract-builder/need-explorer/build-executor/release-archivist **全无 agent 定义**；`skills:` 预加载仅 4/10 agent 声明。
+- RC-C：`cmd-state.mjs` guard 子进程 `cwd: 包根` 而 `readState` 按用户 cwd 解析 → 相对路径基准不一致；SKILL.md 状态转换全用 `<change-dir>` 占位符且无 `tf state transition` 示例。
+- RC-D：`ensure-branch.mjs` `worktreePath = '../${repoName}-${name}'`，假定 change-dir 即代码仓库；VRM 工作区根是空壳 git 仓库（仅跟踪 .gitignore），业务代码在平级独立仓库 → worktree 为空副本。
+
+### 39.1 RC-A：行为规范内容补齐
+
+| feedback | 修复 | 落点 |
+|----------|------|------|
+| #100000 | 新增 Guardrail「处理 change X 不得编辑 changes/Y/」+ 依赖声明/延迟提醒/走 Y 自身流程三步处置；接入既有但从未编排的 `cross-change-consistency-checker` agent | workflow-start SKILL.md Guardrails + routing-rules.md |
+| #100002 | 移植 ce-brainstorm 证据原则（may contradict only on evidence / report it — do not suppress it）；修正模板从「请修正」改为「先验证 finding 属实性，属实则修正、不属实则据实反馈主代理」 | agents/architecture-design.md Red Lines + routing-rules.md 修正模板 |
+| #100003 | 四步协议增加「修复子代理完成前 MUST NOT dispatch 审查子代理」明文 + 并行白名单；修正「三步/四步」旧表述 | workflow-start SKILL.md + routing-rules.md Step 2 |
+| #100004 | 横展到 5 个子代理 skill + agent 加红线「MUST NOT 修改 state/workflow 核心字段，转换由主代理 tf state transition 执行」；修正 State Writes 的 DP 编号错位 | 5 个 SKILL.md + workflow-start State Writes + 5 个新 agent |
+| #100008 | 统一结果协议：终态标注 `FINAL VERDICT`；SendMessage 为权威结果，task-notification.result 仅内部元数据 | routing-rules.md + 各 agent Output Contract |
+
+### 39.2 RC-B：子代理知识投递（agent 注册 + 验证门）
+
+1. **注册 5 个 agent**（写法 2，仿 architecture-design/code-reviewer）：`agents/{spec-writer,contract-builder,build-executor,release-archivist,need-explorer}.md`，各声明 `skills: [<skill>]` 预加载，正文只保留 WHO/WHAT（身份/Iron Law/Inputs/Output Contract/Red Lines），≤100 行。前 4 个可写（含 Artifact Ownership + Structured Output Contract），need-explorer 只读交互式。
+2. **路由下沉**：workflow-start 将 spec-writer/contract-builder/build-executor/release-archivist 从「Route to skill」改为「Dispatch as sub-agent（记录 agentId）」；**need-explorer 保持主进程交互**（需与用户对话，agent 定义仅作可 dispatch 后备）。
+3. **返回即验证门（validation gate）**：子代理返回产物后立即 `tf validate <change-dir>`；FAIL → SendMessage 回原子代理修复。把格式失败拦截在返回时，而非状态转换时（避免浪费整次执行后再失败）。
+4. **`skills:` 预加载可靠性**：LT 确认当前环境生效，作为主路径；验证门为不依赖预加载的独立兜底。
+5. **B4（WHEN/THEN 结构校验）降级为后续迭代**：`countScenarios` 仅校验 Scenario 头存在，WHEN/THEN 从未强制；既有 spec 合规性未知，硬置 ERROR 有回归风险，需专项夹具，故移出本版本（记入待办 P2-26）。
+
+### 39.3 RC-C：CLI 修复
+
+- `cmd-state.mjs` run() 入口 `path.resolve(changeDir)` 统一绝对路径（修相对路径下 guard 找不到产物的 bug）；横展排查其他 cmd-*.mjs 的 cwd 一致性（结论：同类 bug 仅 cmd-state 一处）。
+- `tf state set ... state` 报错升级为完整 `tf state transition <绝对路径> <目标状态>` 语法示例。
+- VALID_STATES 抽到 `state-loader.mjs` 共享导出（消除魔法常量）；`writeState` 加 state 合法性校验（defense-in-depth，拦截非法写入）；`tf doctor` 增「非法 state 值」巡检（拦截子代理 Edit 绕过 CLI 的非法值）。
+- workflow-start SKILL.md 补 `tf state transition` 示例 + 厘清与 `tf runtime guard check` 的关系（transition 内部自动跑 guard）。
+
+### 39.4 RC-D：tf isolate 多仓库工作区重构
+
+`ensure-branch.mjs` 重写（72→226 行），引入布局识别层：
+
+```
+1. resolve change-dir 为绝对路径
+2. 布局识别：父目录 basename==='changes' → root=父之父；root 下含 .git 的直接子目录=代码仓库
+   - Case A 多仓库工作区：在 <root>/.worktrees/<change>/<repo> 为每个代码仓库建 worktree
+     （基于各仓库当前分支，非 init commit）；<root>/.gitignore 忽略 .worktrees/
+   - Case B 单代码仓库（遗留兼容）：回退原行为（worktree 建 ../），保护单仓库项目
+3. 保持 execFileSync 字面参数数组安全形式、--force 语义、非零退出码、双位置参数签名
+   （兼容 workflow-start prototype handoff 的 tf isolate <change-dir> prototype-<handoff-id>）
+```
+
+`build-executor` SKILL.md preflight 更新为 `.worktrees/<change>/` 结构（实现子代理进入聚合目录可见全部参考代码）。测试：既有 #15（Case B）+ 新增 #100009（Case A 多仓库夹具 + worktree 落点断言）全绿。
+
+### 39.5 横展验证
+
+| 维度 | 横展结论 |
+|------|---------|
+| state 禁写红线 | 已横展到 5 个子代理 skill + 5 个新 agent + workflow-start 职责边界 |
+| agent 计数同步 | 8 处计数引用（plugin.json×3 / marketplace×2 / cursor / package.json / AGENTS.md / README / HANDOFF）统一 10/8→15；既有「8 agents」漂移一并修正 |
+| 存量 agent 颜色 | cross-change-consistency-checker `orange→red`（关闭 P2-22，plugin-validator 发布门禁阻断项）；横展确认 agents/ 仅此一处 orange（prototype-builder 已是 green） |
+| 相对路径 cwd | 横展排查 cmd-*.mjs 子进程 cwd 一致性，同类 bug 仅 cmd-state 一处 |
+| 实事求是原则 | 已植入 architecture-design + 修复模板；5 个新产出型 agent 经 Red Lines 模板统一携带 |
+
 ## 待办列表
 
 | 编号 | 待办 | 状态 | 版本 | 来源 |
@@ -761,3 +855,12 @@ before writing arch_design_decision to yaml. FAIL → loop fix (≤3 rounds) or 
 | P1-25 | bug-investigator agent 精简（180→~85 行）+ `skills:` 字段预加载 + HOW 内容迁移至 SKILL.md | ✅ 2026-07-31 | v0.28.1 | P1-24 横展验证 + §37 |
 | P1-26 | code-reviewer agent 精简（171→~100 行）+ `skills:` 字段预加载 + HOW 内容迁移至 SKILL.md | ✅ 2026-07-31 | v0.28.1 | P1-24 横展验证 + §37 |
 | P1-27 | prototype-builder agent 精简（230→~95 行）+ `skills:` 字段预加载 + HOW 内容迁移至 references/builder-methodology.md | ✅ 2026-07-31 | v0.28.1 | P1-24 横展验证 + §37 |
+| P1-28 | workflow-start 增加「跨 change 隔离」Guardrail + 接入 cross-change-consistency-checker | ✅ 2026-08-01 | v0.30.0 | workflow-feedback 2026-08-01（#100000） |
+| P1-29 | 注册 spec-writer/contract-builder/build-executor/release-archivist/need-explorer 为 agent（skills 预加载）+ 路由下沉 + 返回即验证门 | ✅ 2026-08-01 | v0.30.0 | workflow-feedback 2026-08-01（#100001 #100006） |
+| P1-30 | 子代理实事求是原则：reviewer 建议先查代码验证，存疑据实反馈主代理 | ✅ 2026-08-01 | v0.30.0 | workflow-feedback 2026-08-01（#100002） |
+| P1-31 | workflow-start 四步协议修复→审查严格串行 + 并行白名单 + 三步/四步表述修正 | ✅ 2026-08-01 | v0.30.0 | workflow-feedback 2026-08-01（#100003） |
+| P1-32 | tf isolate 重构为多仓库工作区 .worktrees/<change>/<repo>（Case A/B 布局识别） | ✅ 2026-08-01 | v0.30.0 | workflow-feedback 2026-08-01（#100009） |
+| P2-23 | 子代理 state 禁写红线横展 5 skill + 5 agent + CLI 纵深防御（writeState 校验 + doctor 巡检） | ✅ 2026-08-01 | v0.30.0 | workflow-feedback 2026-08-01（#100004） |
+| P2-24 | tf state transition 错误提示升级 + 绝对路径一致性（path.resolve）+ VALID_STATES 抽共享 | ✅ 2026-08-01 | v0.30.0 | workflow-feedback 2026-08-01（#100005） |
+| P3-5 | 统一子代理结果传递协议（FINAL VERDICT + SendMessage 权威结果） | ✅ 2026-08-01 | v0.30.0 | workflow-feedback 2026-08-01（#100008） |
+| P2-26 | validator 补 WHEN/THEN 结构校验（B4 降级：需专项夹具防回归） | 🔲 待实施 | v0.31.0 | v0.30.0 §39.2 降级项 |

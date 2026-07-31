@@ -29,6 +29,7 @@
 | v0.28.0    | Agent 补全 + 架构自动审查 + 项目级规范被动沉淀（设计增强方案 v0.11）：① architecture-design agent 创建（P1-18）② architecture-reviewer agent 创建（6 维度审查 + ≤3 轮循环修正，P1-20/21）③ conventions 配置段 schema + 4 个 skill 上下文注入 + 4 个模板 + 阶段转换前规范建议协议（P2-18~21）④ routing-rules.md 审查增强；agents 8→10；来源：workflow-feedback 2026-07-31 + LT 需求 | ✅ 2026-07-31 |
 | v0.28.1    | Agent/Skill 职责分离修正 + 主干补强 auto-review + 横展三 agent 精简（设计增强方案 v0.11 §35/§36/§37）：① architecture-design agent 精简（WHO/WHAT only，229→~100 行）+ `skills:` 字段预加载 Skill 完整知识库（P1-22）② workflow-start SKILL.md 主干补强三步协议摘要（dispatch→auto-review→reasonableness check）+ Guardrails/State Writes 同步（P1-23）③ 横展修复 bug-investigator（180→~85 行）+ code-reviewer（171→~100 行）+ prototype-builder（230→~95 行）三个 Category A2 agent，HOW 内容迁移至对应 Skill（P1-25/26/27）；来源：workflow-feedback 2026-07-31（P1-1 agent-quality + P1-2 sop-flow）+ LT 横展需求 | ✅ 2026-07-31 |
 | v0.29.0    | §37 DP-A 确认门 + 产物权限规则 + A4 PRD 交叉验证 + change 命名版本前缀（7 个 workflow-feedback 根因修复）：① workflow-start 三步→四步协议，Step 4 DP-A 用户确认门（AskUserQuestion + SendMessage 复用 + 项目规范变更提示）② Artifact Ownership guardrail（workflow-start/orchestrator 双 skill + architecture-design agent 唯一负责人声明）③ architecture-reviewer A4 双对照源（brief + PRD 功能清单）+ 子实体 CRUD 完整性检查 ④ architecture-design api.md PRD 功能→API 端点映射表 ⑤ change-split-auditor Dim 1 子实体操作完整性检查 ⑥ s4-split-validate change 目录命名 `v{N}-C{n}-{kebab-name}` + change_dag prd_version ⑦ 代码层补齐 arch_review_* + dp_a_* 字段（修复 v0.28.1 死命令）；来源：workflow-feedback 2026-07-31 × 7（#1~#7）；457/457 测试全过 | ✅ 2026-07-31 |
+| v0.30.0    | workflow 健壮性增强（设计增强方案 v0.11 §38/§39，9 个 workflow-feedback 四根因修复）：① RC-A 行为规范补齐（跨 change 隔离 guardrail + 实事求是原则 + 修复→审查串行 + state 禁写横展 + 统一结果协议 + workflow-start DP 编号错位修正）② RC-B 子代理投递（注册 spec-writer/contract-builder/build-executor/release-archivist/need-explorer 5 个 agent + skills 预加载 + 路由下沉 + 返回即验证门）③ RC-C CLI（tf state transition 相对路径 bug 修复 + VALID_STATES 抽共享 + writeState 校验 + doctor 非法 state 巡检）④ RC-D tf isolate 多仓库工作区重构（.worktrees/<change>/<repo>，Case A/B 布局识别）；agents 10→15（含 cross-change-consistency-checker 颜色 orange→red，关闭 P2-22）；B4 WHEN/THEN 校验降级 v0.31.0（P2-26）；来源：workflow-feedback 2026-08-01 ×9（#100000~#100009）；459/459 测试全过 | ✅ 2026-08-01 |
 
 ## 规划中里程碑
 
@@ -79,6 +80,11 @@
 | P1-25 | bug-investigator agent 精简（180→~85 行）+ `skills:` 字段预加载 + HOW 内容迁移至 SKILL.md（Report Format / Quality Standards / Edge Cases） | ✅ 2026-07-31 | v0.28.1 | 来源：P1-24 横展验证 + 设计增强方案 v0.11 §37 |
 | P1-26 | code-reviewer agent 精简（171→~100 行）+ `skills:` 字段预加载 + HOW 内容迁移至 SKILL.md（6 步 Review Process / Severity Levels / Calibration Rules） | ✅ 2026-07-31 | v0.28.1 | 来源：P1-24 横展验证 + 设计增强方案 v0.11 §37 |
 | P1-27 | prototype-builder agent 精简（230→~95 行）+ `skills:` 字段预加载 + HOW 内容迁移至 references/builder-methodology.md（Build Process Steps 0-4 / Hard Constraints / Seed Composition / P0-P2 自检 / Deliverable Hard Gate / Decision-Point Interaction） | ✅ 2026-07-31 | v0.28.1 | 来源：P1-24 横展验证 + 设计增强方案 v0.11 §37 |
+| P1-28 | workflow-start 增加「跨 change 隔离」Guardrail + 接入 cross-change-consistency-checker | ✅ 2026-08-01 | v0.30.0 | 来源：workflow-feedback 2026-08-01（#100000） |
+| P1-29 | 注册 spec-writer/contract-builder/build-executor/release-archivist/need-explorer 为 agent（skills 预加载）+ 路由下沉 + 返回即验证门 | ✅ 2026-08-01 | v0.30.0 | 来源：workflow-feedback 2026-08-01（#100001 #100006） |
+| P1-30 | 子代理实事求是原则：reviewer 建议先查代码验证，存疑据实反馈主代理 | ✅ 2026-08-01 | v0.30.0 | 来源：workflow-feedback 2026-08-01（#100002） |
+| P1-31 | workflow-start 四步协议修复→审查严格串行 + 并行白名单 + 三步/四步表述修正 | ✅ 2026-08-01 | v0.30.0 | 来源：workflow-feedback 2026-08-01（#100003） |
+| P1-32 | tf isolate 重构为多仓库工作区 .worktrees/<change>/<repo>（Case A/B 布局识别） | ✅ 2026-08-01 | v0.30.0 | 来源：workflow-feedback 2026-08-01（#100009） |
 
 ### P2（改善，按节奏推进）
 
@@ -101,7 +107,10 @@
 | P2-13 | references/ 版本引用漂移清理 + check-versions 扫描盲区扩展：① 清理 references/ 下陈旧 `spec-superflow@0.15.0/@0.16.0` npx 引用（27+3 处，分布 release-archivist / workflow-orchestrator s2/s4/s5 / workflow-start / build-executor）至当前版本 ② `check-version-consistency.mjs` 扫描范围从顶层 SKILL.md 扩展到 `references/**`，杜绝再漂移 | 🔲 待实施 | v1.0.0 | 来源：v0.21.0 plugin-validator W2（门禁盲区横展） |
 | P2-14 | pre-commit hook 同步范围扩展：将 `.claude-plugin/marketplace.json` 的 skill/agent 计数描述纳入 pre-commit 自动同步（当前仅覆盖 plugin.json / AGENTS.md / README.md，marketplace.json 在 17→23 skills 扩容时漏同步，v0.22.0 P3 验证发现并手动修正文本，但自动化同步规则未补） | 🔲 待实施 | v0.22.0+ | 来源：v0.22.0 plugin-validator 横展 |
 | P2-15 | change-brief frontmatter schema 对齐：v0.22.0 E2E 测试发现无头 Claude 落盘 brief 时未写入 `upstream_source: orchestrator` 字段，导致 workflow-start DP-0 继承判定伪代码中 `brief 存在 AND upstream_source == orchestrator` 条件不满足、走 else 手动路径而非继承分支。建议修正：① workflow-start 判定逻辑改为"brief 存在即继承"（不依赖字段值，更贴合 CC 自己写的'以 brief 存在为主信号'设计意图）或 ② s4-split-validate.md brief 模板强制含 upstream_source 字段。CC 倾向方案①。**v0.22.5 进展**：新增 `templates/change-brief.md` 标准模板（含 `upstream_source` 字段），部分解决方案②；但 workflow-start 判定逻辑仍检查字段值，方案①未实施 | 🟡 部分完成 | v0.22.5+ | 来源：v0.22.0 E2E 测试（VRM S3→S4 重跑发现）；v0.22.5 制品链评审 F07 |
-| P2-22 | Agent color 无效值修复：`cross-change-consistency-checker` 和 `prototype-builder` 使用了 `orange`（不在有效颜色列表 blue/cyan/green/yellow/magenta/red 中），改为 `yellow` 或 `red` | 🔲 待实施 | v0.28.0+ | 来源：v0.28.0 plugin-validator |
+| P2-22 | Agent color 无效值修复：`cross-change-consistency-checker` 和 `prototype-builder` 使用了 `orange`（不在有效颜色列表 blue/cyan/green/yellow/magenta/red 中），改为 `yellow` 或 `red` | ✅ 2026-08-01 | v0.30.0 | cross-change-consistency-checker orange→red（prototype-builder 已是 green，横展确认 agents/ 仅此一处）；来源：v0.28.0 plugin-validator |
+| P2-23 | 子代理 state 禁写红线横展 5 skill + 5 agent + CLI 纵深防御（writeState 校验 + doctor 巡检） | ✅ 2026-08-01 | v0.30.0 | 来源：workflow-feedback 2026-08-01（#100004） |
+| P2-24 | tf state transition 错误提示升级 + 绝对路径一致性（path.resolve）+ VALID_STATES 抽共享 | ✅ 2026-08-01 | v0.30.0 | 来源：workflow-feedback 2026-08-01（#100005） |
+| P2-26 | validator 补 WHEN/THEN 结构校验（B4 降级：需专项夹具防回归） | 🔲 待实施 | v0.31.0 | 来源：v0.30.0 §39.2 降级项 |
 
 ### P3（低优先级，时机成熟再做）
 
@@ -111,3 +120,4 @@
 | P3-2 | recon-probe.sh 并入 `ssf recon` CLI | 🔲 待实施 | v1.0.0+ | 来源：v0.8 §18.4.2 |
 | P3-3 | ce-brainstorm 无头模式兼容：headless 检测 + 自动选推荐 | 🔲 待实施 | v1.0.0+ | 来源：v0.16.0 无头测试 |
 | P3-4 | S3 ce-plan grounding 性能：增量 grounding | 🔲 待实施 | v1.0.0+ | 来源：v0.16.0 无头测试 |
+| P3-5 | 统一子代理结果传递协议（FINAL VERDICT + SendMessage 权威结果） | ✅ 2026-08-01 | v0.30.0 | 来源：workflow-feedback 2026-08-01（#100008） |
