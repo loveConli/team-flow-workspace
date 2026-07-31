@@ -171,6 +171,15 @@ CLAUDE.md 和 AGENTS.md 中描述的工作流包含 architecture-design 门控�
    - 本地 `.npmrc` 指向 npmmirror 镜像不支持发布，必须显式指定官方 registry + token 文件（绝对路径）
    - 发布成功后会自动创建 git tag
 7. **主项目提交**：更新 CLAUDE.md 版本号 + 提交
+8. **远程推送**（子仓库 → 父仓库，顺序不可反）：
+   ```bash
+   # 先推子仓库（npm 已发布，远程代码需同步）
+   cd team-flow && git push
+   # 再推父仓库（CLAUDE.md 版本号引用子仓库版本）
+   cd .. && git push
+   ```
+   - 网络不稳定时 retry（GitHub 偶发 75s 超时），不要跳过此步骤
+   - 推送失败 = 远程与本地不同步，后续协作会出问题
 
 ## 插件迭代工作流（强制规则）
 
