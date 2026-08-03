@@ -335,7 +335,60 @@ glaf4-tests-inspect（项目体检）
 
 ---
 
-## 待办列表（v0.32.0 新增）
+## 五十四、skills 注入静默失效：frontmatter YAML 合法性事件（v0.33.0）
+
+> **LT 决策 ✅ 2026-08-03**：description 精简单句 + 删除 `<example>` 块；不 patch 本地缓存，只走正式发布后验证。
+
+### 54.1 事件
+
+C1 补救流程（vrm4teamflow 工作区，2026-08-03）发现：dispatch `team-flow:spec-writer` 时子代理上下文 `skill_content` 附件为 0——SKILL.md 全文未注入，子代理产出缺失 delta headers / Scenario 块的首版产物。本机复现（Claude Code 2.1.220 + plugin 0.32.2）确认现象不依赖工作区与插件版本。
+
+### 54.2 证据链（四轮实证 + 对照组）
+
+| # | 实证 | 结果 |
+|---|------|------|
+| 1 | 诊断探针 dispatch spec-writer，子代理上下文自查 | 无 SKILL.md 内容；skills 清单仅一行描述 |
+| 2 | 二轮探针 | 手工 Skill 工具调用可加载（自加载通道存在）；预加载为 0 |
+| 3 | 行为探针（问规则语义而非字符串匹配） | agent .md 正文**有**注入（逐字背出 FINAL VERDICT / Artifact Ownership）；tools 限制**未**生效（子代理实际持有 117 工具含全部 MCP） |
+| 4 | PyYAML 严格解析 15 个 agent frontmatter | 15/15 全部非法（"while scanning a simple key"） |
+| 对照 | glaf4-test assess-worker（合法 YAML frontmatter，同机同会话） | SKILL.md 全文注入 ✅ |
+| 佐证 | 官方文档 [sub-agents](https://code.claude.com/docs/en/sub-agents) | "Preloaded skills: full content of any skill named in the agent's skills field" |
+
+### 54.3 根因
+
+全部 team-flow agent .md 的 frontmatter 是**非法 YAML**：`description: >-` 块标量内部顶格书写 `<example>`，缩进断裂导致文档非法。Claude Code 对非法 frontmatter 采取**静默降级**：正文按 `---` 边界切分保留，元数据整体丢弃——
+
+- `skills:` 预加载被静默丢弃（无任何警告）
+- `tools:` 限制失效 → 回退全量工具
+- description 回退泛化标签（registry 显示 "Agent from team-flow plugin"）
+- name 取自文件名
+
+该机制非 Claude Code bug：官方文档与二进制字符串均确认 `skills:` 是受支持字段，合法 frontmatter 的 glaf4 对照组注入正常。属产物侧缺陷——Anthropic 官方 plugin-dev 插件同样写法同样中招（registry 显示泛化标签），说明官方示例本身诱导了该写法。
+
+**横展扫描**：`e2e` / `test-strategy` 两个 SKILL.md 的 description 含裸 `: `，同为非法 YAML；templates/ 与多 IDE 目录无中招副本。
+
+### 54.4 影响面
+
+- 9 个声明 `skills:` 的 agent 自诞生起从未获得 SKILL.md 方法论（"写法 2 预加载"全程空转，CLAUDE.md 的确定性断言从未被实证）；v0.32.1 的 contract-builder test-strategy 预加载修复同样未生效
+- tools 限制未生效：子代理握有全量 MCP 工具（修复后收紧为声明集，属行为变更）
+- C1 的 spec 首版格式缺陷、历史上子代理产出偏离方法论，部分根源于此
+
+### 54.5 修复（v0.33.0）
+
+1. **15 个 agent description 单句化**：删除 `<example>` 块，学 glaf4 写法（LT 决策）；`skills:` 保持裸名（与 glaf4 实证成功写法一致）
+2. **2 个 SKILL.md frontmatter 修复**：description 加引号消解裸冒号（e2e / test-strategy）
+3. **长效门禁**：`tests/lib/frontmatter-lint.test.mjs`（js-yaml 严格解析全部 agents/skills/commands frontmatter + 必填字段断言 + `skills:` 引用必须解析到真实 `skills/<name>/SKILL.md`），进 `npm test`（P3 门禁），杜绝复发
+4. **验证方式**：不 patch 本地缓存；正式发布 + marketplace 更新后，在实际流程中验证注入生效（LT 决策）
+
+### 54.6 教训
+
+- **机制断言必须实证**："写法 2 确定性 100%" 写入 CLAUDE.md 时从未做过实证探针。今后任何"通道/机制有效"的断言，落笔同时必须附一次实证（dispatch → 行为探针）
+- **静默降级是最危险的失效模式**：无警告、无报错、流程全绿，缺陷存活了整个插件生命周期。门禁要校验"产物有效性"，不能只校验"产物存在性"
+- **LLM 内省探针有假阴性**：精确字符串匹配的内省不可靠（前两轮探针误判"正文未注入"），行为探针（问规则语义、要求复述独有规则）才是可靠方法
+
+---
+
+## 待办列表（v0.32.0+ 新增）
 
 | 编号 | 待办 | 状态 | 版本 | 来源 |
 |------|------|------|------|------|
@@ -351,7 +404,12 @@ glaf4-tests-inspect（项目体检）
 | P2-38 | workflow-start：glaf4-tests 路由归位 + test-matrix-ready 引导 + build-executor 返回验证补测试文件检查 | ✅ v0.32.1（2026-08-03） | v0.32.0 | §52 B3 |
 | P2-39 | doctor 巡检扩展：产物引用完整性 + skip_reason 配对 + DP 时间戳 sanity | ✅ v0.32.1（2026-08-03） | v0.32.0 | §52 B4 |
 | P3-9 | 报告生成纪律：LLM 重构报告现场核对标注区（文档级） | ✅ v0.32.1（2026-08-03） | v0.32.0 | §52 B5 |
-| P3-10 | exploring→specifying 门禁时序优化（先产物后转换的引导或门禁语义调整，C1 报告问题 #5，独立小项） | 🔲 待实施 | v0.32.0+ | C1 报告 §8.3 |
+| P3-10 | exploring→specifying 门禁时序优化（artifacts-exist 移出该转换，消除鸡生蛋死锁） | ✅ v0.32.2（2026-08-03） | v0.32.0+ | C1 报告 §8.3 |
+| P1-44 | pre-tool-use-guard 产物区豁免（change 目录产物写入放行 + macOS /private 路径归一化） | ✅ v0.32.2（2026-08-03） | v0.32.0+ | C1 死锁链环 1 |
+| P2-40 | cmd-version hooks 版本同步修复（pattern 后缀通配防腐化 + 双位置同步 + major 硬编码修复） | ✅ v0.32.2（2026-08-03） | v0.32.0+ | npm version 链中断 |
+| P1-45 | §54 frontmatter YAML 合法性事件设计写回 | ✅ v0.33.0（2026-08-03） | v0.33.0 | §54 |
+| P2-41 | 15 agent description 单句化（删 `<example>`）+ e2e/test-strategy SKILL.md frontmatter 修复，恢复 skills: 注入 | ✅ v0.33.0（2026-08-03） | v0.33.0 | §54.5 |
+| P3-12 | frontmatter-lint 长效门禁（js-yaml 严格解析 + 必填字段 + skills 引用解析，进 npm test） | ✅ v0.33.0（2026-08-03） | v0.33.0 | §54.5 |
 
 ## 兼容性与风险
 
@@ -361,3 +419,4 @@ glaf4-tests-inspect（项目体检）
 | 进行中的 change 升级后被卡 | 豁免键 = init 打戳：升级前创建的 change 无 schema_version → 一律按 legacy 放行；升级后新建的 change 才受考核（真正的渐进式启用） |
 | 非标 runner 项目 | 解析器注册表可扩展；当下合法出路 = 显式 skip + 理由（可审计），不提供手工自述（防 RC-2 复发） |
 | hotfix 紧急通道被门禁拖慢 | test-matrix-ready/test-matrix-complete 均不挂 hotfix/tweak（沿用 §45.3） |
+| v0.33.0 行为变更：frontmatter 修复后 tools 限制开始生效，子代理失去未声明的 MCP 工具 | 属恢复声明设计；若某 agent 确需 MCP 工具，须在其 frontmatter `tools:` 显式声明（lint 门禁保障 frontmatter 始终可解析） |

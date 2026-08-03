@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 本工作区的核心目标是**开发和测试 team-flow 工作流**。team-flow 是一个统一插件（24 skills + 15 agents），整合了 spec-superflow（9）、compound-engineering（6）、architecture-design（1）、prototype（1）、design-system（1）、workflow-orchestrator（1）、workflow-bootstrap（1）、e2e（1）、session-handoff（1）、workflow-feedback（1）、test-strategy（1）。
 
 - **设计增强方案当前权威版本**：`docs/architecture-api-db-design-enhancement-v0.13.md`
-- **插件版本**：`v0.32.2`（24 skills + 15 agents；0.32.0 打包事故撤回，版本号不可复用）
+- **插件版本**：`v0.33.0`（24 skills + 15 agents；0.32.0 打包事故撤回，版本号不可复用）
 
 ## 工作区结构
 
@@ -251,7 +251,7 @@ Agent prompt 保持精简（目标 ≤100 行），只定义"谁来做、做什�
 
 ### 子代理知识注入通道（确定性从高到低）
 
-1. **`skills:` 字段预加载**（推荐）：启动时把 SKILL.md 全文注入上下文，确定性 100%
+1. **`skills:` 字段预加载**（推荐）：启动时把 SKILL.md 全文注入上下文，确定性 100%。**硬前提：agent frontmatter 必须是合法 YAML**——v0.33.0 事件（v0.13 §54）：非法 YAML（description 内顶格 `<example>`）导致 Claude Code 静默降级，skills:/tools:/description 全部被丢弃且无任何警告，缺陷存活整个插件生命周期。现由 frontmatter-lint 测试（npm test）强制守护
 2. **`context: fork` 注入**：SKILL.md 成为子 agent 的任务 prompt，确定性 100%
 3. **运行时自主发现**：靠语义匹配触发，不保证，不可依赖
 4. **Agent prompt 中硬写指令**：作为兜底，优先级最低
@@ -262,6 +262,9 @@ Agent prompt 保持精简（目标 ≤100 行），只定义"谁来做、做什�
 - `skills:` 预加载是全量注入 SKILL.md，`references/` 和 `chapters/` **不会自动带上**——Agent 需在执行中按需 Read
 - Agent prompt 中用一句话指向 Skill："Your preloaded Skill contains the detailed methodology. Follow it for HOW."
 - 措辞强度决定遵循度：关键指令用 MUST/DO NOT，放 prompt 开头
+- **agent description 必须单句**（v0.33.0 起）：`<example>` 块会破坏 YAML 块标量导致整个 frontmatter 静默失效；触发示例的代价不值得冒这个险（team-flow 的 agent 由 workflow-start 显式 dispatch，不依赖 description 自动触发）
+- **`tools:` 限制自 v0.33.0 起真实生效**：子代理只握有 frontmatter 声明的工具（此前静默降级为全量工具）。若某 agent 需要 MCP 工具，必须在 `tools:` 显式声明
+- **机制断言必须实证**（v0.13 §54.6 教训）：任何"通道/机制有效"的写法定论，必须附一次实证探针（dispatch 子代理 → 行为探针问规则语义，勿用精确字符串内省——有假阴性）
 
 # 约束
 
