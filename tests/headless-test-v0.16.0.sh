@@ -1,4 +1,7 @@
 #!/bin/bash
+# ⚠️ DEPRECATED（v0.31.0 起）：本脚本为 v0.16.0 时代 bash 原型，已被 team-flow/tests/e2e/ 的 node
+#    结构化 runner 取代（两层架构 + 测试矩阵 + 基线归档隔离 + tf guard oracle）。仅作历史参考，不再维护。
+#    新测试入口：cd team-flow && npm run test:e2e（Tier1 确定性）/ npm run test:e2e:llm（Tier2 LLM）。
 # team-flow v0.16.0 无头测试脚本
 # 测试目标：VRM 管理驾驶舱项目（模拟 Session 29d058e5 工作流路径）
 # 测试范围：v0.15.0 全流程（bootstrap→S4）+ v0.16.0 新 skill（session-handoff / workflow-feedback）

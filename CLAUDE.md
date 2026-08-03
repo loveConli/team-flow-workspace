@@ -4,17 +4,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 仓库性质
 
-本工作区的核心目标是**开发和测试 team-flow 工作流**。team-flow 是一个统一插件（23 skills + 15 agents），整合了 spec-superflow（9）、compound-engineering（6）、architecture-design（1）、prototype（1）、design-system（1）、workflow-orchestrator（1）、workflow-bootstrap（1）、e2e（1）、session-handoff（1）、workflow-feedback（1）。
+本工作区的核心目标是**开发和测试 team-flow 工作流**。team-flow 是一个统一插件（24 skills + 15 agents），整合了 spec-superflow（9）、compound-engineering（6）、architecture-design（1）、prototype（1）、design-system（1）、workflow-orchestrator（1）、workflow-bootstrap（1）、e2e（1）、session-handoff（1）、workflow-feedback（1）、test-strategy（1）。
 
-- **设计增强方案当前权威版本**：`docs/architecture-api-db-design-enhancement-v0.12.md`
-- **插件版本**：`v0.31.0`（24 skills + 15 agents）
+- **设计增强方案当前权威版本**：`docs/architecture-api-db-design-enhancement-v0.13.md`
+- **插件版本**：`v0.32.1`（24 skills + 15 agents；0.32.0 打包事故撤回，版本号不可复用）
 
 ## 工作区结构
 
 ```
 team-flow-workspace/
 ├── docs/                          # 设计文档（工作区级）
-│   ├── architecture-api-db-design-enhancement-v0.12.md # ★ 当前权威版本
+│   ├── architecture-api-db-design-enhancement-v0.13.md # ★ 当前权威版本
+│   ├── architecture-api-db-design-enhancement-v0.12.md # 历史保留版本
 │   ├── architecture-api-db-design-enhancement-v0.11.md # 历史保留版本
 │   ├── roadmap-and-todos.md       # Roadmap + 待办列表（从本文件抽取）
 │   ├── design-doc-system.md       # 设计文档体系 + 版本规则（从本文件抽取）
@@ -112,26 +113,29 @@ exploring → [architecture-design 判断门 ★设计层面] → specifying →
 **架构审查**：`arch_review_verdict` / `arch_review_rounds` / `arch_review_report`（v0.28.1 §36）
 **DP-A 确认门**：`dp_a_result` / `dp_a_timestamp` / `dp_a_adjustments`（v0.29.0 §37）
 **复利门控**：`compound_skipped`（v0.24.0）
+**测试矩阵门控**：`test_matrix_hash` / `test_matrix_skipped` / `test_matrix_skip_reason`（v0.12 §42.5 + v0.13 §48）+ `test_evidence_path`（v0.13 §50：tf test record 落盘的 runner 输出证据）
+**版本标记**：`schema_version`（v0.13 §48.1：**不在 BUILTIN_DEFAULTS**，仅 `tf state init` 创建 change 时打戳；字段缺失 = 存量 change，是测试门禁的豁免键）
 
-### 关键差异说明（v0.29.0 更新）
+### 关键差异说明（v0.32.0 更新）
 
 CLAUDE.md 和 AGENTS.md 中描述的工作流包含 architecture-design 门控（v0.9 §26）和 change-brief.md 交接等设计。代码实现与文档的差距已在 v0.22.5/v0.23.0 中修复：
 
-| 设计承诺 | 代码现实（v0.28.1+） |
+| 设计承诺 | 代码现实（v0.32.0） |
 |----------|----------|
 | `arch_design_*` 字段持久化 | ✅ state-loader BUILTIN_DEFAULTS 含 4 字段、cmd-state SETTABLE_FIELDS 白名单包含、writeState 序列化到独立段落 |
 | architecture-design 门控 BLOCK | ✅ guard.mjs `exploring:specifying` 含 `arch-design` 维度（`arch_design_decision: required` 时硬阻断，`null` 时透明放行兼容存量 change） |
 | `architecture/*.md` 产出 | ✅ hash.mjs 白名单纳入 architecture/{architecture,database,api}.md（v0.23.0 §30），sql/*.sql 明确不纳入 |
 | `change-brief.md` 交接 | 无脚本创建、无模板（hash 排除是有意设计，代码层零引用，纯文档产物） |
+| 测试门禁（v0.13 硬化） | ✅ 豁免键 = `schema_version`（init 打戳，缺失 = 存量）；`test-matrix-ready` 挂 approved-for-build→executing（full）；`test-matrix-complete` 删除内容型豁免与 hash null 短路；`tests-passing` 只认 `tf test record` 程序化证据（非存量），dp_6_result 自述不再是证据（BUG-A 通道仅存量保留）；`test_result` 移出 SETTABLE_FIELDS；`tf execution review` 禁止 base==head |
 
-**当前强制执行**的包括：核心 4+1 制品（proposal/specs/design/tasks + execution-contract）的状态管理 + architecture/*.md 的 hash 纳入 + arch-design guard 维度。change-brief.md 仍为纯文档层产物（有意设计，不纳入 hash）。
+**当前强制执行**的包括：核心 4+1 制品（proposal/specs/design/tasks + execution-contract）的状态管理 + architecture/*.md 的 hash 纳入 + arch-design guard 维度 + 测试门禁硬化（v0.32.0：矩阵入口门禁 + 程序化测试证据）。change-brief.md 仍为纯文档层产物（有意设计，不纳入 hash）。
 
 ## 文档治理规则
 
 ### 设计增强方案版本管理
 
-- **当前权威版本**：`docs/architecture-api-db-design-enhancement-v0.12.md`
-- **历史版本**：v0.11/v0.8 保留不删；v0.2/v0.3/v0.5/v0.7 已删除，可通过 `git log --all -- "docs/architecture-api-db-design-enhancement-v0.*.md"` 追溯
+- **当前权威版本**：`docs/architecture-api-db-design-enhancement-v0.13.md`
+- **历史版本**：v0.12/v0.11/v0.8 保留不删；v0.2/v0.3/v0.5/v0.7 已删除，可通过 `git log --all -- "docs/architecture-api-db-design-enhancement-v0.*.md"` 追溯
 - **新版本规则**：重大设计变更时创建新版本文件，旧版本保留不删
 
 ### Roadmap 更新策略

@@ -1,4 +1,7 @@
 #!/bin/bash
+# ⚠️ DEPRECATED（v0.31.0 起）：本脚本为 v0.16.0 时代 bash 原型，已被 team-flow/tests/e2e/ 的 node
+#    结构化 runner 取代（两层架构 + 测试矩阵 + 基线归档隔离 + tf guard oracle）。仅作历史参考，不再维护。
+#    新测试入口：cd team-flow && npm run test:e2e（Tier1 确定性）/ npm run test:e2e:llm（Tier2 LLM）。
 # team-flow v0.16.0 分阶段链式无头测试
 # 设计说明（2026-07-25 CC 创建）：
 #   claude -p 是单轮模式，orchestrator 全流程无法一次跑完。

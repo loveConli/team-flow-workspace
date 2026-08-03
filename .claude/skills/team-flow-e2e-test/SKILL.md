@@ -1,203 +1,107 @@
 ---
 name: team-flow-e2e-test
 description: >
-  team-flow 工作流全流程端到端无头测试。用 claude -p（print 模式）+ --resume 链式接续，
-  对目标项目执行 Bootstrap→S1→S2→S3→S4 全流程 + v0.16.0 新 skill（session-handoff/workflow-feedback）验证。
-  当需要验证 team-flow 插件版本升级后的工作流完整性、回归测试、或新 skill 触发验证时使用。
-  不适用于：单个 skill 的单元测试（直接 claude -p 调用即可）、交互式流程验证（需人工参与）。
-argument-hint: "[目标项目路径] [--phase bootstrap|s2|s3|s4|handoff|feedback|all] [--resume <session-id>]"
+  team-flow 工作流端到端自动化测试（node 结构化 runner + 测试矩阵驱动，v0.31.0 重构）。
+  两层架构：Tier1 确定性层（直调 tf CLI + guard 门禁断言，进 CI，零 LLM 成本，覆盖 v0.29.1+
+  状态机/14 guard 维度/tf isolate/agent 注册/test-matrix-complete）；Tier2 LLM 层（claude -p
+  驱动真实工作流阶段，行为级断言，opt-in local-only）。测试目标用基线归档解压隔离，全程不碰活工作区。
+  当需要验证 team-flow 插件版本升级后的工作流完整性、回归测试、或针对性单阶段验证时使用。
+  不适用于：单个 skill 的单元测试（直接 claude -p 调用即可）、需人工交互的流程验证。
+argument-hint: "[--tier 1|2|all] [--case <case_id>]"
 ---
 
-# team-flow E2E 无头测试
+# team-flow E2E 自动化测试
 
-对目标项目执行 team-flow 全流程无头测试，验证工作流完整性。
+对 team-flow 工作流做端到端自动化测试。**测试代码在 `team-flow/tests/e2e/`**，测试矩阵在
+`team-flow/tests/e2e/test-matrix.md`（复用 `skills/test-strategy` 方法论适配到工作流行为）。
 
 ## When to Use
 
-- team-flow 插件版本升级后的回归测试
-- 新 skill 添加后的触发验证
-- 工作流 SOP 变更后的全流程验证
-- LT 要求"跑一轮测试"时
+- team-flow 插件版本升级后的回归测试（验证 v0.29.1+ 的 change 级机制）
+- 针对性单阶段验证（架构门控 / spec-writer dispatch / tf isolate / 状态转换 …）
+- 新 skill / 新 guard 维度添加后的触发与阻断验证
 
 ## When NOT to Use
 
-- 单个 skill 的单元测试（直接 `claude -p "/team-flow:<skill>"` 即可）
-- 需要人工交互的流程验证（无头模式无法回答 AskUserQuestion）
-- 目标项目无代码库（bootstrap 需要代码库侦察）
+- 单个 skill 的单元测试（直接 `claude -p "/team-flow:<skill>"`）
+- 需人工交互的流程验证（无头模式自动确认，无法回答真实 AskUserQuestion）
 
-## 核心原理
+## 两层架构
 
-`claude -p`（print 模式）是单轮请求-响应，orchestrator 全流程无法一次跑完。
-解决方案：**分阶段链式调用 + `--resume` 接续**。
+| 层 | 驱动 | 特征 | 运行 |
+|---|---|---|---|
+| **Tier1 确定性** | 直调 `tf` CLI + guard，合成 fixture 设态断言 | 快、零 LLM 成本、确定性、进 CI | `npm run test:e2e` |
+| **Tier2 LLM** | `claude -p` 驱动真实阶段，stream-json 行为级断言 | 慢、贵、概率性、opt-in local-only | `npm run test:e2e:llm` |
 
-```
-claude -p "bootstrap"     → session-A（B1→B5，产出 baseline.md）
-claude -p "orchestrator"  → session-B（S1 路由，产出 registry.yaml）
-claude -p "s2 brainstorm" → session-C（可能停在交互点）
-claude -p --resume C      → session-C'（模拟用户回答，接续写 PRD）
-claude -p "s3 plan"       → session-D（产出 plan.md）
-claude -p "s4 split"      → session-E（产出 changes/）
-claude -p "handoff"       → session-F（产出 .team-flow/handoffs/）
-claude -p "feedback"      → session-G（产出 .team-flow/feedback/）
-```
+**oracle 原则**：用插件自带门禁（`tf runtime guard check --json` / `tf validate` / `tf state get` /
+`tf execution show --json` / `checkChangeStates`）作断言源，替代 grep 文件 + Claude 自评。
+Tier2 只断**状态字段 / 文件存在 / 机械计算值 / stream-json 行为事件**（如 subagent dispatch、
+FINAL VERDICT、目录树快照零 diff），不断内容质量。
 
-每阶段通过 `.team-flow/` 状态文件衔接（orchestrator.yaml 的 phases 状态）。
-
-## 执行步骤
-
-### Step 0: 环境准备
+## 快速开始
 
 ```bash
-PLUGIN_DIR="<team-flow 插件源码路径>"
-TARGET_DIR="<目标项目路径>"
-OUTPUT_DIR="<测试输出路径>"
+cd team-flow
 
-# 清理目标项目的 team-flow 状态（保留项目本身文件）
-cd "$TARGET_DIR"
-rm -rf .team-flow .workflow-orchestrator.yaml CONCEPTS.md
+# Tier1：确定性回归（默认，进 CI；合成 fixture，无需基线归档/插件同步）
+npm run test:e2e
 
-# 验证插件版本
-grep '"version"' "$PLUGIN_DIR/plugin.json"
+# Tier2：LLM 工作流测试（opt-in，local-only），三步前置：
+npm run test:e2e:baseline      # ① 一次性把 vrm4teamflow 全量压缩为冻结基线归档
+npm run test:e2e:plugin-sync   # ② 从 GitHub update 插件到被测版本 + 校验已安装版本
+npm run test:e2e:llm           # ③ TF_E2E_LLM=1 串行跑 workflow/*.test.mjs（--test-concurrency=1）
 ```
 
-### Step 1: Bootstrap（B1→B5）
+## 测试隔离（基线归档，不碰活工作区）
 
-```bash
-cd "$TARGET_DIR"
-claude -p "请对当前项目执行 /team-flow:workflow-bootstrap 初始化。使用 Quick 侦察模式。" \
-  --plugin-dir "$PLUGIN_DIR" \
-  --dangerously-skip-permissions \
-  --append-system-prompt "$AUTO_DECIDE" \
-  --output-format stream-json \
-  > "$OUTPUT_DIR/bootstrap.json" 2>&1
-```
+- **冻结基线**：`npm run test:e2e:baseline` 把当前 vrm4teamflow 全量压缩为
+  `tests/e2e/baseline/vrm4teamflow-baseline.tar.gz`（含 .git）。源/归档路径可用
+  `TF_E2E_VRM` / `TF_E2E_BASELINE` 覆盖。
+- **每用例解压**：Tier2 每个用例解压归档到独立 `mkdtemp` 副本，测完 `rm -rf`——**全程不碰活工作区**，
+  彻底解耦日常使用污染（helpers/workspace.mjs）。
+- **插件同步**：插件经 GitHub 安装/更新。测前 `test:e2e:plugin-sync` update 到被测版本并校验
+  （`TF_E2E_PLUGIN_UPDATE_CMD` / `TF_E2E_VERSION` 可覆盖）。默认测 GitHub 安装的发布产物；
+  保留 `--plugin-dir <local>` 旁路供发布前本地调试。
 
-**验证**：`baseline.md` + `ARCHITECTURE.md` + `CONCEPTS.md` + 目录结构存在。
+## Tier2 风控四件套（claude-driver.mjs）
 
-### Step 2: Orchestrator S1→S2
+1. `--test-concurrency=1`：串行，避免多 claude 并发烧钱 + API 429。
+2. 单用例超时（默认 15min）：超时 kill + fail + 归档 JSONL。
+3. 预算熔断：累计 `total_cost_usd` 超 `TF_E2E_BUDGET_USD`（默认 50）中止后续。
+4. `--max-turns 40` + 检测 `stop_reason==='max_turns'` 显式 fail；缺 result 行（崩溃/截断）→ fail。
 
-```bash
-claude -p "执行 /team-flow:workflow-orchestrator 处理需求：<模糊需求描述>。从 S1 开始。" \
-  --plugin-dir "$PLUGIN_DIR" \
-  --dangerously-skip-permissions \
-  --append-system-prompt "$AUTO_DECIDE" \
-  --output-format stream-json \
-  > "$OUTPUT_DIR/orchestrator.json" 2>&1
-```
+## 测试矩阵
 
-**验证**：`registry.yaml` + `orchestrator.yaml` 存在，s1.status=completed。
-
-### Step 3: S2 Brainstorm（可能需要 --resume）
-
-首次调用可能停在方案选择交互点。提取 session_id 后用 `--resume` 接续：
-
-```bash
-# 提取 session_id
-SESSION_ID=$(grep -o '"session_id":"[^"]*"' "$OUTPUT_DIR/s2.json" | head -1 | cut -d'"' -f4)
-
-# 模拟用户回答，接续
-claude -p --resume "$SESSION_ID" \
-  --plugin-dir "$PLUGIN_DIR" \
-  --dangerously-skip-permissions \
-  --append-system-prompt "$AUTO_DECIDE" \
-  "选推荐方案，直接写 PRD 到 prd/v1/prd.md。写完冻结 PRD。" \
-  --output-format stream-json \
-  > "$OUTPUT_DIR/s2-resume.json" 2>&1
-```
-
-**验证**：`prd/v1/prd.md` 存在，frontmatter 含 `frozen: true`。
-
-### Step 4: S3 Plan
-
-```bash
-claude -p "继续 orchestrator S3。读取 prd/v1/prd.md，调用 ce-plan（一人公司模式）产出 plan.md。" \
-  --plugin-dir "$PLUGIN_DIR" \
-  --dangerously-skip-permissions \
-  --append-system-prompt "$AUTO_DECIDE" \
-  --output-format stream-json \
-  > "$OUTPUT_DIR/s3.json" 2>&1
-```
-
-**验证**：`prd/v1/plan.md` 存在，含 change 拆分和 DAG。
-
-### Step 5: S4 Split
-
-```bash
-claude -p "继续 orchestrator S4。读取 plan.md 的 change 拆分，创建 changes/<name>/ 目录和 .spec-superflow.yaml。" \
-  --plugin-dir "$PLUGIN_DIR" \
-  --dangerously-skip-permissions \
-  --append-system-prompt "$AUTO_DECIDE" \
-  --output-format stream-json \
-  > "$OUTPUT_DIR/s4.json" 2>&1
-```
-
-**验证**：`changes/` 下各 change 目录存在，每个含 `.spec-superflow.yaml`（state: exploring）。
-**注意**：change 目录必须在项目根 `changes/<name>/`，不是 `.team-flow/changes/`（见 s4-split-validate.md:35）。
-
-### Step 6: session-handoff（v0.16.0）
-
-```bash
-claude -p "执行 /team-flow:session-handoff 下一步继续 change 级实施。" \
-  --plugin-dir "$PLUGIN_DIR" \
-  --dangerously-skip-permissions \
-  --append-system-prompt "$AUTO_DECIDE" \
-  --output-format stream-json \
-  > "$OUTPUT_DIR/handoff.json" 2>&1
-```
-
-**验证**：`.team-flow/handoffs/*.md` 存在，含 10 节结构（工作流状态/进度/建议Skills/产物引用/脱敏声明）。
-
-### Step 7: workflow-feedback（v0.16.0）
-
-```bash
-claude -p "执行 /team-flow:workflow-feedback 记录问题：<问题描述> --category <分类> --severity <P0-P3>" \
-  --plugin-dir "$PLUGIN_DIR" \
-  --dangerously-skip-permissions \
-  --append-system-prompt "$AUTO_DECIDE" \
-  --output-format stream-json \
-  > "$OUTPUT_DIR/feedback.json" 2>&1
-```
-
-**验证**：`.team-flow/feedback/*.md` 存在，frontmatter 含 type/category/severity/status。
+`tests/e2e/test-matrix.md`：design_method 工作流映射（state/contract/reject/idempotency/…）+
+复杂度分级 + 对抗验证三招 + 候选覆盖台账（v0.29.1+ 行为 → covered/deferred）+ Tier1/Tier2 用例表。
+**与 docs/test-ledger/ 解耦**（那是应用代码测试台账），但**工作流行为层覆盖 v0.12 新行为**
+（contract-builder 产 test-matrix.md、test_matrix_hash、guard test-matrix-complete）。
 
 ## 自动决策 Prompt（AUTO_DECIDE）
 
-所有阶段共用的 `--append-system-prompt`：
-
-```
-你正在无头自动化测试环境中运行 team-flow 工作流。关键规则：
-1. 当需要 AskUserQuestion 时，选择标记为「推荐」的选项。无推荐则选第一个。不要等待用户输入。
-2. 如果需要用户确认（PRD 冻结、计划确认），视为已确认并继续。
-3. 每阶段完成后更新 .team-flow/ 状态文件。
-4. 侦察模式选 Quick。首版范围选 P0 全量。
-5. 敏感信息用 ${PLACEHOLDER} 替换。
-状态恢复：先读 .team-flow/registry.yaml 和 orchestrator.yaml，从当前阶段的下一步继续。
-```
+所有 Tier2 阶段共用 `--append-system-prompt`（实现见 `tests/e2e/helpers/prompts.mjs`）：
+AskUserQuestion 选「推荐」（无推荐选第一个）；用户确认（PRD 冻结/DP-A/DP-3）视为已确认；
+侦察选 Quick；敏感信息用 `${PLACEHOLDER}`；阻断记 feedback 并绕过；结尾标注 `FINAL VERDICT`；
+状态恢复先读 `.team-flow/registry.yaml` + `orchestrator.yaml` 从当前阶段续跑。
 
 ## 已知限制
 
-| 限制 | 说明 | 解决方案 |
-|------|------|---------|
-| ce-brainstorm 停在方案选择 | 多轮交互 skill 在 -p 模式下阻断 | `--resume` 接续 |
-| S3 grounding 耗时 | verify-before-claiming 导致 ~9min 代码扫描 | 对已有 baseline 的项目可跳过 |
-| S4 可能跳过审计 | 无头 Claude 标注 skipped-plan-inline | 测试后检查 split_audit 字段 |
-| change 目录位置 | 无头 Claude 可能误放 .team-flow/changes/ | 验证时检查 changes/ 而非 .team-flow/changes/ |
-
-## 递归进化自动化（评估结论）
-
-详见 `references/recursive-evolution.md`。
+| 限制 | 说明 | 处理 |
+|------|------|------|
+| `--verbose` 硬前置 | print 模式 stream-json 必须带 `--verbose`，否则 CLI 拒绝启动 | runner 已强制带（旧 bash 脚本 7 处漏写，已废弃） |
+| guard/validate 依赖 dist | schema-valid 维度 + tf validate 需 `dist/index.js` | 确保已构建（dist 已随仓库提交） |
+| DP-0/DP-A 人工门 | 无头靠自动确认，测的是门控机制触发而非人的判断 | 断言状态字段落盘，不断判断质量 |
+| 实事求是/串行/SendMessage 复用 | LLM 行为，概率性 | 弱信号/时序/dispatch 计数断言，非确定性硬断言 |
+| Tier2 依赖活环境 | 需 claude + 基线归档 + 插件已更新 | opt-in local-only，不进 CI |
 
 ## Guardrails
 
-- **不修改源代码**：测试只产出文档和状态文件，不修改目标项目的源代码
-- **清理优先**：每次测试前清理 .team-flow/ 状态，避免残留干扰
-- **超时保护**：每阶段设置 `--max-turns`（建议 30）防止无限循环
-- **输出归档**：所有 JSON 输出保存到 `$OUTPUT_DIR/`，便于事后分析
+- **零污染**：测试只在解压副本上跑，绝不直接修改活工作区 vrm4teamflow。
+- **安全边界**：`--dangerously-skip-permissions` 仅在隔离副本内使用，绝不对真实项目跑。
+- **清理 best-effort**：临时副本清理失败不掩盖用例真实断言结果。
 
-## Success Output
+## 历史脚本（已废弃）
 
-测试完成后输出：
-1. 各阶段通过/失败状态表
-2. 产出物清单（文件路径 + 大小）
-3. 发现的问题清单（可直接转为 workflow-feedback 或 CLAUDE.md 待办）
-4. 耗时统计（每阶段 duration_ms）
+`tests/headless-test-v0.16.0.sh` / `tests/headless-staged-v0.16.0.sh` 是 v0.16.0 时代的 bash 原型
+（仅产品级 happy path、grep 断言、`|| true` 吞失败、无隔离、`--verbose` 漏写），已被本 node runner
+取代，仅作历史参考。递归进化评估见 `references/recursive-evolution.md`。

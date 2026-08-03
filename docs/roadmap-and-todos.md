@@ -35,7 +35,8 @@
 
 | 版本      | 里程碑                 | 核心内容                                                                                                                                                          | 状态                    |
 | ------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- |
-| v0.31.0 | **测试矩阵驱动开发**        | 测试矩阵驱动开发流程 + 测试复利闭环（设计增强方案 v0.12）：① test-strategy skill（10+1 种 design_method + 分层策略 + 对抗验证 + 复杂度分级）② test-matrix.md 产物（12 列字段 + 候选覆盖台账 + 对抗验证段）③ docs/test-ledger/ 全局测试台账 + tf test-merge 复利回写 ④ build-executor/code-reviewer/release-archivist 改造 ⑤ guard test-matrix-complete + 豁免策略 ⑥ glaf4-tests 对接方案；来源：LT 审查（2026-08-01）+ glaf4-tests 插件 + S03 单元测试课程 + 三方评审 | 🔲 设计完成（v0.12），待实施 |
+| v0.31.0 | **测试矩阵驱动开发**        | 测试矩阵驱动开发流程 + 测试复利闭环（设计增强方案 v0.12）：① test-strategy skill（10+1 种 design_method + 分层策略 + 对抗验证 + 复杂度分级）② test-matrix.md 产物（12 列字段 + 候选覆盖台账 + 对抗验证段）③ docs/test-ledger/ 全局测试台账 + tf test-merge 复利回写 ④ build-executor/code-reviewer/release-archivist 改造 ⑤ guard test-matrix-complete + 豁免策略 ⑥ glaf4-tests 对接方案；来源：LT 审查（2026-08-01）+ glaf4-tests 插件 + S03 单元测试课程 + 三方评审 | ✅ 2026-08-01（发布当日 C1-domain-policy 事件暴露门禁三重绕过 → v0.32.1 硬化，见 v0.13） |
+| v0.32.1 | **测试门禁硬化**          | C1-domain-policy 事件修复（设计增强方案 v0.13 §47-§53）：① 豁免键修正 schema_version（init 打戳，删除内容型豁免 + hash null 短路）② 门禁前移 test-matrix-ready（approved-for-build→executing）③ tests-passing 程序化（tf test record + 证据落盘 + 关闭手工通道 + dp_6 去证据化）④ review 硬化（禁 base==head + receipt 测试统计）⑤ SOP 批次（contract-builder 矩阵 MUST + release-archivist 零测试条款 + 路由归位）⑥ doctor/validate 巡检扩展；来源：C1 事件四方证据验证 + LT 四项决策（2026-08-03） | ✅ 2026-08-03（0.32.0 打包事故撤回，版本号不可复用，以 0.32.1 重发） |
 | v1.0.0  | **成熟版**             | ① 触发词去重（分层触发域，方案C） ② PreToolUse hook 执行期状态守护 ③ "ce-" 前缀正名（保留+文档化，方案C） ④ 设计增强方案 v1.0 全量定稿 ⑤ orchestrator 设计优化（反馈环路+增量入口） | 🔲 进行中（①②③已完成，④⑤待实施；⑥身份统一提前至 v0.23.0 ✅） |
 | v0.16.0+ | **原型生成体系升级**       | 学习 open-design 方法论，升级 prototype 设计能力。研究 ✅ v0.17.0；Wave 1+2 ✅ v0.18.0（合并实施）；Wave 3 待反馈决策 | ✅ Wave 1+2 已完成 |
 | v1.x    | **项目级差异化配置**       | 工作流编排 + 原型设计系统支持项目级差异化配置；配置优先级：项目级 > plugin 内置默认 | 🔲 规划中 |
@@ -86,12 +87,17 @@
 | P1-30 | 子代理实事求是原则：reviewer 建议先查代码验证，存疑据实反馈主代理 | ✅ 2026-08-01 | v0.30.0 | 来源：workflow-feedback 2026-08-01（#100002） |
 | P1-31 | workflow-start 四步协议修复→审查严格串行 + 并行白名单 + 三步/四步表述修正 | ✅ 2026-08-01 | v0.30.0 | 来源：workflow-feedback 2026-08-01（#100003） |
 | P1-32 | tf isolate 重构为多仓库工作区 .worktrees/<change>/<repo>（Case A/B 布局识别） | ✅ 2026-08-01 | v0.30.0 | 来源：workflow-feedback 2026-08-01（#100009） |
-| P1-33 | 新增 `skills/test-strategy/SKILL.md` + references/（10+1 种 design_method + 分层策略 + 对抗验证 + 复杂度分级） | 🔲 待实施 | v0.31.0 | 来源：v0.12 §41 |
-| P1-34 | spec-writer SKILL.md 增加 Unit/Integration 可选标签（测试矩阵上游输入） | 🔲 待实施 | v0.31.0 | 来源：v0.12 §44.1 |
-| P1-35 | build-executor implementer-prompt.md 增强：按矩阵 TDD + 五步闭环 + 两不原则 | 🔲 待实施 | v0.31.0 | 来源：v0.12 §44.2 |
-| P1-36 | code-reviewer SKILL.md + prompt 增强：Test Matrix Compliance 审查维度 | 🔲 待实施 | v0.31.0 | 来源：v0.12 §44.3 |
-| P1-37 | release-archivist SKILL.md 增加 Step 2b Test Matrix Reconciliation（条件触发） | 🔲 待实施 | v0.31.0 | 来源：v0.12 §44.4 |
-| P1-38 | build-executor agents 声明 `skills: [build-executor, test-strategy]` 预加载 | 🔲 待实施 | v0.31.0 | 来源：v0.12 §41.3 |
+| P1-33 | 新增 `skills/test-strategy/SKILL.md` + references/（10+1 种 design_method + 分层策略 + 对抗验证 + 复杂度分级） | ✅ v0.31.0（2026-08-01） | v0.31.0 | 来源：v0.12 §41 |
+| P1-34 | spec-writer SKILL.md 增加 Unit/Integration 可选标签（测试矩阵上游输入） | ✅ v0.31.0（2026-08-01） | v0.31.0 | 来源：v0.12 §44.1 |
+| P1-35 | build-executor implementer-prompt.md 增强：按矩阵 TDD + 五步闭环 + 两不原则 | ✅ v0.31.0（2026-08-01） | v0.31.0 | 来源：v0.12 §44.2 |
+| P1-36 | code-reviewer SKILL.md + prompt 增强：Test Matrix Compliance 审查维度 | ✅ v0.31.0（2026-08-01） | v0.31.0 | 来源：v0.12 §44.3 |
+| P1-37 | release-archivist SKILL.md 增加 Step 2b Test Matrix Reconciliation（条件触发） | ✅ v0.31.0（2026-08-01） | v0.31.0 | 来源：v0.12 §44.4 |
+| P1-38 | build-executor agents 声明 `skills: [build-executor, test-strategy]` 预加载 | ✅ v0.31.0（2026-08-01） | v0.31.0 | 来源：v0.12 §41.3 |
+| P1-39 | 豁免键修正：state init 打戳 `schema_version`（仅 change 创建时；rebuild/set 禁追加、不进 SETTABLE_FIELDS）+ `test_matrix_skip_reason`/`test_evidence_path` 字段 | ✅ v0.32.1（2026-08-03） | v0.32.0 | 来源：v0.13 §48.1；LT 决策 2026-08-03 |
+| P1-40 | test-matrix-complete 重构：legacy/skip 双豁免 + 删除内容型豁免 + 删除 hash null 短路 + skip 必附理由 + 共享豁免模块 test-gate-exemptions.mjs | ✅ v0.32.1（2026-08-03） | v0.32.0 | 来源：v0.13 §48.2-48.4 |
+| P1-41 | test-matrix-ready 新增：full approved-for-build→executing 门禁前移（矩阵存在非空 OR 显式 skip；hotfix/tweak 豁免） | ✅ v0.32.1（2026-08-03） | v0.32.0 | 来源：v0.13 §49；LT 决策 2026-08-03 |
+| P1-42 | 新增 `tf test record` 命令：maven-surefire（含 XML 目录）/jest/pytest 解析器 + auto 识别 + 证据落盘 `.superpowers/test-evidence/` + 无手工通道 | ✅ v0.32.1（2026-08-03） | v0.32.0 | 来源：v0.13 §50.1；LT 决策"一步到位程序化" |
+| P1-43 | tests-passing 重构：结构化 test_result 解析（recorded-by=tf-test-record）+ dp_6_result 去证据化（BUG-A 通道仅存量保留）+ total=0 空真拒绝 + 证据文件存在性校验 | ✅ v0.32.1（2026-08-03） | v0.32.0 | 来源：v0.13 §50.2 |
 
 ### P2（改善，按节奏推进）
 
@@ -117,14 +123,20 @@
 | P2-22 | Agent color 无效值修复：`cross-change-consistency-checker` 和 `prototype-builder` 使用了 `orange`（不在有效颜色列表 blue/cyan/green/yellow/magenta/red 中），改为 `yellow` 或 `red` | ✅ 2026-08-01 | v0.30.0 | cross-change-consistency-checker orange→red（prototype-builder 已是 green，横展确认 agents/ 仅此一处）；来源：v0.28.0 plugin-validator |
 | P2-23 | 子代理 state 禁写红线横展 5 skill + 5 agent + CLI 纵深防御（writeState 校验 + doctor 巡检） | ✅ 2026-08-01 | v0.30.0 | 来源：workflow-feedback 2026-08-01（#100004） |
 | P2-24 | tf state transition 错误提示升级 + 绝对路径一致性（path.resolve）+ VALID_STATES 抽共享 | ✅ 2026-08-01 | v0.30.0 | 来源：workflow-feedback 2026-08-01（#100005） |
-| P2-26 | validator 补 WHEN/THEN 结构校验（B4 降级：需专项夹具防回归） | 🔲 待实施 | v0.31.0 | 来源：v0.30.0 §39.2 降级项 |
-| P2-27 | 定义 test-matrix.md 格式规范（12 列 + schema 强制覆盖 + 对抗验证段） | 🔲 待实施 | v0.31.0 | 来源：v0.12 §42 |
-| P2-28 | contract-builder SKILL.md 改造：生成 test-matrix.md 附属产物 + 注入 test-ledger baselines | 🔲 待实施 | v0.31.0 | 来源：v0.12 §42 + §43.5 |
-| P2-29 | hash.mjs 新增 computeTestMatrixHash + state-loader 新增 test_matrix_hash / test_matrix_skipped 字段 | 🔲 待实施 | v0.31.0 | 来源：v0.12 §42.5 + §45.4 |
-| P2-30 | scripts/guard/checks/test-matrix-complete.mjs 新增 + guard.mjs 矩阵更新 + 豁免策略（tweak/hotfix/显式跳过/存量兼容） | 🔲 待实施 | v0.31.0 | 来源：v0.12 §45 |
-| P2-31 | scripts/lib/test-merge.mjs 新增（6 步流程 + 三方合并 + INDEX 重写） | 🔲 待实施 | v0.31.0 | 来源：v0.12 §43.3 |
-| P2-32 | docs/test-ledger/ 目录结构定义 + INDEX.md / baselines/ / patterns/ / changelog/ 格式规范 | 🔲 待实施 | v0.31.0 | 来源：v0.12 §43.1-43.2 |
-| P2-33 | test-ledger 注入机制：contract-builder + S1 路由 | 🔲 待实施 | v0.31.0 | 来源：v0.12 §43.5 |
+| P2-26 | validator 补 WHEN/THEN 结构校验（B4 降级：需专项夹具防回归） | 🔲 待实施 | v0.32.0+ | 来源：v0.30.0 §39.2 降级项（v0.31.0 未实施，顺延） |
+| P2-27 | 定义 test-matrix.md 格式规范（12 列 + schema 强制覆盖 + 对抗验证段） | ✅ v0.31.0（2026-08-01） | v0.31.0 | 来源：v0.12 §42 |
+| P2-28 | contract-builder SKILL.md 改造：生成 test-matrix.md 附属产物 + 注入 test-ledger baselines | ✅ v0.31.0（2026-08-01） | v0.31.0 | 来源：v0.12 §42 + §43.5 |
+| P2-29 | hash.mjs 新增 computeTestMatrixHash + state-loader 新增 test_matrix_hash / test_matrix_skipped 字段 | ✅ v0.31.0（2026-08-01） | v0.31.0 | 来源：v0.12 §42.5 + §45.4 |
+| P2-30 | scripts/guard/checks/test-matrix-complete.mjs 新增 + guard.mjs 矩阵更新 + 豁免策略（tweak/hotfix/显式跳过/存量兼容） | ✅ v0.31.0（2026-08-01） | v0.31.0 | 来源：v0.12 §45 |
+| P2-31 | scripts/lib/test-merge.mjs 新增（6 步流程 + 三方合并 + INDEX 重写） | ✅ v0.31.0（2026-08-01） | v0.31.0 | 来源：v0.12 §43.3 |
+| P2-32 | docs/test-ledger/ 目录结构定义 + INDEX.md / baselines/ / patterns/ / changelog/ 格式规范 | ✅ v0.31.0（2026-08-01） | v0.31.0 | 来源：v0.12 §43.1-43.2 |
+| P2-33 | test-ledger 注入机制：contract-builder + S1 路由 | ✅ v0.31.0（2026-08-01） | v0.31.0 | 来源：v0.12 §43.5 |
+| P2-34 | execution review 硬化：base≠head（禁空 diff review）+ receipt tests 统计字段（--tests-total/passed/failed） | ✅ v0.32.1（2026-08-03） | v0.32.0 | 来源：v0.13 §51 |
+| P2-35 | 矩阵 hash 接线：contract-builder SOP 生成后必跑 tf state rebuild + tf validate 矩阵 hash 漂移警告 + 双向互锁（段↔文件） | ✅ v0.32.1（2026-08-03） | v0.32.0 | 来源：v0.13 §51.3 + §52 B1 |
+| P2-36 | contract-builder：agent 补 test-strategy 预加载（修复预加载断点）+ 矩阵生成 MUST 化 + skip 必附理由 | ✅ v0.32.1（2026-08-03） | v0.32.0 | 来源：v0.13 §52 B1 |
+| P2-37 | release-archivist：零测试条款（0 tests ≠ PASS）+ tf test record 对接 + Step 2b 非 legacy FAIL + dp_6 去证据化说明 | ✅ v0.32.1（2026-08-03） | v0.32.0 | 来源：v0.13 §52 B2 |
+| P2-38 | workflow-start：glaf4-tests 路由归位（触发主体=contract-builder）+ 入口门禁前移引导 + build-executor 返回验证补测试文件检查 | ✅ v0.32.1（2026-08-03） | v0.32.0 | 来源：v0.13 §52 B3 |
+| P2-39 | doctor 巡检扩展：skip_reason 配对 + 产物引用完整性（arch_review_report/test_evidence_path）；checkChangeTestGates | ✅ v0.32.1（2026-08-03） | v0.32.0 | 来源：v0.13 §52 B4 |
 
 ### P3（低优先级，时机成熟再做）
 
@@ -135,5 +147,8 @@
 | P3-3 | ce-brainstorm 无头模式兼容：headless 检测 + 自动选推荐 | 🔲 待实施 | v1.0.0+ | 来源：v0.16.0 无头测试 |
 | P3-4 | S3 ce-plan grounding 性能：增量 grounding | 🔲 待实施 | v1.0.0+ | 来源：v0.16.0 无头测试 |
 | P3-5 | 统一子代理结果传递协议（FINAL VERDICT + SendMessage 权威结果） | ✅ 2026-08-01 | v0.30.0 | 来源：workflow-feedback 2026-08-01（#100008） |
-| P3-6 | scripts/lib/test-matrix-export.mjs（glaf4 格式转换） | 🔲 待实施 | v0.31.0 | 来源：v0.12 §46.1 |
-| P3-7 | routing-rules.md 新增 glaf4-tests 路由段 | 🔲 待实施 | v0.31.0 | 来源：v0.12 §46.2 |
+| P3-6 | scripts/lib/test-matrix-export.mjs（glaf4 格式转换） | ✅ v0.31.0（2026-08-01） | v0.31.0 | 来源：v0.12 §46.1 |
+| P3-7 | routing-rules.md 新增 glaf4-tests 路由段 | ✅ v0.31.0（2026-08-01） | v0.31.0 | 来源：v0.12 §46.2 |
+| P3-9 | 报告生成纪律：LLM 重构报告必须现场核对（session-handoff Guardrail #6） | ✅ v0.32.1（2026-08-03） | v0.32.0 | 来源：v0.13 §52 B5；C1 报告 10+ 处失真教训 |
+| P3-10 | exploring→specifying 门禁时序优化（先产物后转换的引导或门禁语义调整） | 🔲 待实施 | v0.32.0+ | 来源：v0.13 待办表；C1 报告问题 #5 |
+| P3-11 | 存量超限 SKILL.md 渐进式披露收敛（release-archivist 223 / workflow-start 213 等 10 个 >150 行文件，细节移入 references/） | 🔲 待实施 | v0.32.0+ | 来源：v0.32.0 P3 验证 plugin-validator/skill-reviewer（既有债务，非 v0.32.0 引入） |
