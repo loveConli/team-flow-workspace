@@ -37,7 +37,7 @@
 | ------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- |
 | v0.31.0 | **测试矩阵驱动开发**        | 测试矩阵驱动开发流程 + 测试复利闭环（设计增强方案 v0.12）：① test-strategy skill（10+1 种 design_method + 分层策略 + 对抗验证 + 复杂度分级）② test-matrix.md 产物（12 列字段 + 候选覆盖台账 + 对抗验证段）③ docs/test-ledger/ 全局测试台账 + tf test-merge 复利回写 ④ build-executor/code-reviewer/release-archivist 改造 ⑤ guard test-matrix-complete + 豁免策略 ⑥ glaf4-tests 对接方案；来源：LT 审查（2026-08-01）+ glaf4-tests 插件 + S03 单元测试课程 + 三方评审 | ✅ 2026-08-01（发布当日 C1-domain-policy 事件暴露门禁三重绕过 → v0.32.1 硬化，见 v0.13） |
 | v0.32.1 | **测试门禁硬化**          | C1-domain-policy 事件修复（设计增强方案 v0.13 §47-§53）：① 豁免键修正 schema_version（init 打戳，删除内容型豁免 + hash null 短路）② 门禁前移 test-matrix-ready（approved-for-build→executing）③ tests-passing 程序化（tf test record + 证据落盘 + 关闭手工通道 + dp_6 去证据化）④ review 硬化（禁 base==head + receipt 测试统计）⑤ SOP 批次（contract-builder 矩阵 MUST + release-archivist 零测试条款 + 路由归位）⑥ doctor/validate 巡检扩展；来源：C1 事件四方证据验证 + LT 四项决策（2026-08-03） | ✅ 2026-08-03（0.32.0 打包事故撤回，版本号不可复用，以 0.32.1 重发） |
-| v0.32.2 | **工作流写入门禁修复 patch** | C1 死锁链修复三件套：① pre-tool-use-guard 路径化（change 目录内产物写入放行，目录外维持状态门禁——修复 exploring/specifying/bridging 阶段产物写入被误伤、被迫 Bash 绕过的问题）② exploring→specifying 移除 artifacts-exist（P3-10，产物齐全性由 specifying→bridging 独家负责）③ hooks/session-start PLUGIN_VERSION 纳入 team-flow.mjs version 自动同步（消除每次发版手工修 hook 的中断）；来源：C1 事件死锁链复盘 + LT 决策（2026-08-03） | 🔲 待实施 |
+| v0.32.2 | **工作流写入门禁修复 patch** | C1 死锁链修复三件套：① pre-tool-use-guard 路径化（change 目录内产物写入放行，目录外维持状态门禁——修复 exploring/specifying/bridging 阶段产物写入被误伤、被迫 Bash 绕过的问题）② exploring→specifying 移除 artifacts-exist（P3-10，产物齐全性由 specifying→bridging 独家负责）③ hooks/session-start PLUGIN_VERSION 纳入 team-flow.mjs version 自动同步（消除每次发版手工修 hook 的中断）；来源：C1 事件死锁链复盘 + LT 决策（2026-08-03） | ✅ 2026-08-03 |
 | v1.0.0  | **成熟版**             | ① 触发词去重（分层触发域，方案C） ② PreToolUse hook 执行期状态守护 ③ "ce-" 前缀正名（保留+文档化，方案C） ④ 设计增强方案 v1.0 全量定稿 ⑤ orchestrator 设计优化（反馈环路+增量入口） | 🔲 进行中（①②③已完成，④⑤待实施；⑥身份统一提前至 v0.23.0 ✅） |
 | v0.16.0+ | **原型生成体系升级**       | 学习 open-design 方法论，升级 prototype 设计能力。研究 ✅ v0.17.0；Wave 1+2 ✅ v0.18.0（合并实施）；Wave 3 待反馈决策 | ✅ Wave 1+2 已完成 |
 | v1.x    | **项目级差异化配置**       | 工作流编排 + 原型设计系统支持项目级差异化配置；配置优先级：项目级 > plugin 内置默认 | 🔲 规划中 |
@@ -99,7 +99,7 @@
 | P1-41 | test-matrix-ready 新增：full approved-for-build→executing 门禁前移（矩阵存在非空 OR 显式 skip；hotfix/tweak 豁免） | ✅ v0.32.1（2026-08-03） | v0.32.0 | 来源：v0.13 §49；LT 决策 2026-08-03 |
 | P1-42 | 新增 `tf test record` 命令：maven-surefire（含 XML 目录）/jest/pytest 解析器 + auto 识别 + 证据落盘 `.superpowers/test-evidence/` + 无手工通道 | ✅ v0.32.1（2026-08-03） | v0.32.0 | 来源：v0.13 §50.1；LT 决策"一步到位程序化" |
 | P1-43 | tests-passing 重构：结构化 test_result 解析（recorded-by=tf-test-record）+ dp_6_result 去证据化（BUG-A 通道仅存量保留）+ total=0 空真拒绝 + 证据文件存在性校验 | ✅ v0.32.1（2026-08-03） | v0.32.0 | 来源：v0.13 §50.2 |
-| P1-44 | pre-tool-use-guard 路径化改造：写入目标在 change 目录内（产物区：architecture/、specs/、proposal/design/tasks/contract/matrix 等）→ 放行；change 目录外（代码区）→ 维持状态门禁（仅 approved-for-build/executing/debugging 放行）。修复 exploring/specifying/bridging 阶段产物写入被一刀切拦截、LLM 被迫 Bash 绕过（写入彻底脱管）的死锁；与 P3-10 联动解除 C1 死锁链 | 🔲 待实施 | v0.32.2 | 来源：C1 死锁链复盘（hook L105-116 状态一刀切误伤产物写入）+ LT 决策（2026-08-03） |
+| P1-44 | pre-tool-use-guard 路径化改造：写入目标在 change 目录内（产物区：architecture/、specs/、proposal/design/tasks/contract/matrix 等）→ 放行；change 目录外（代码区）→ 维持状态门禁（仅 approved-for-build/executing/debugging 放行）。修复 exploring/specifying/bridging 阶段产物写入被一刀切拦截、LLM 被迫 Bash 绕过（写入彻底脱管）的死锁；与 P3-10 联动解除 C1 死锁链 | ✅ v0.32.2（2026-08-03） | v0.32.2 | 来源：C1 死锁链复盘（hook L105-116 状态一刀切误伤产物写入）+ LT 决策（2026-08-03） |
 
 ### P2（改善，按节奏推进）
 
@@ -139,7 +139,7 @@
 | P2-37 | release-archivist：零测试条款（0 tests ≠ PASS）+ tf test record 对接 + Step 2b 非 legacy FAIL + dp_6 去证据化说明 | ✅ v0.32.1（2026-08-03） | v0.32.0 | 来源：v0.13 §52 B2 |
 | P2-38 | workflow-start：glaf4-tests 路由归位（触发主体=contract-builder）+ 入口门禁前移引导 + build-executor 返回验证补测试文件检查 | ✅ v0.32.1（2026-08-03） | v0.32.0 | 来源：v0.13 §52 B3 |
 | P2-39 | doctor 巡检扩展：skip_reason 配对 + 产物引用完整性（arch_review_report/test_evidence_path）；checkChangeTestGates | ✅ v0.32.1（2026-08-03） | v0.32.0 | 来源：v0.13 §52 B4 |
-| P2-40 | hooks/session-start 的 PLUGIN_VERSION 纳入 `team-flow.mjs version` 自动同步范围（或 check-version-consistency --fix 支持）：消除每次发版 npm version 脚本链必中断、手工 sed 修 hook 的重复踩坑（v0.27.1/v0.27.2/v0.32.0/v0.32.1 四次实证） | 🔲 待实施 | v0.32.2 | 来源：v0.32.0/v0.32.1 升版事故复盘 + LT 决策（2026-08-03） |
+| P2-40 | hooks/session-start 的 PLUGIN_VERSION 纳入 `team-flow.mjs version` 自动同步范围（或 check-version-consistency --fix 支持）：消除每次发版 npm version 脚本链必中断、手工 sed 修 hook 的重复踩坑（v0.27.1/v0.27.2/v0.32.0/v0.32.1 四次实证） | ✅ v0.32.2（2026-08-03） | v0.32.2 | 来源：v0.32.0/v0.32.1 升版事故复盘 + LT 决策（2026-08-03）；附带修复 major 硬编码为 0 缺陷 |
 
 ### P3（低优先级，时机成熟再做）
 
@@ -153,5 +153,5 @@
 | P3-6 | scripts/lib/test-matrix-export.mjs（glaf4 格式转换） | ✅ v0.31.0（2026-08-01） | v0.31.0 | 来源：v0.12 §46.1 |
 | P3-7 | routing-rules.md 新增 glaf4-tests 路由段 | ✅ v0.31.0（2026-08-01） | v0.31.0 | 来源：v0.12 §46.2 |
 | P3-9 | 报告生成纪律：LLM 重构报告必须现场核对（session-handoff Guardrail #6） | ✅ v0.32.1（2026-08-03） | v0.32.0 | 来源：v0.13 §52 B5；C1 报告 10+ 处失真教训 |
-| P3-10 | exploring→specifying 门禁时序修复：`exploring:specifying` 移除 `artifacts-exist` 维度（产物齐全性由 `specifying:bridging` 独家负责，该维度本就挂着）——消除"先转换被拦、先产物没转换"的鸡生蛋；与 P1-44 联动解除 C1 死锁链（环2） | 🔲 待实施 | v0.32.2 | 来源：v0.13 待办表；C1 报告问题 #5 + 死锁链复盘；LT 确认方案 A（2026-08-03） |
+| P3-10 | exploring→specifying 门禁时序修复：`exploring:specifying` 移除 `artifacts-exist` 维度（产物齐全性由 `specifying:bridging` 独家负责，该维度本就挂着）——消除"先转换被拦、先产物没转换"的鸡生蛋；与 P1-44 联动解除 C1 死锁链（环2） | ✅ v0.32.2（2026-08-03） | v0.32.2 | 来源：v0.13 待办表；C1 报告问题 #5 + 死锁链复盘；LT 确认方案 A（2026-08-03） |
 | P3-11 | ~~存量超限 SKILL.md 渐进式披露收敛~~ | 🗑️ 不执行 | — | LT 决策 2026-08-03：不需要执行（存量超限非功能问题，接受现状） |
