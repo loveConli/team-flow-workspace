@@ -386,6 +386,127 @@ C1 补救流程（vrm4teamflow 工作区，2026-08-03）发现：dispatch `team-
 - **静默降级是最危险的失效模式**：无警告、无报错、流程全绿，缺陷存活了整个插件生命周期。门禁要校验"产物有效性"，不能只校验"产物存在性"
 - **LLM 内省探针有假阴性**：精确字符串匹配的内省不可靠（前两轮探针误判"正文未注入"），行为探针（问规则语义、要求复述独有规则）才是可靠方法
 
+## 五十五、测试能力增强：conventions 机制 + glaf4-test 通用能力吸收（v0.34.0）
+
+### 55.1 背景
+
+team-flow 当前的测试能力（test-strategy、build-executor TDD 铁律、test-matrix 机制、guard 门禁）已形成完整闭环，但存在两个缺口：
+
+1. **组合覆盖声明缺失**：glaf4-test 有 `combination_coverage` 机制（pairwise/branch），team-flow 无对应设计
+2. **测试质量规则缺失**：glaf4-test 有 ~50 条生成后质量扫描规则，team-flow 无对应参考
+3. **conventions 机制缺失**：Java 项目的测试规范（JUnit 5 + Mockito、Spring Boot 测试模式）没有标准化注入通道
+
+### 55.2 设计决策
+
+**核心原则**：TDD 纪律必须在 team-flow 的编排层（build-executor）自行保障，不能委托给 glaf4-test。
+
+**理由**：glaf4-test 的 TDD 实现存在架构级差距：
+- RED 是声明式的（声明 `expected_red`，不实际运行测试看到失败）
+- REFACTOR 完全缺失
+- 多 Worker 架构割裂 TDD 紧凑循环
+- validate 不检查 TDD 执行顺序
+
+**职责划分**：
+
+| 能力 | 负责方 | 理由 |
+|------|--------|------|
+| TDD 执行（RED→GREEN→REFACTOR） | team-flow build-executor | 必须保持紧凑循环 |
+| 测试设计（test-matrix 生成） | team-flow contract-builder | 通用方法论，已对齐 |
+| 测试代码生成 | team-flow implementer 子代理 | 通过 conventions 注入技术栈规范 |
+| 测试验证 | team-flow tf test record | 通用 runner 支持 |
+
+### 55.3 能力吸收策略
+
+**可吸收（通用能力）**：
+
+| 优先级 | 能力 | 来源 | 收益 |
+|--------|------|------|------|
+| P0 | 组合覆盖声明 | glaf4-test combination_coverage | 填补覆盖盲区 |
+| P1 | 测试质量规则（16 条通用） | glaf4-test scan-generated-tests.py | 提升审查质量 |
+| P1 | failure 分类法（6 类） | glaf4-test analyze-surefire-failures.py | 结构化诊断 |
+| P2 | 社交测试契约 | glaf4-test social-test-contracts.md | 集成测试方法论 |
+| P2 | 测试隔离分级 | glaf4-test h2-rabbitmq-redis.md | 隔离策略分层 |
+
+**不可吸收（Java 专用）**：
+- test_kind 12 枚举 → 通过 test-matrix-export.mjs 桥接
+- MockMvc/H2/Redis/RabbitMQ 测试模式 → 通过 conventions 注入
+- Spring 合同检查 → 通过 glaf4-test 外部管线路由
+- GLAF4 框架契约 → 通过 glaf4-test 外部管线路由
+
+### 55.4 conventions 机制设计
+
+**核心原则**：
+1. plugin 内置默认 conventions（符合 glaf4-test 要求）
+2. 版本化管理（conventions 带版本号，支持更新检查）
+3. 分层设计（默认层 + 项目层）
+4. 更新通知（team-flow 更新时检查 conventions 版本）
+
+**目录结构**：
+```
+team-flow/
+├── templates/conventions/                    # plugin 内置模板
+│   ├── _manifest.json                        # 模板清单
+│   ├── glaf4-compliant/
+│   │   ├── java-testing.md                   # Java 测试规范（glaf4-test 兼容）
+│   │   └── spring-patterns.md                # Spring Boot 测试规范（glaf4-test 兼容）
+│   ├── js-testing.md                         # JavaScript 测试规范
+│   └── python-testing.md                     # Python 测试规范
+
+项目根目录/
+├── .team-flow/
+│   ├── conventions/                          # 项目 conventions（从 plugin 复制，可自定义）
+│   │   ├── java-testing.md
+│   │   ├── spring-patterns.md
+│   │   └── .versions.json                    # 版本信息
+│   └── team-flow.config.json                 # conventions 路径映射
+```
+
+**生成时机**：workflow-bootstrap B1.5 阶段（新增）
+- 存量项目：自动识别技术栈，生成 conventions
+- 全新项目：交互式引导用户选择技术栈，生成 conventions + 项目骨架
+
+**更新机制**：
+- workflow-start S1 阶段检查 conventions 版本
+- 比较 plugin 内置版本与项目版本
+- 提示用户更新（支持合并/覆盖/保持三种选项）
+
+### 55.5 产出清单
+
+**新增文件**：
+- `templates/conventions/_manifest.json` — 模板清单
+- `templates/conventions/glaf4-compliant/java-testing.md` — Java 测试规范（glaf4-test 兼容）
+- `templates/conventions/glaf4-compliant/spring-patterns.md` — Spring Boot 测试规范（glaf4-test 兼容）
+- `templates/conventions/js-testing.md` — JavaScript 测试规范
+- `templates/conventions/python-testing.md` — Python 测试规范
+- `scripts/lib/conventions-generator.mjs` — conventions 生成器脚本
+- `tests/lib/conventions-generator.test.mjs` — 测试文件（15 个测试）
+- `skills/test-strategy/references/test-quality-rules.md` — 16 条通用规则
+- `skills/test-strategy/references/integration-test-contracts.md` — 5 种契约类型
+- `skills/test-strategy/references/integration-test-isolation.md` — 4 级隔离策略
+
+**修改文件**：
+- `skills/test-strategy/SKILL.md` — 增加 §8 组合覆盖声明
+- `scripts/lib/test-record.mjs` — 增加 classifyFailure 函数（6 类失败分类）
+- `skills/workflow-bootstrap/SKILL.md` — 增加 B1.5 阶段（Conventions Generator）
+
+### 55.6 与 glaf4-test 的关系
+
+**集成点**：
+- `test-matrix-export.mjs`：将 glaf4-test 的 test-matrix.json 转换为 team-flow 的 test-matrix.md
+- conventions 注入：Java 项目的测试规范通过 conventions 注入到 implementer 子代理
+- 外部管线路由：存量 Java 项目的测试补全可路由到 glaf4-test 的完整流水线
+
+**不集成的部分**：
+- TDD 执行：由 team-flow build-executor 保障
+- test_kind 12 枚举：通过桥接脚本转换
+- GLAF4 框架专用规范：不纳入 team-flow
+
+### 55.7 验证
+
+- **测试**：571/571 通过（含 15 个新增 conventions-generator 测试）
+- **版本一致性**：check-versions ✅
+- **npm 发布**：@xulthekl/team-flow@0.34.0 ✅
+
 ---
 
 ## 待办列表（v0.32.0+ 新增）
@@ -410,6 +531,13 @@ C1 补救流程（vrm4teamflow 工作区，2026-08-03）发现：dispatch `team-
 | P1-45 | §54 frontmatter YAML 合法性事件设计写回 | ✅ v0.33.0（2026-08-03） | v0.33.0 | §54 |
 | P2-41 | 15 agent description 单句化（删 `<example>`）+ e2e/test-strategy SKILL.md frontmatter 修复，恢复 skills: 注入 | ✅ v0.33.0（2026-08-03） | v0.33.0 | §54.5 |
 | P3-12 | frontmatter-lint 长效门禁（js-yaml 严格解析 + 必填字段 + skills 引用解析，进 npm test） | ✅ v0.33.0（2026-08-03） | v0.33.0 | §54.5 |
+| P0-10 | 组合覆盖声明（test-strategy §8：pairwise/branch 声明 + 对账规则） | ✅ v0.34.0（2026-08-04） | v0.34.0 | §55.3 |
+| P1-46 | 测试质量规则（16 条通用规则，从 glaf4-test 抽取） | ✅ v0.34.0（2026-08-04） | v0.34.0 | §55.3 |
+| P1-47 | failure 分类法（classifyFailure：6 类失败分类） | ✅ v0.34.0（2026-08-04） | v0.34.0 | §55.3 |
+| P2-42 | 社交测试契约（5 种契约类型：入口/协作者/数据/中间件/清理） | ✅ v0.34.0（2026-08-04） | v0.34.0 | §55.3 |
+| P2-43 | 测试隔离分级（4 级隔离策略：L1 进程内/L2 事务/L3 手动清理/L4 无隔离） | ✅ v0.34.0（2026-08-04） | v0.34.0 | §55.3 |
+| P2-44 | conventions 机制（plugin 内置模板 + conventions-generator + 版本管理 + 更新检查） | ✅ v0.34.0（2026-08-04） | v0.34.0 | §55.4 |
+| P2-45 | workflow-bootstrap B1.5 阶段（Conventions Generator：存量项目自动识别 + 全新项目交互式引导） | ✅ v0.34.0（2026-08-04） | v0.34.0 | §55.4 |
 
 ## 兼容性与风险
 
@@ -420,3 +548,7 @@ C1 补救流程（vrm4teamflow 工作区，2026-08-03）发现：dispatch `team-
 | 非标 runner 项目 | 解析器注册表可扩展；当下合法出路 = 显式 skip + 理由（可审计），不提供手工自述（防 RC-2 复发） |
 | hotfix 紧急通道被门禁拖慢 | test-matrix-ready/test-matrix-complete 均不挂 hotfix/tweak（沿用 §45.3） |
 | v0.33.0 行为变更：frontmatter 修复后 tools 限制开始生效，子代理失去未声明的 MCP 工具 | 属恢复声明设计；若某 agent 确需 MCP 工具，须在其 frontmatter `tools:` 显式声明（lint 门禁保障 frontmatter 始终可解析） |
+| conventions 更新冲突：用户自定义 conventions 后 plugin 更新 | 提供合并/覆盖/保持三种选项；.versions.json 记录 customized 状态 |
+| 全新项目引导过于复杂 | 提供合理默认值（Java → Maven → JUnit 5 + Mockito → Spring Boot），减少交互步骤 |
+| glaf4-test 规范变更导致 conventions 过时 | 版本化管理 + 自动更新检查；workflow-start S1 阶段提示用户 |
+| Java 专用规则污染通用框架 | 通过 conventions 注入，不硬编码进 test-strategy；glaf4-compliant 模板独立存放 |
