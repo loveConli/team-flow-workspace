@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Coding 陪跑设计与规划方案</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            surface: {
+              DEFAULT: '#ffffff',
+              subtle: '#f9fafb',
+              elevated: '#ffffff',
+            },
+            border: {
+              DEFAULT: '#e5e7eb',
+              subtle: '#f3f4f6',
+            },
+            text: {
+              DEFAULT: '#111827',
+              secondary: '#4b5563',
+              muted: '#9ca3af',
+            },
+            primary: {
+              DEFAULT: '#0f172a',
+              hover: '#1e293b',
+              active: '#334155',
+              foreground: '#ffffff',
+            },
+            accent: {
+              DEFAULT: '#3b82f6',
+              hover: '#2563eb',
+              active: '#1d4ed8',
+            },
+            success: '#10b981',
+            warning: '#f59e0b',
+            danger: '#ef4444',
+          },
+          spacing: {
+            '18': '4.5rem',
+            '22': '5.5rem',
+          },
+          borderRadius: {
+            'sm': '4px',
+            'md': '6px',
+            'lg': '8px',
+            'xl': '12px',
+          },
+          boxShadow: {
+            'sm': '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+            'md': '0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05)',
+            'lg': '0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.05)',
+          },
+        },
+      },
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+    body {
+      font-feature-settings: 'cv11', 'ss01', 'ss03';
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    .section-title {
+      font-size: 2rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+    }
+
+    .card {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      transition: all 0.2s ease-out;
+    }
+
+    .card:hover {
+      border-color: #d1d5db;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      line-height: 1;
+    }
+
+    .badge-l1 {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .badge-l2 {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+
+    .badge-l3 {
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    .timeline-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #3b82f6;
+      position: absolute;
+      left: -6px;
+      top: 8px;
+    }
+
+    .timeline-line {
+      position: absolute;
+      left: -1px;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: linear-gradient(to bottom, #3b82f6 0%, #93c5fd 100%);
+    }
+
+    .table-container {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th {
+      background: #f9fafb;
+      font-weight: 600;
+      text-align: left;
+      padding: 0.75rem 1rem;
+      border-bottom: 2px solid #e5e7eb;
+      font-size: 0.875rem;
+      color: #4b5563;
+    }
+
+    td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid #f3f4f6;
+      font-size: 0.875rem;
+    }
+
+    tr:hover td {
+      background: #fafafa;
+    }
+
+    .code-block {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      padding: 1rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      line-height: 1.6;
+      overflow-x: auto;
+    }
+
+    .metric-card {
+      text-align: center;
+      padding: 1.5rem;
+    }
+
+    .metric-value {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: #111827;
+      line-height: 1;
+    }
+
+    .metric-label {
+      font-size: 0.875rem;
+      color: #6b7280;
+      margin-top: 0.5rem;
+    }
+
+    @media (max-width: 768px) {
+      .section-title {
+        font-size: 1.5rem;
+      }
+
+      .metric-value {
+        font-size: 2rem;
+      }
+    }
+  </style>
+</head>
+<body class="bg-surface-subtle text-text">
+
+  <!-- Header -->
+  <header class="bg-surface border-b border-border">
+    <div class="max-w-7xl mx-auto px-6 py-12">
+      <div class="mb-2">
+        <span class="text-sm font-medium text-text-muted">内部汇报材料</span>
+      </div>
+      <h1 class="text-4xl font-bold tracking-tight text-text mb-3">
+        AI Coding 陪跑设计与规划方案
+      </h1>
+      <p class="text-lg text-text-secondary max-w-3xl">
+        基于 team-flow 工作流插件，构建覆盖"需求→交付"全链路的 AI 研发方法论与质量门禁体系
+      </p>
+      <div class="mt-6 flex items-center gap-6 text-sm text-text-muted">
+        <span>版本：v1.0（草案）</span>
+        <span>日期：2026-08-04</span>
+        <span>状态：待确认</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-6 py-12 space-y-16">
+
+    <!-- Section 1: Executive Summary -->
+    <section>
+      <h2 class="section-title mb-6">核心摘要</h2>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="card p-6">
+          <div class="metric-value">v0.33.0</div>
+          <div class="metric-label">当前版本（24 skills + 15 agents）</div>
+        </div>
+        <div class="card p-6">
+          <div class="metric-value">7 周</div>
+          <div class="metric-label">试点到规模化基线周期</div>
+        </div>
+        <div class="card p-6">
+          <div class="metric-value">6 阶段</div>
+          <div class="metric-label">全链路覆盖（需求→反馈复利）</div>
+        </div>
+      </div>
+
+      <div class="mt-8 space-y-4">
+        <div class="card p-6">
+          <h3 class="font-semibold text-text mb-2">交付物成熟</h3>
+          <p class="text-sm text-text-secondary leading-relaxed">
+            team-flow v0.33.0 已覆盖"模糊需求 → 交付归档"完整研发闭环，含代码级质量门禁（状态机 / hash 校验 / 测试矩阵 / 程序化测试证据），是内部 AI Coding 主力的可行底座。
+          </p>
+        </div>
+
+        <div class="card p-6">
+          <h3 class="font-semibold text-text mb-2">策略：边迭代、边试点</h3>
+          <p class="text-sm text-text-secondary leading-relaxed">
+            试点团队当 beta 用户，feedback 反哺插件迭代；v1.0.0（10 月初）作为规模化分水岭——发布前只试点，发布后才全量推广。底层模型采用国内 API（如 DeepSeek），降低合规与网络风险。
+          </p>
+        </div>
+
+        <div class="card p-6">
+          <h3 class="font-semibold text-text mb-2">价值主张</h3>
+          <p class="text-sm text-text-secondary leading-relaxed">
+            不是引入"AI 写代码工具"，而是把团队沉淀的 AI 研发方法论 + 质量门禁复制到全公司；需求到归档的每个环节有门禁、有产物、有知识复利，质量不滑坡。
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 2: Capability Map -->
+    <section>
+      <h2 class="section-title mb-2">能力地图</h2>
+      <p class="text-sm text-text-secondary mb-6">覆盖产品研发全链路，自动化程度分 L1/L2/L3 三档</p>
+
+      <!-- Stage Flow Indicator -->
+      <div class="card p-5 mb-6">
+        <div class="flex items-center justify-between">
+          <div class="flex flex-col items-center flex-1">
+            <div class="w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-semibold mb-2">1</div>
+            <div class="text-xs text-text-secondary font-medium">需求</div>
+          </div>
+          <div class="w-8 h-px bg-gray-300 flex-shrink-0 -mt-5"></div>
+          <div class="flex flex-col items-center flex-1">
+            <div class="w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-semibold mb-2">2</div>
+            <div class="text-xs text-text-secondary font-medium">设计</div>
+          </div>
+          <div class="w-8 h-px bg-gray-300 flex-shrink-0 -mt-5"></div>
+          <div class="flex flex-col items-center flex-1">
+            <div class="w-9 h-9 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-sm font-semibold mb-2">3</div>
+            <div class="text-xs text-text-secondary font-medium">开发</div>
+          </div>
+          <div class="w-8 h-px bg-gray-300 flex-shrink-0 -mt-5"></div>
+          <div class="flex flex-col items-center flex-1">
+            <div class="w-9 h-9 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-sm font-semibold mb-2">4</div>
+            <div class="text-xs text-text-secondary font-medium">测试</div>
+          </div>
+          <div class="w-8 h-px bg-gray-300 flex-shrink-0 -mt-5"></div>
+          <div class="flex flex-col items-center flex-1">
+            <div class="w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-semibold mb-2">5</div>
+            <div class="text-xs text-text-secondary font-medium">交付</div>
+          </div>
+          <div class="w-8 h-px bg-gray-300 flex-shrink-0 -mt-5"></div>
+          <div class="flex flex-col items-center flex-1">
+            <div class="w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-semibold mb-2">6</div>
+            <div class="text-xs text-text-secondary font-medium">复利</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="space-y-4">
+        <!-- Phase 1: Requirements -->
+        <div class="card p-6">
+          <div class="flex items-start justify-between mb-4">
+            <div>
+              <h3 class="font-semibold text-text mb-1">阶段 ① 需求</h3>
+              <p class="text-sm text-text-secondary">需求澄清、PRD 编写、完整性评审</p>
+            </div>
+            <span class="badge badge-l2">L2-L3</span>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <h4 class="text-xs font-semibold text-text-muted uppercase tracking-wide mb-2">核心能力</h4>
+              <ul class="space-y-1 text-sm text-text-secondary">
+                <li>• ce-brainstorm 产出结构化 PRD（GTMC D7 模板）</li>
+                <li>• need-explorer 交互式澄清意图/scope/约束</li>
+                <li>• prd-completeness-reviewer 5 维度完整性评审</li>
+                <li>• ce-strategy 产品策略锚点（STRATEGY.md）</li>
+              </ul>
+            </div>
+            <div>
+              <h4 class="text-xs font-semibold text-text-muted uppercase tracking-wide mb-2">产物与门禁</h4>
+              <ul class="space-y-1 text-sm text-text-secondary">
+                <li>• <code class="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded">prd/vN/prd.md</code></li>
+                <li>• <code class="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded">STRATEGY.md</code> / <code class="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded">CONCEPTS.md</code></li>
+                <li class="font-medium text-text">门禁：PRD 完整性评审冻结</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Phase 2: Design -->
+        <div class="card p-6">
+          <div class="flex items-start justify-between mb-4">
+            <div>
+              <h3 class="font-semibold text-text mb-1">阶段 ② 设计</h3>
+              <p class="text-sm text-text-secondary">原型、架构、计划、拆分</p>
+            </div>
+            <span class="badge badge-l2">L2-L3</span>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <h4 class="text-xs font-semibold text-text-muted uppercase tracking-wide mb-2">核心能力</h4>
+              <ul class="space-y-1 text-sm text-text-secondary">
+                <li>• prototype 内部编排器（env-scout→builder→reviewer）</li>
+                <li>• design-system 项目级设计系统（base+变体）</li>
+                <li>• architecture-design 4A+DDD 五项检查→三件套</li>
+                <li>• ce-plan 产品级计划（change 拆分+依赖 DAG）</li>
+                <li>• change-split-auditor 拆分质量审计</li>
+              </ul>
+            </div>
+            <div>
+              <h4 class="text-xs font-semibold text-text-muted uppercase tracking-wide mb-2">产物与门禁</h4>
+              <ul class="space-y-1 text-sm text-text-secondary">
+                <li>• <code class="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded">prototype/</code>（UI 契约真相源）</li>
+                <li>• <code class="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded">architecture/{architecture,database,api}.md</code></li>
+                <li>• <code class="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded">plan.md</code></li>
+                <li class="font-medium text-text">门禁：拆分审计必选 + 架构审查 A1-A6</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Phase 3: Development -->
+        <div class="card p-6">
+          <div class="flex items-start justify-between mb-4">
+            <div>
+              <h3 class="font-semibold text-text mb-1">阶段 ③ 开发</h3>
+              <p class="text-sm text-text-secondary">状态机编排、TDD 批次、代码审查</p>
+            </div>
+            <span class="badge badge-l3">L3（最高）</span>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <h4 class="text-xs font-semibold text-text-muted uppercase tracking-wide mb-2">核心能力</h4>
+              <ul class="space-y-1 text-sm text-text-secondary">
+                <li>• workflow-start 8 态状态机编排</li>
+                <li>• spec-writer 四件规划制品</li>
+                <li>• contract-builder 执行契约 + 测试矩阵</li>
+                <li>• build-executor TDD 批次实施（TDD Iron Law）</li>
+                <li>• code-reviewer spec 合规审查（6 步）</li>
+                <li>• bug-investigator 科学方法根因调查</li>
+              </ul>
+            </div>
+            <div>
+              <h4 class="text-xs font-semibold text-text-muted uppercase tracking-wide mb-2">产物与门禁</h4>
+              <ul class="space-y-1 text-sm text-text-secondary">
+                <li>• <code class="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded">changes/&lt;name&gt;/</code> 全套</li>
+                <li>• <code class="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded">execution-contract.md</code></li>
+                <li>• <code class="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded">test-matrix.md</code></li>
+                <li class="font-medium text-text">门禁：状态机 + hash + TDD + 代码审查</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Phase 4: Testing -->
+        <div class="card p-6">
+          <div class="flex items-start justify-between mb-4">
+            <div>
+              <h3 class="font-semibold text-text mb-1">阶段 ④ 测试</h3>
+              <p class="text-sm text-text-secondary">测试矩阵、程序化证据、E2E</p>
+            </div>
+            <span class="badge badge-l3">L3（v0.32 硬化）</span>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <h4 class="text-xs font-semibold text-text-muted uppercase tracking-wide mb-2">核心能力</h4>
+              <ul class="space-y-1 text-sm text-text-secondary">
+                <li>• test-strategy 10+1 种 design_method</li>
+                <li>• <code class="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded">tf test record</code> 程序化证据收集</li>
+                <li>• e2e AC 驱动 Playwright 测试</li>
+                <li>• test-merge 测试复利回写</li>
+              </ul>
+            </div>
+            <div>
+              <h4 class="text-xs font-semibold text-text-muted uppercase tracking-wide mb-2">产物与门禁</h4>
+              <ul class="space-y-1 text-sm text-text-secondary">
+                <li>• <code class="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded">test-matrix.md</code>（12 列字段）</li>
+                <li>• <code class="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded">docs/test-ledger/</code>（全局台账）</li>
+                <li class="font-medium text-text">门禁：矩阵门禁 + 只认程序化证据</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Phase 5: Delivery -->
+        <div class="card p-6">
+          <div class="flex items-start justify-between mb-4">
+            <div>
+              <h3 class="font-semibold text-text mb-1">阶段 ⑤ 交付</h3>
+              <p class="text-sm text-text-secondary">合并、归档、全局文档回写</p>
+            </div>
+            <span class="badge badge-l2">L2-L3（到归档为止）</span>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <h4 class="text-xs font-semibold text-text-muted uppercase tracking-wide mb-2">核心能力</h4>
+              <ul class="space-y-1 text-sm text-text-secondary">
+                <li>• spec-merger delta spec 合并</li>
+                <li>• release-archivist 验证+closing+归档</li>
+                <li>• arch-merge / prototype-sync 全局回写</li>
+              </ul>
+            </div>
+            <div>
+              <h4 class="text-xs font-semibold text-text-muted uppercase tracking-wide mb-2">产物与门禁</h4>
+              <ul class="space-y-1 text-sm text-text-secondary">
+                <li>• closing 总结 + <code class="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded">learnings.md</code></li>
+                <li class="font-medium text-text">门禁：compound-captured（强制经验或显式 skip）</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Phase 6: Feedback & Compound -->
+        <div class="card p-6">
+          <div class="flex items-start justify-between mb-4">
+            <div>
+              <h3 class="font-semibold text-text mb-1">阶段 ⑥ 反馈与复利</h3>
+              <p class="text-sm text-text-secondary">经验沉淀、问题记录、知识回流</p>
+            </div>
+            <span class="badge badge-l2">L2（贯穿层）</span>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <h4 class="text-xs font-semibold text-text-muted uppercase tracking-wide mb-2">核心能力</h4>
+              <ul class="space-y-1 text-sm text-text-secondary">
+                <li>• ce-compound 全局经验沉淀（三层索引）</li>
+                <li>• workflow-feedback 工作流问题结构化记录</li>
+                <li>• session-handoff 会话交接</li>
+                <li>• 复利贯穿机制（每阶段转换点注入）</li>
+              </ul>
+            </div>
+            <div>
+              <h4 class="text-xs font-semibold text-text-muted uppercase tracking-wide mb-2">产物与门禁</h4>
+              <ul class="space-y-1 text-sm text-text-secondary">
+                <li>• <code class="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded">docs/solutions/</code>（经验库）</li>
+                <li>• <code class="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded">.team-flow/feedback/</code></li>
+                <li class="text-xs text-text-muted">advisory 级，不阻断流程</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Boundary Note -->
+      <div class="mt-6 card p-6 bg-yellow-50 border-yellow-200">
+        <h3 class="font-semibold text-text mb-2">能力边界（实事求是）</h3>
+        <ul class="space-y-1 text-sm text-text-secondary">
+          <li>• ❌ 不覆盖：生产发布/部署、线上监控告警、非技术项目管理</li>
+          <li>• ⚠️ 半覆盖：需求源集成（TAPD 等，通过 MCP 手动对接）</li>
+          <li>• 整流程产物主要面向 AI Coding 流程闭环；要件文档、架构设计书、API 式样书等传统标准成果物的产出暂未在范围内</li>
+          <li class="font-medium text-text">汇报口径："team-flow 覆盖到归档，生产运维仍需既有体系"</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- Section 3: Timeline -->
+    <section>
+      <h2 class="section-title mb-2">日程规划</h2>
+      <p class="text-sm text-text-secondary mb-6">双轨并行：轨 A 插件迭代 + 轨 B 陪跑，v1.0.0 是规模化分水岭（8/9-8/16 放假，不计入规划）</p>
+
+      <!-- Visual Timeline -->
+      <div class="card p-6 mb-6">
+        <div class="grid grid-cols-4 gap-4 text-center">
+          <div class="border-r border-border pr-4">
+            <div class="text-xs font-semibold text-text-muted uppercase tracking-wide mb-2">8/4-8/8（W0）</div>
+            <div class="text-sm font-medium text-text mb-1">插件完善</div>
+            <div class="text-xs text-text-secondary">试点前最后一轮迭代</div>
+          </div>
+          <div class="border-r border-border pr-4">
+            <div class="text-xs font-semibold text-text-muted uppercase tracking-wide mb-2">8/17-8/29（W1-W2）</div>
+            <div class="text-sm font-medium text-text mb-1">准备启动 + 陪跑前半</div>
+            <div class="text-xs text-text-secondary">基建就绪 + 首迭代陪跑</div>
+          </div>
+          <div class="border-r border-border pr-4">
+            <div class="text-xs font-semibold text-text-muted uppercase tracking-wide mb-2">9 月（W3-W6）</div>
+            <div class="text-sm font-medium text-text mb-1">陪跑后半 + 独立运行</div>
+            <div class="text-xs text-text-secondary">完整迭代闭环 + 团队独立</div>
+          </div>
+          <div>
+            <div class="text-xs font-semibold text-text-muted uppercase tracking-wide mb-2">10 月初（W7）</div>
+            <div class="text-sm font-medium text-text mb-1">复盘 + v1.0.0</div>
+            <div class="text-xs text-text-secondary">复盘报告 + v1.0.0 发布</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Track A: Plugin Iteration -->
+      <div class="mb-6">
+        <h3 class="font-semibold text-text mb-4">轨 A：team-flow 插件迭代</h3>
+        <div class="space-y-3">
+          <div class="card p-4">
+            <div class="flex items-start gap-4">
+              <div class="flex-shrink-0 w-20 text-sm font-medium text-text-muted">已发布</div>
+              <div class="flex-1">
+                <div class="font-medium text-text mb-1">v0.33.0</div>
+                <p class="text-sm text-text-secondary">skills 注入恢复（frontmatter YAML 修复 + 长效门禁）</p>
+              </div>
+            </div>
+          </div>
+          <div class="card p-4 border-2 border-accent">
+            <div class="flex items-start gap-4">
+              <div class="flex-shrink-0 w-20 text-sm font-medium text-accent">8/4-8/8</div>
+              <div class="flex-1">
+                <div class="font-semibold text-text mb-1">v0.34 插件完善（试点前最后一轮）</div>
+                <ul class="text-sm text-text-secondary space-y-1 mt-1">
+                  <li>• 项目需求文档作为产品级起点及持续维护（含决策过程、推导过程、原始输入）</li>
+                  <li>• 项目需求文档 → 业务场景分析和拆分，输出业务场景清单</li>
+                  <li>• 业务流程与业务场景交叉验证（可选）</li>
+                  <li>• 变更实施阶段完善单元测试、集成测试</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div class="card p-4">
+            <div class="flex items-start gap-4">
+              <div class="flex-shrink-0 w-20 text-sm font-medium text-text-muted">8/17 起</div>
+              <div class="flex-1">
+                <div class="font-medium text-text mb-1">v0.35.x</div>
+                <p class="text-sm text-text-secondary">试点首迭代反馈批 + orchestrator 设计优化</p>
+              </div>
+            </div>
+          </div>
+          <div class="card p-4">
+            <div class="flex items-start gap-4">
+              <div class="flex-shrink-0 w-20 text-sm font-medium text-accent">10 月初</div>
+              <div class="flex-1">
+                <div class="font-semibold text-text mb-1">v1.0.0 成熟版</div>
+                <p class="text-sm text-text-secondary">设计增强方案 v1.0 定稿 + orchestrator 优化 + 待办收尾 + 试点经验纳入</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Track B: Pilot -->
+      <div>
+        <h3 class="font-semibold text-text mb-4">轨 B：陪跑日程</h3>
+        <div class="relative pl-8 space-y-6">
+          <div class="timeline-line"></div>
+
+          <div class="relative">
+            <div class="timeline-dot"></div>
+            <div class="card p-4">
+              <div class="flex items-start justify-between mb-2">
+                <div class="font-medium text-text">准备与启动（1 周）</div>
+                <span class="text-xs text-text-muted">8/17-8/23</span>
+              </div>
+              <p class="text-sm text-text-secondary mb-2">基建就绪（环境、账号、网络）+ 集训 2-3 天 + 试点项目 bootstrap 初始化</p>
+              <div class="text-xs text-text-muted">验收：试点团队环境可用，baseline.md 建立，团队过一遍完整流程 demo</div>
+            </div>
+          </div>
+
+          <div class="relative">
+            <div class="timeline-dot"></div>
+            <div class="card p-4">
+              <div class="flex items-start justify-between mb-2">
+                <div class="font-medium text-text">陪跑期（4 周）</div>
+                <span class="text-xs text-text-muted">8/24-9/19</span>
+              </div>
+              <p class="text-sm text-text-secondary mb-2">全程陪跑完整迭代闭环（需求→设计→开发→测试→交付）+ 反馈收集 + v1.0.0 冲刺发布</p>
+              <div class="text-xs text-text-muted">验收：完整迭代走通，feedback 沉淀 ≥10 条，v1.0.0 发布</div>
+            </div>
+          </div>
+
+          <div class="relative">
+            <div class="timeline-dot bg-success"></div>
+            <div class="card p-4 border-2 border-success">
+              <div class="flex items-start justify-between mb-2">
+                <div class="font-semibold text-text">复盘 + v1.0.0 发布（约 3 周）</div>
+                <span class="text-xs text-text-muted">9/22-10/11</span>
+              </div>
+              <p class="text-sm text-text-secondary mb-2">试点复盘报告 + 规模化路线规划 + v1.0.0 成熟版发布（含国庆假期缓冲）</p>
+              <div class="text-xs text-text-muted">验收：复盘报告完成，v1.0.0 发布，规模化路线获批</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 4: Usage Model -->
+    <section>
+      <h2 class="section-title mb-2">分层使用模型</h2>
+      <p class="text-sm text-text-secondary mb-6">team-flow 是组织级工作流层，原生 Claude Code 是个人工具层</p>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="card p-6">
+          <h3 class="font-semibold text-text mb-3">个人日常</h3>
+          <div class="text-sm text-text-secondary mb-4">原生 Claude Code</div>
+          <ul class="space-y-1 text-sm text-text-secondary">
+            <li>• 对话式问答</li>
+            <li>• 单点编码</li>
+            <li>• 代码解释 / 重构</li>
+            <li>• 临时工具 / 调试</li>
+          </ul>
+        </div>
+
+        <div class="card p-6 border-2 border-primary">
+          <h3 class="font-semibold text-text mb-3">组织研发</h3>
+          <div class="text-sm text-text-secondary mb-4">team-flow</div>
+          <ul class="space-y-1 text-sm text-text-secondary">
+            <li>• 产品级新需求 → orchestrator</li>
+            <li>• change 内操作 → workflow-start</li>
+            <li>• 既有项目 → workflow-bootstrap</li>
+            <li>• bug → bug-investigator</li>
+          </ul>
+        </div>
+
+        <div class="card p-6">
+          <h3 class="font-semibold text-text mb-3">全局资产</h3>
+          <div class="text-sm text-text-secondary mb-4">复利层</div>
+          <ul class="space-y-1 text-sm text-text-secondary">
+            <li>• docs/solutions/ 经验库</li>
+            <li>• docs/architecture/ 架构锚点</li>
+            <li>• prototype/ UI 契约</li>
+            <li>• STRATEGY.md / CONCEPTS.md</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="mt-6 card p-6 bg-blue-50 border-blue-200">
+        <h3 class="font-semibold text-text mb-3">三条纪律</h3>
+        <ol class="space-y-2 text-sm text-text-secondary list-decimal list-inside">
+          <li><strong class="text-text">产品级新需求必须走 orchestrator</strong>——唯一的规范化入口，不用个人对话方式直接写核心代码（否则产物无门禁 = 质量无保障）</li>
+          <li><strong class="text-text">门禁不放行 = 不完成</strong>——状态机、hash、测试矩阵、程序化证据是"完成"的定义，不是可绕过的建议</li>
+          <li><strong class="text-text">人工决策点不外包</strong>——DP-1（需求边界）、DP-3（契约批准）、DP-A（方案确认）、架构评审、代码合并审批，永远是人的责任</li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- Section 6: Risks -->
+    <section>
+      <h2 class="section-title mb-2">风险与依赖</h2>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th class="w-1/4">风险</th>
+              <th class="w-1/6">等级</th>
+              <th class="w-7/12">对策</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="font-medium">插件颠簸期稳定性</td>
+              <td><span class="badge bg-red-100 text-red-800">高</span></td>
+              <td>试点即 beta；升级窗口协商；v1.0.0 前不承诺规模化；关键修复优先</td>
+            </tr>
+            <tr>
+              <td class="font-medium">首批体验影响信任</td>
+              <td><span class="badge bg-red-100 text-red-800">高</span></td>
+              <td>陪跑兜底；问题快速修复；透明度（已知问题清单）；正向激励（首批 = 共建者）</td>
+            </tr>
+            <tr>
+              <td class="font-medium">安全合规</td>
+              <td><span class="badge bg-red-100 text-red-800">高</span></td>
+              <td>采用国内模型 API 降低跨境数据风险；密钥治理规范 + CI 扫描；代码外传白名单；MCP 权限最小化</td>
+            </tr>
+            <tr>
+              <td class="font-medium">成本</td>
+              <td><span class="badge bg-yellow-100 text-yellow-800">中</span></td>
+              <td>用量监控；上下文优化；评估订阅/API 计费组合</td>
+            </tr>
+            <tr>
+              <td class="font-medium">团队接受度</td>
+              <td><span class="badge bg-yellow-100 text-yellow-800">中</span></td>
+              <td>分层次培训；门禁是保护不是束缚；示范"AI 提高研发质量"而非"AI 替代人"</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Section 6: Pending Decisions -->
+    <section>
+      <h2 class="section-title mb-2">待确认事项</h2>
+      <p class="text-sm text-text-secondary mb-6">需 LT/领导拍板</p>
+
+      <div class="space-y-3">
+        <div class="card p-4">
+          <div class="flex items-start gap-3">
+            <div class="flex-shrink-0 w-6 h-6 rounded-full bg-accent text-white flex items-center justify-center text-xs font-semibold">1</div>
+            <div>
+              <div class="font-medium text-text mb-1">试点团队选择</div>
+              <p class="text-sm text-text-secondary">1 个项目团队，含产品、UI、前端、Java 后端</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card p-4">
+          <div class="flex items-start gap-3">
+            <div class="flex-shrink-0 w-6 h-6 rounded-full bg-accent text-white flex items-center justify-center text-xs font-semibold">2</div>
+            <div>
+              <div class="font-medium text-text mb-1">AI 模型选型与预算</div>
+              <p class="text-sm text-text-secondary">国内模型 API（如 DeepSeek），预算上限多少？</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card p-4">
+          <div class="flex items-start gap-3">
+            <div class="flex-shrink-0 w-6 h-6 rounded-full bg-accent text-white flex items-center justify-center text-xs font-semibold">3</div>
+            <div>
+              <div class="font-medium text-text mb-1">陪跑人力投入</div>
+              <p class="text-sm text-text-secondary">2 人全职投入陪跑</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card p-4">
+          <div class="flex items-start gap-3">
+            <div class="flex-shrink-0 w-6 h-6 rounded-full bg-accent text-white flex items-center justify-center text-xs font-semibold">4</div>
+            <div>
+              <div class="font-medium text-text mb-1">网络与合规</div>
+              <p class="text-sm text-text-secondary">国内模型接入通道与代码外传边界（需 IT/安全确认）</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card p-4">
+          <div class="flex items-start gap-3">
+            <div class="flex-shrink-0 w-6 h-6 rounded-full bg-accent text-white flex items-center justify-center text-xs font-semibold">5</div>
+            <div>
+              <div class="font-medium text-text mb-1">试点数据收集</div>
+              <p class="text-sm text-text-secondary">试点团队需要总结以及收集 KPI 基线数据（需求→上线周期、缺陷率、AI 编码占比等）</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-surface border-t border-border mt-16">
+    <div class="max-w-7xl mx-auto px-6 py-8">
+      <div class="flex items-center justify-between text-sm text-text-muted">
+        <div>AI Coding 陪跑设计与规划方案 · v2.0（修订）</div>
+        <div>2026-08-04 · 待 LT 确认后用于领导汇报</div>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>
