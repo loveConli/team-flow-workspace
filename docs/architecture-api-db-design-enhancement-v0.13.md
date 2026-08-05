@@ -14,6 +14,7 @@
 > - **§51 review 与 hash 链硬化**：`tf execution review` 禁止 base==head（空 diff review 非法）+ receipt 持久化测试统计；修复矩阵 hash 捕获断链（生成后必须 `tf state rebuild`）。
 > - **§52 SOP 硬化批次**：contract-builder 补 test-strategy 预加载 + 矩阵生成 MUST + 双向校验；release-archivist 零测试 FAIL 条款；workflow-start 路由归位；doctor 巡检扩展。
 > - **§53 实战补救参考**：C1-domain-policy 回退补测操作规程。
+> - **§56 C1 workflow-feedback 根因修复**（v0.35.0）：worktree 生命周期管理（tf deisolate）、receipt 保留（revise 不删 reviews/）、refresh-hash 命令、BLOCKED 证据链、上下文水位例外条款。
 
 ---
 
@@ -552,3 +553,63 @@ team-flow/
 | 全新项目引导过于复杂 | 提供合理默认值（Java → Maven → JUnit 5 + Mockito → Spring Boot），减少交互步骤 |
 | glaf4-test 规范变更导致 conventions 过时 | 版本化管理 + 自动更新检查；workflow-start S1 阶段提示用户 |
 | Java 专用规则污染通用框架 | 通过 conventions 注入，不硬编码进 test-strategy；glaf4-compliant 模板独立存放 |
+
+---
+
+## 五十六、C1 workflow-feedback 根因修复（v0.35.0）
+
+> 来源：vrm4teamflow `.team-flow/feedback/20260805-*`（6 条 feedback，3P1 + 3P2）
+> 交叉验证：4 个独立专家验证，16/16 断言通过 + 3 处修正
+> 目标插件版本：**v0.35.0**
+
+### 56.1 问题全景
+
+| 聚类 | Feedback | 严重度 | 根因 |
+|------|----------|--------|------|
+| A. worktree 生命周期断裂 | P1-1 | P1 | `tf isolate` 只创建不清理，closing 流程无 deisolate/merge-back |
+| B. receipt 被 revise 误杀 | P1-2 + P2-2 | P1 | `writePlan` 在 revision/hash 变化时 `rmSync(reviews/)`，无 keep-receipts |
+| C. BLOCKED 归因无证据链 | P1-3 + P1-4 | P1 | build-executor BLOCKED 报告自由文本 + 上下文腐化 |
+| D. test-merge 自调用 bug | P2-1 | P2 | `test-merge.mjs:537` main() 无参自调用崩溃 |
+
+### 56.2 修复方案
+
+**D1 test-merge bug**：`test-merge.mjs:537` → `run()` + `import.meta.url` 守卫（参考 conventions-generator.mjs）。
+
+**B1 revise 保留 reviews/**：`execution-plan.mjs:55-58` 的 `rmSync(paths.reviews, ...)` 改为仅删除 recommendation receipt。`readCurrentReview` 已有 plan_hash/plan_revision 校验（+ report 存活再校验），旧 receipt 自动失效但不丢证据。
+
+**B2 refresh-hash 命令**：新增 `tf execution refresh-hash`——只更新 plan 的 artifacts_hash/contract_hash，不升 revision、不清 receipts。`execution-plan.mjs` 导出 `refreshPlanHash()`。
+
+**B3 stale 报错增强**：`validatePlan` 报错信息附 hash 前缀（plan: xxx…, current: yyy…）。
+
+**A1 deisolate 命令**：新建 `cmd-deisolate.mjs`，支持 dry-run/merge/clean，识别 Case A（多仓库工作区 .worktrees/）和 Case B（单仓库 ../<repo>-<name>）。
+
+**A2 closing deisolate**：`release-archivist/SKILL.md` Post-Verification 增加 Worktree Deisolation advisory 步骤。
+
+**C1 BLOCKED 证据链**：`build-executor.md` Structured Output Contract 增加 `blocker.category/root_cause/evidence/attempted_fixes` 结构化格式。BLOCKED 无证据 = FAIL。
+
+**C2 上下文水位**：§37 原子代理协议增加例外——transcript >2MB 或 token >200 万时允许启动新代理替代恢复（需完整交接文档）。
+
+**C3 glaf4-test 优先**：build-executor Red Lines 增加环境问题处理指引——禁止 guess-and-check，优先走 test-strategy skill。
+
+### 56.3 交叉验证修正
+
+| 原分析不准确 | 修正 |
+|-------------|------|
+| 因果链："design.md 变化 → receipt 被删"（暗示自动） | 修正：design.md 变化 → plan stale → review 拒绝 → 用户被迫 revise → revise 时 rmSync 才触发 |
+| rmSync 触发条件描述为"revision 变化" | 修正：`revision !== OR hash !==`，plan.hash 覆盖整个 plan 对象（waves/recommendation 等），不仅是 artifacts |
+| 修复方案：`pathToFileURL(process.argv[1]).href` | 修正：项目已有模式 `file://${process.argv[1]}`（conventions-generator.mjs:507） |
+
+### 56.4 涉及文件
+
+| 文件 | 操作 |
+|------|------|
+| `scripts/lib/test-merge.mjs` | Edit: 第 537-540 行 |
+| `scripts/lib/execution-plan.mjs` | Edit: writePlan + validatePlan + refreshPlanHash 导出 |
+| `scripts/lib/cmd-execution.mjs` | Edit: 新增 refresh-hash 子命令 |
+| `scripts/lib/cmd-deisolate.mjs` | **New** |
+| `scripts/team-flow.mjs` | Edit: 注册 deisolate + HELP |
+| `skills/release-archivist/SKILL.md` | Edit: Post-Verification deisolate |
+| `agents/build-executor.md` | Edit: BLOCKED 证据链 + glaf4-test 优先 |
+| `skills/workflow-start/SKILL.md` | Edit: §37 水位例外 |
+| `skills/workflow-start/references/routing-rules.md` | Edit: §37 水位例外 |
+| `tests/lib/execution-plan.test.mjs` | Edit: stale 断言改 startsWith |
