@@ -18,6 +18,7 @@
 | **架构/API/DB 设计增强方案** | `docs/architecture-api-db-design-enhancement-v{X}.md` | team-flow 插件的**唯一权威设计文档**。定义设计目标、方法论底座（F1-F8）、SOP 闭环、产物结构、复利机制、集成规则、决策落实状态 | 文件名带版本号；每次重大设计变更**新增版本文件**，旧版保留不删；文件内部标题版本可超前于文件名 |
 | **插件设计总纲**           | `team-flow/AGENTS.md`                                 | 面向 LLM 和贡献者的运行时参考：能力概览、Skills 索引（必须与实际 `skills/` 目录一致）、SOP、产物结构、配置、约束      | 必须与最新设计增强方案和实际 skills/ 目录保持同步                                          |
 | 原型设计调研               | `docs/prototype-design-research.md`                   | 原型方案选型调研（五方案对比），结论已吸收进设计增强方案第十五章                                           | 仅作历史参考，不再独立维护                                                          |
+| 产品级架构设计文档（v0.35.0） | `docs/architecture/iterations/vN/architecture.md`     | 产品级详细架构（6 产物：BC/聚合注册表/指令事件/状态机/概念 ER/时序），architecture 阶段产出，预测态快照，三层数据面 L3 层 | 随迭代 vN 新建，迭代收尾标 archived；全局当前态由 arch-merge 从 change 增量维护 |
 
 ## 辅助文档（team-flow/ 子仓库内）
 

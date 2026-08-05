@@ -58,6 +58,7 @@
 | P0-3 | plugin.json description "17 skills" → "20 skills"（含 .claude-plugin/ 副本）    | ✅ 2026-07-24 | v0.12.0 | 来源：v0.11.0 设计评审    |
 | P0-4 | 身份命名关系文档化：AGENTS.md 新增"身份与依赖关系"节，明确 team-flow（插件）包含 spec-superflow（npm 底座） | ✅ 2026-07-24 | v0.12.0 | 来源：v0.11.0 设计评审 C1 |
 | P0-5 | check-version-consistency.mjs 扩展：skill 计数校验 + npx 版本引用校验（正向+负向测试通过）        | ✅ 2026-07-24 | v0.12.0 | 来源：文档维护规范          |
+| P0-6 | 产品级架构设计增强（v0.14 §57-§66，v0.36.0）：architecture 阶段编排 + 产品级文档模板（6 产物）+ 变更级输入联动（路由分流）+ arch-merge 重构（当前态 upsert/生成式/冲突预检/并发安全 4 硬门禁）+ 旧项目逆向重建（arch-reverse-analyst）+ guard 门禁（arch-readiness/arch-snapshot + arch_baseline 豁免） | 🔲 实施中 | v0.35.0 | 来源：LT 三诉求 2026-08-03 + 四专家评审 + 复利/change 级评估；设计增强方案 v0.14 |
 
 ### P1（重要，两个版本内完成）
 
@@ -77,7 +78,7 @@
 | P1-12 | 原型 Wave 2：token 四层模型 + reviewer rubric 扩展 + direction-picker + guard 脚本 | ✅ 2026-07-25 | v0.18.0 | 来源：P2-6 升级提案（Wave 1+2 合并实施） |
 | P1-13 | 产出型子代理质量闸门（横展全部产出型 agent，prototype-builder 首发）：① 产物落盘硬闸门——声明的 deliverable 文件已 `Write` 落盘且非空，否则禁止返回 `done`，改返回带 `blockers` 的非终态 ② 决策点/阻断点不结束、先经 `SendMessage` 反馈主代理（推广为 team-flow 全部子代理统一交互协议；子代理不能阻塞提问，由主代理自决或 `AskUserQuestion`）③ 大产出默认分片（先 Write 主体骨架 → Edit 分段追加数据层/渲染层，规避单次 Write 截断与预算峰值）④ 主代理交接后强制 `ls`/`test -f` 校验入口文件存在且非空再派 reviewer，缺失则 resume builder | ✅ 2026-07-25 | v0.20.0 | 来源：workflow-feedback 2026-07-25（VRM mgmt-dashboard S2，agent-quality，反馈级 P1） |
 | P1-14 | 子代理决策点 SendMessage stop-and-resume 交互协议（**完成 P1-13 的 SendMessage 子项**）：子代理（无 AskUserQuestion）决策点经 `SendMessage(to: main)` 发问即停 → 主代理收 `task-notification` 代问用户 → 回传自动 resume 续跑；主代理维护请求-应答匹配纪律 + 子代理应答校验；修订 §18.1.2（不引入常驻 agent team 不变，结构化返回仍为终态主协议）。落点 prototype-builder/env-scout + prototype orchestration-flow（主代理中继）+ AGENTS.md | ✅ 2026-07-25 | v0.21.0 | 来源：LT 实证（Session d6801ab4）+ workflow-feedback agent-quality 改进建议2 |
-| P1-15 | 架构设计显式编排与产物独立化（v0.9 §26）：① workflow-start 路由表增加 architecture-design 子代理调用（exploring→specifying 之间） ② architecture-design 判断+执行一体化 SOP + 结构化输出契约 ③ 产出目录从 `specs/<cap>/` 提升为独立 `architecture/` ④ spec-writer Required Inputs 增加 `architecture/` 读取 ⑤ workflow-start 合理性确认机制 + yaml 字段 + 硬阻断 ⑥ hotfix/tweak 不豁免 | 🔲 待实施 | v0.23.0 | 来源：LT+CC 讨论（2026-07-27） |
+| P1-15 | 架构设计显式编排与产物独立化（v0.9 §26）：① workflow-start 路由表增加 architecture-design 子代理调用（exploring→specifying 之间） ② architecture-design 判断+执行一体化 SOP + 结构化输出契约 ③ 产出目录从 `specs/<cap>/` 提升为独立 `architecture/` ④ spec-writer Required Inputs 增加 `architecture/` 读取 ⑤ workflow-start 合理性确认机制 + yaml 字段 + 硬阻断 ⑥ hotfix/tweak 不豁免 | ✅ v0.23.0（2026-08-05 补登：CLAUDE.md 记载 v0.22.5+/v0.23.0 已贯通，roadmap 状态此前未同步） | v0.23.0 | 来源：LT+CC 讨论（2026-07-27） |
 | P1-16 | ce-brainstorm Phase 0.0 增加 tf CLI 可用性检查和显式降级逻辑：① 先检查 `which tf` ② 不可用时走 fallback（询问用户：默认模板 or 自定义路径）③ 在工作区创建模板（`.team-flow/templates/`）④ 维护配置文件到 `.team-flow/team-flow.config.json` | 🔲 待实施 | v0.26.0 | 来源：workflow-feedback 2026-07-29（P1） |
 | P1-17 | ce-brainstorm SKILL.md 增加 guardrail：禁止写入 skill 目录（显式声明项目级制品只在项目工作区创建/修改） | 🔲 待实施 | v0.26.0 | 来源：workflow-feedback 2026-07-29（P1） |
 | P1-22 | architecture-design agent 精简（WHO/WHAT only，229→~100 行）+ `skills:` 字段预加载 Skill 完整知识库 | ✅ 2026-07-31 | v0.28.1 | 来源：workflow-feedback 2026-07-31（P1-1 agent-quality）+ 设计增强方案 v0.11 §35 |
@@ -104,6 +105,8 @@
 | P1-43 | tests-passing 重构：结构化 test_result 解析（recorded-by=tf-test-record）+ dp_6_result 去证据化（BUG-A 通道仅存量保留）+ total=0 空真拒绝 + 证据文件存在性校验 | ✅ v0.32.1（2026-08-03） | v0.32.0 | 来源：v0.13 §50.2 |
 | P1-44 | pre-tool-use-guard 路径化改造：写入目标在 change 目录内（产物区：architecture/、specs/、proposal/design/tasks/contract/matrix 等）→ 放行；change 目录外（代码区）→ 维持状态门禁（仅 approved-for-build/executing/debugging 放行）。修复 exploring/specifying/bridging 阶段产物写入被一刀切拦截、LLM 被迫 Bash 绕过（写入彻底脱管）的死锁；与 P3-10 联动解除 C1 死锁链 | ✅ v0.32.2（2026-08-03） | v0.32.2 | 来源：C1 死锁链复盘（hook L105-116 状态一刀切误伤产物写入）+ LT 决策（2026-08-03） |
 | P1-45 | §54 frontmatter YAML 合法性事件设计写回：四轮实证证据链（诊断探针/行为探针/glaf4 对照/PyYAML 解析）+ 根因（非法 YAML → Claude Code 静默降级丢弃 skills:/tools: 元数据）+ 修复决策 + 教训（机制断言必须实证、静默降级是最危险失效模式、行为探针优于字符串内省） | ✅ v0.33.0（2026-08-03） | v0.33.0 | 来源：C1 补救流程发现 skills 注入=0；LT 决策（2026-08-03） |
+| P1-48 | 产品级架构事件建模深度：事件风暴模板 + 事件来源矩阵 + 聚合不变量反推启发式（v0.14 §64.2） | 🔲 待实施 | v0.36.0+ | 来源：v0.14 §64.2；DDD 评审 |
+| P1-49 | BC 依赖环检测工具化：domains/ 与 ARCHITECTURE.md §1 图论校验 | 🔲 待实施 | v0.36.0+ | 来源：v0.14 §64.2 |
 
 ### P2（改善，按节奏推进）
 
@@ -145,6 +148,8 @@
 | P2-39 | doctor 巡检扩展：skip_reason 配对 + 产物引用完整性（arch_review_report/test_evidence_path）；checkChangeTestGates | ✅ v0.32.1（2026-08-03） | v0.32.0 | 来源：v0.13 §52 B4 |
 | P2-40 | hooks/session-start 的 PLUGIN_VERSION 纳入 `team-flow.mjs version` 自动同步范围（或 check-version-consistency --fix 支持）：消除每次发版 npm version 脚本链必中断、手工 sed 修 hook 的重复踩坑（v0.27.1/v0.27.2/v0.32.0/v0.32.1 四次实证） | ✅ v0.32.2（2026-08-03） | v0.32.2 | 来源：v0.32.0/v0.32.1 升版事故复盘 + LT 决策（2026-08-03）；附带修复 major 硬编码为 0 缺陷 |
 | P2-41 | frontmatter YAML 修复：15 个 agent description 单句化（删除顶格 `<example>` 块——块标量断裂根因，学 glaf4 写法）+ e2e/test-strategy 两个 SKILL.md description 裸冒号修复 → 恢复 skills: 预加载与 tools: 限制。**行为变更**：子代理工具集从全量（含全部 MCP）收紧为声明集 | ✅ v0.33.0（2026-08-03） | v0.33.0 | 来源：v0.13 §54.5；LT 决策"精简单句 + 删除示例"（2026-08-03） |
+| P2-46 | ER/时序图自动渲染 + 提交图与生成图漂移检测（pretty-mermaid/archify） | 🔲 待实施 | v0.36.0+ | 来源：v0.14 §64.2 |
+| P2-47 | arch-merge 语义冲突增强：聚合不变量级冲突检测（两 delta 改同一不变量语义相反） | 🔲 待实施 | v0.36.0+ | 来源：v0.14 §64.2 |
 
 ### P3（低优先级，时机成熟再做）
 
@@ -161,3 +166,4 @@
 | P3-10 | exploring→specifying 门禁时序修复：`exploring:specifying` 移除 `artifacts-exist` 维度（产物齐全性由 `specifying:bridging` 独家负责，该维度本就挂着）——消除"先转换被拦、先产物没转换"的鸡生蛋；与 P1-44 联动解除 C1 死锁链（环2） | ✅ v0.32.2（2026-08-03） | v0.32.2 | 来源：v0.13 待办表；C1 报告问题 #5 + 死锁链复盘；LT 确认方案 A（2026-08-03） |
 | P3-11 | ~~存量超限 SKILL.md 渐进式披露收敛~~ | 🗑️ 不执行 | — | LT 决策 2026-08-03：不需要执行（存量超限非功能问题，接受现状） |
 | P3-12 | frontmatter-lint 长效门禁：js-yaml 严格解析全部 agents/skills/commands frontmatter + name/description 必填断言 + agent name 与文件名一致 + skills: 引用必须解析到真实 skills/<name>/SKILL.md；进 npm test（58 例），杜绝非法 frontmatter 静默降级复发 | ✅ v0.33.0（2026-08-03） | v0.33.0 | 来源：v0.13 §54.5；教训"门禁要校验产物有效性，不能只校验存在性" |
+| P3-13 | 全局 API 消费者影响扫描（变更端点时提示受影响消费方） | 🔲 待实施 | — | 来源：v0.14 §64.2 |

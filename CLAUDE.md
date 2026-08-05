@@ -6,8 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 本工作区的核心目标是**开发和测试 team-flow 工作流**。team-flow 是一个统一插件（24 skills + 15 agents），整合了 spec-superflow（9）、compound-engineering（6）、architecture-design（1）、prototype（1）、design-system（1）、workflow-orchestrator（1）、workflow-bootstrap（1）、e2e（1）、session-handoff（1）、workflow-feedback（1）、test-strategy（1）。
 
-- **设计增强方案当前权威版本**：`docs/architecture-api-db-design-enhancement-v0.13.md`
-- **插件版本**：`v0.35.0`（24 skills + 15 agents；0.32.0 打包事故撤回，版本号不可复用）
+- **设计增强方案当前权威版本**：`docs/architecture-api-db-design-enhancement-v0.14.md`
+- **插件版本**：`v0.36.0`（24 skills + 15 agents；0.32.0 打包事故撤回，版本号不可复用）
 - **测试能力增强方案**：`docs/plan/test-capability-enhancement-design.md`（v0.34.0 新增，conventions 机制 + glaf4-test 通用能力吸收）
 - **工作空间支持**：conventions-generator 支持多子项目扫描（v0.34.1 新增）
 
@@ -16,7 +16,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```
 team-flow-workspace/
 ├── docs/                          # 设计文档（工作区级）
-│   ├── architecture-api-db-design-enhancement-v0.13.md # ★ 当前权威版本
+│   ├── architecture-api-db-design-enhancement-v0.14.md # ★ 当前权威版本
+│   ├── architecture-api-db-design-enhancement-v0.13.md # 历史保留版本
 │   ├── architecture-api-db-design-enhancement-v0.12.md # 历史保留版本
 │   ├── architecture-api-db-design-enhancement-v0.11.md # 历史保留版本
 │   ├── roadmap-and-todos.md       # Roadmap + 待办列表（从本文件抽取）
@@ -54,7 +55,8 @@ team-flow-workspace/
   → S1 路径路由器 → 需求选择（.team-flow/registry.yaml）+ 判断入口路径
   → S2 PRD + 原型 → ce-brainstorm + prd-completeness-reviewer + prototype 内部编排器 → 冻结
   → S3 计划 → ce-plan（plan_mode 入口问定）→ plan.md（change 拆分+依赖+高阶技术方向，不含接口清单）
-  → S4 拆分验证与分发 → change-split-auditor 审计（必选）→ 创建 changes/<name>/ + change-brief.md
+  → [ARCH 产品级架构设计（v0.36.0 新增）] → architecture-design product 模式 8 步设计 → docs/architecture/iterations/vN/architecture.md（6 产物快照，预测态，不写全局）→ 产品级评审门（architecture-reviewer product 视角）→ skip 须物化
+  → S4 拆分验证与分发 → arch-readiness 门（快照覆盖 change 触及 BC；arch_baseline 缺失 → WARN 不阻断）→ change-split-auditor 审计（必选）→ 创建 changes/<name>/ + change-brief.md
   → S5 全局监控（change≥2 必选）→ 跨 change 一致性 + 复利晋升 + 动态重规划
   → [复利贯穿层] 每个阶段转换点：检测→捕获→索引→注入
   → change 完成：arch-merge → prototype-sync + 复利晋升
@@ -103,6 +105,10 @@ exploring → [architecture-design 判断门 ★设计层面] → specifying →
 | SDD 执行计划 | `changes/<name>/.superpowers/sdd/execution-plan.json` | 代码创建但不在 guard |
 | 需求注册表 | `.team-flow/registry.yaml` | workflow-orchestrator 引用 |
 | 全局架构基线 | `docs/architecture/baseline.md` | workflow-bootstrap 引用 |
+| 产品级架构快照 | `docs/architecture/iterations/vN/architecture.md` | S3.5 ARCH 阶段产出（v0.36.0，预测态，不写全局） |
+| 项目架构基线标记 | `.team-flow/arch-state.json` | `tf arch init` 打戳 `arch_baseline`（v0.36.0）；缺失 = 存量信号 → arch 门禁 WARN 不 FAIL |
+
+> **全局架构三层维护（v0.36.0，v0.14 §57.3）**：L1 全局当前态（docs/architecture/，arch-merge 生成式：ARCHITECTURE marker 区 / PHYSICAL-MODEL / DATABASE / API-INDEX / INDEX）= 实际落地态唯一权威；L2 变更级增量（changes/<name>/architecture/）= 只写 delta；L3 迭代快照 + 演进日志 + changelog（iterations/vN/ + changelog/）= 预测态退役。回写时序：产品级设计只写快照，change 关闭时 arch-merge 回写实际增量，迭代收尾快照标 archived。
 
 ### 状态文件内置字段（state-loader.mjs BUILTIN_DEFAULTS）
 
