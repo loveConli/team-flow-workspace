@@ -40,7 +40,7 @@ team-flow 当前处于功能完整但仍在快速迭代的"颠簸期"（v0.31→
 
 ### 2.1 总体视图
 
-team-flow 覆盖产品研发的 **需求 → 设计 → 开发 → 测试 → 交付 → 反馈沉淀** 全链路，但**不覆盖生产发布与线上运维**（边界见 2.3）。自动化程度分级：
+team-flow 覆盖产品研发的 **需求 → 设计 → 开发 → 交付 → 反馈沉淀** 全链路（测试能力嵌入在设计和开发阶段，不是独立阶段），**不覆盖生产发布与线上运维**（边界见 2.3）。自动化程度分级：
 
 - **L3 全自动 + 门禁守护**：AI 执行，代码级门禁强制校验产物，人审阅兜底（规划、实现、测试段为主）
 - **L2 半自动 + 人工决策点**：AI 产出，人工在关键决策点（DP）确认
@@ -87,9 +87,10 @@ team-flow 覆盖产品研发的 **需求 → 设计 → 开发 → 测试 → �
 | change-split-auditor | plan 拆分质量审计（需求覆盖矩阵、DAG 无环、粒度均衡、字段完整性） | 拆分审计 PASS/FAIL verdict | **L3 必选门禁** |
 | architecture-design | 4A+DDD 增量设计：五项检查判定 + 三件套产出 | `changes/<name>/architecture/{architecture,database,api}.md` + SQL | L2，人工确认 |
 | architecture-reviewer | 架构设计 6 维度自动审查（A1-A6，≤3 轮循环修正） | 架构审查报告 | L3 门禁 |
+| test-strategy | 测试策略设计：10+1 种 design_method + 分层策略 + 对抗验证 + 复杂度分级 | `test-matrix.md`（12 列字段） | **L3 门禁：test-matrix-ready** |
 | e2e | AC 驱动 Playwright E2E 场景设计 | E2E 场景清单 | L2 |
 
-**能力程度**：从"PRD"到"架构三件套 + 原型 + 计划"的完整设计链路，且每个产出都有自动审查兜底（PRD 完整性、拆分质量、架构 6 维度、原型一致性），防止 AI 产物"看着像那么回事"实则失真。
+**能力程度**：从"PRD"到"架构三件套 + 原型 + 计划 + 测试策略"的完整设计链路，且每个产出都有自动审查兜底（PRD 完整性、拆分质量、架构 6 维度、原型一致性），防止 AI 产物"看着像那么回事"实则失真。测试策略在此阶段完成设计，为开发阶段的 TDD 实施提供矩阵驱动。
 
 #### 阶段 ③ 开发（自动化程度：L3 最高，核心区）
 
@@ -99,29 +100,22 @@ team-flow 覆盖产品研发的 **需求 → 设计 → 开发 → 测试 → �
 | spec-writer | 产出四件规划制品 | `changes/<name>/proposal.md` + `specs/*.md` + `design.md` + `tasks.md` | L3：`artifacts_hash` 校验 |
 | contract-builder | 规划制品压缩为单一执行握手契约 | `execution-contract.md` + `test-matrix.md` | L3：`contract_hash` + DP-3 批准门 |
 | build-executor | 以契约为权威驱动 TDD 批次实施（守 TDD Iron Law） | 代码实现 + 单元/集成测试 | L3：批次门禁 |
+| e2e | Playwright E2E 生成、执行、覆盖率审计 | E2E 测试脚本 + 覆盖报告 | L2 |
+| test-merge | 测试复利回写全局测试台账 | `docs/test-ledger/`（INDEX + baselines + patterns） | L3 |
 | code-reviewer | spec 合规审查（6 步 + 严重级校准 + 测试矩阵合规维度） | 审查报告 | **L3 合并门禁** |
 | bug-investigator | 科学方法根因调查（执行期 bug/测试失败） | 根因分析报告（不直接改码） | L2-L3 |
 | cross-change-consistency-checker | 多 change 并行时的共享聚合/API 契约/架构锚点漂移检测 | 冲突检测报告 | L3（S5 必选） |
 
 **能力程度**：这是 team-flow 与传统 AI Coding 工具拉开差距的核心区——**实现由"批准的契约"驱动，而非直接对话驱动**。TDD Iron Law（先写测试）、测试矩阵驱动、代码审查门禁，保证 AI 写的代码不是"黑盒产出"。
 
-#### 阶段 ④ 测试（自动化程度：L3，强覆盖，v0.31-v0.33 硬化）
-
-| 子能力 | 做什么 | 产物 | 自动化/门禁 |
-|---|---|---|---|
-| test-strategy | 测试设计方法论：10+1 种 design_method + 分层策略 + 对抗验证 + 复杂度分级 | `test-matrix.md`（12 列字段） | L3 |
-| 测试执行证据 | 对接 maven-surefire / jest / pytest，程序化收集 | `.superpowers/test-evidence/` | **L3：`tf test record`，无手工通道** |
-| e2e | Playwright E2E 生成、执行、覆盖率审计 | E2E 测试脚本 + 覆盖报告 | L2 |
-| test-merge | 测试复利回写全局测试台账 | `docs/test-ledger/`（INDEX + baselines + patterns） | L3 |
-
-**门禁体系（v0.32.1 事件级硬化后的现状）**：
+**测试门禁体系（v0.32.1 事件级硬化后的现状）**：
 - `test-matrix-ready`：**approved-for-build → executing 前置门禁**（矩阵存在非空 OR 显式 skip 附理由）
-- `tests-passing`：**只认程序化证据**（`tf test record` 落盘），dp_6 自述不再是证据
+- `tests-passing`：**只认程序化证据**（`tf test record` 落盘，对接 maven-surefire / jest / pytest），dp_6 自述不再是证据
 - 豁免键 = `schema_version`（存量 change 兼容，新 change 不豁免）
 
 > 这是"质量不滑坡"的保障：AI 生成的代码必须有测试矩阵 + 真实测试证据才能关闭 change，杜绝"AI 写了代码但没人验证"。
 
-#### 阶段 ⑤ 交付（自动化程度：L2-L3，覆盖到归档）
+#### 阶段 ④ 交付（自动化程度：L2-L3，覆盖到归档）
 
 | 子能力 | 做什么 | 产物 | 自动化/门禁 |
 |---|---|---|---|
@@ -131,7 +125,7 @@ team-flow 覆盖产品研发的 **需求 → 设计 → 开发 → 测试 → �
 
 **能力程度**：交付到"代码合并 + 归档 + 全局文档回写"为止。**生产构建、部署、上线不在此范围**（见边界）。
 
-#### 阶段 ⑥ 反馈与复利（自动化程度：L2，贯穿层）
+#### 阶段 ⑤ 反馈与复利（自动化程度：L2，贯穿层）
 
 | 子能力 | 做什么 | 产物 | 自动化/门禁 |
 |---|---|---|---|
@@ -165,11 +159,8 @@ team-flow 覆盖产品研发的 **需求 → 设计 → 开发 → 测试 → �
 | 研发阶段 | 人做什么 | AI 做什么（team-flow） | AI 做什么（原生能力） | 关键产物 | 质量门禁 |
 |---|---|---|---|---|---|
 | **需求** | 业务背景、价值判断、优先级决策 | `/team-flow:workflow-orchestrator` → ce-brainstorm 产 PRD + prd-completeness-reviewer 评审 | 对话澄清、竞品/资料检索 | `prd/vN/prd.md` | PRD 完整性评审冻结 |
-| **原型/设计** | 方向拍板、审美判断、方案选择 | prototype 内部编排器（env-scout→builder→reviewer）+ design-system | 参考图分析、风格建议 | `prototype/`、`design-system.md` | 原型一致性评审 |
-| **架构/方案** | 技术选型决策、架构评审 | architecture-design 五项检查→三件套 + architecture-reviewer A1-A6 + ce-plan | 技术预研、方案对比 | `architecture/*.md`、`plan.md` | 拆分审计必选 + 架构审查 |
-| **实现** | 业务逻辑理解、疑难问题定位、变更决策 | workflow-start 8 态机：spec-writer→contract-builder→build-executor（TDD 批次）→code-reviewer | 单点编码、重构、脚本、debug | `changes/<name>/` 全套 | 状态机 + hash + TDD + 代码审查 |
-| **测试** | 测试策略拍板、异常场景补充 | test-strategy 矩阵 + build-executor TDD + `tf test record` 证据 | 测试数据、调试、覆盖率分析 | `test-matrix.md`、`docs/test-ledger/` | 矩阵门禁 + 程序化证据 |
-| **E2E/验收** | 验收标准确认 | `/team-flow:e2e`（AC 驱动 Playwright） | 测试脚本优化 | E2E 脚本 | 覆盖率审计 |
+| **设计** | 方向拍板、审美判断、方案选择、技术选型、架构评审、测试策略拍板 | prototype + design-system + architecture-design + ce-plan + test-strategy（测试矩阵）+ change-split-auditor | 参考图分析、风格建议、技术预研 | `prototype/`、`design-system.md`、`architecture/*.md`、`plan.md`、`test-matrix.md` | 原型一致性评审 + 拆分审计 + 架构审查 + 测试矩阵门禁 |
+| **开发** | 业务逻辑理解、疑难问题定位、变更决策 | workflow-start 8 态机：spec-writer→contract-builder→build-executor（TDD 批次 + 测试执行）→e2e→test-merge→code-reviewer | 单点编码、重构、脚本、debug、测试数据 | `changes/<name>/` 全套、`docs/test-ledger/` | 状态机 + hash + TDD + 测试通过（程序化证据）+ 代码审查 |
 | **交付/归档** | 合并审批、发布决策 | release-archivist（验证+closing+归档）+ spec-merger + arch-merge + prototype-sync | 变更说明、release notes | closing 总结、`learnings.md` | compound-captured |
 | **反馈/迭代** | 复盘、优先级 | workflow-feedback + ce-compound + 复利注入 | 汇报材料、知识沉淀 | `.team-flow/feedback/`、`docs/solutions/` | — |
 
@@ -214,8 +205,8 @@ team-flow 覆盖产品研发的 **需求 → 设计 → 开发 → 测试 → �
 |---|---|---|---|
 | 已发布 | v0.33.0 | skills 注入恢复（frontmatter YAML 修复 + 长效门禁） | 2026-08-03 |
 | **8/4-8/8** | **v0.34** | **插件完善（试点前最后一轮迭代）**：① 项目需求文档作为产品级起点及持续维护（含决策过程、推导过程、原始输入） ② 项目需求文档 → 业务场景分析和拆分，输出业务场景清单 ③ 业务流程与业务场景交叉验证（可选） ④ 变更实施阶段完善单元测试、集成测试 | LT 反馈 2026-08-04 |
-| 8/17 起 | v0.35.x | 试点首迭代反馈批（workflow-feedback 驱动）+ orchestrator 设计优化 | 试点反馈 |
-| **10 月初** | **v1.0.0** | **成熟版**：设计增强方案 v1.0 全量定稿 + orchestrator 设计优化（反馈环路+增量入口）+ 待办收尾（P1-8/P1-15 等）+ 试点经验纳入 | Roadmap 里程碑（顺延） |
+| 8/17 起 | v0.35.x | 根据试点团队首批反馈修复插件问题 + 优化工作流编排体验 | 试点反馈 |
+| **10 月初** | **v1.0.0** | **成熟版**：插件正式稳定版发布，集成试点全部经验、完善核心工作流、达到全量推广质量标准 | Roadmap 里程碑（顺延） |
 
 **关键约束**：
 - 试点期间的插件变更需保证**试点项目不中断**（升级窗口与试点团队协商，优先 patch 而非大改）。

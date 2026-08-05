@@ -241,8 +241,8 @@
           <div class="metric-label">试点到规模化基线周期</div>
         </div>
         <div class="card p-6">
-          <div class="metric-value">6 阶段</div>
-          <div class="metric-label">全链路覆盖（需求→反馈复利）</div>
+          <div class="metric-value">5 阶段</div>
+          <div class="metric-label">全链路覆盖（需求→反馈复利，测试嵌入设计与开发）</div>
         </div>
       </div>
 
@@ -294,17 +294,12 @@
           </div>
           <div class="w-8 h-px bg-gray-300 flex-shrink-0 -mt-5"></div>
           <div class="flex flex-col items-center flex-1">
-            <div class="w-9 h-9 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-sm font-semibold mb-2">4</div>
-            <div class="text-xs text-text-secondary font-medium">测试</div>
-          </div>
-          <div class="w-8 h-px bg-gray-300 flex-shrink-0 -mt-5"></div>
-          <div class="flex flex-col items-center flex-1">
-            <div class="w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-semibold mb-2">5</div>
+            <div class="w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-semibold mb-2">4</div>
             <div class="text-xs text-text-secondary font-medium">交付</div>
           </div>
           <div class="w-8 h-px bg-gray-300 flex-shrink-0 -mt-5"></div>
           <div class="flex flex-col items-center flex-1">
-            <div class="w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-semibold mb-2">6</div>
+            <div class="w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-semibold mb-2">5</div>
             <div class="text-xs text-text-secondary font-medium">复利</div>
           </div>
         </div>
@@ -347,7 +342,7 @@
           <div class="flex items-start justify-between mb-4">
             <div>
               <h3 class="font-semibold text-text mb-1">阶段 ② 设计</h3>
-              <p class="text-sm text-text-secondary">原型、架构、计划、拆分</p>
+              <p class="text-sm text-text-secondary">原型、架构、计划、测试策略、拆分</p>
             </div>
             <span class="badge badge-l2">L2-L3</span>
           </div>
@@ -360,6 +355,7 @@
                 <li>• design-system 项目级设计系统（base+变体）</li>
                 <li>• architecture-design 4A+DDD 五项检查→三件套</li>
                 <li>• ce-plan 产品级计划（change 拆分+依赖 DAG）</li>
+                <li>• test-strategy 测试策略设计（10+1 种 design_method + 分层策略 + 对抗验证）</li>
                 <li>• change-split-auditor 拆分质量审计</li>
               </ul>
             </div>
@@ -369,7 +365,8 @@
                 <li>• <code class="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded">prototype/</code>（UI 契约真相源）</li>
                 <li>• <code class="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded">architecture/{architecture,database,api}.md</code></li>
                 <li>• <code class="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded">plan.md</code></li>
-                <li class="font-medium text-text">门禁：拆分审计必选 + 架构审查 A1-A6</li>
+                <li>• <code class="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded">test-matrix.md</code>（测试矩阵，12 列字段）</li>
+                <li class="font-medium text-text">门禁：拆分审计必选 + 架构审查 A1-A6 + 测试矩阵门禁</li>
               </ul>
             </div>
           </div>
@@ -380,7 +377,7 @@
           <div class="flex items-start justify-between mb-4">
             <div>
               <h3 class="font-semibold text-text mb-1">阶段 ③ 开发</h3>
-              <p class="text-sm text-text-secondary">状态机编排、TDD 批次、代码审查</p>
+              <p class="text-sm text-text-secondary">状态机编排、TDD 批次实施、测试执行、代码审查</p>
             </div>
             <span class="badge badge-l3">L3（最高）</span>
           </div>
@@ -391,8 +388,11 @@
               <ul class="space-y-1 text-sm text-text-secondary">
                 <li>• workflow-start 8 态状态机编排</li>
                 <li>• spec-writer 四件规划制品</li>
-                <li>• contract-builder 执行契约 + 测试矩阵</li>
+                <li>• contract-builder 执行契约构建</li>
                 <li>• build-executor TDD 批次实施（TDD Iron Law）</li>
+                <li>• test 执行能力：单元/集成/E2E 测试自动运行</li>
+                <li>• tf test record 程序化证据收集（v0.32 硬化）</li>
+                <li>• e2e AC 驱动 Playwright 测试</li>
                 <li>• code-reviewer spec 合规审查（6 步）</li>
                 <li>• bug-investigator 科学方法根因调查</li>
               </ul>
@@ -402,49 +402,21 @@
               <ul class="space-y-1 text-sm text-text-secondary">
                 <li>• <code class="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded">changes/&lt;name&gt;/</code> 全套</li>
                 <li>• <code class="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded">execution-contract.md</code></li>
-                <li>• <code class="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded">test-matrix.md</code></li>
-                <li class="font-medium text-text">门禁：状态机 + hash + TDD + 代码审查</li>
+                <li>• <code class="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded">test-result.md</code>（测试执行结果）</li>
+                <li>• <code class="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded">test-evidence/</code>（程序化证据，12 列字段）</li>
+                <li>• <code class="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded">docs/test-ledger/</code>（全局测试台账）</li>
+                <li class="font-medium text-text">门禁：状态机 + hash + TDD + 测试通过（只认程序化证据）+ 代码审查</li>
               </ul>
             </div>
           </div>
         </div>
 
-        <!-- Phase 4: Testing -->
+
+        <!-- Phase 4: Delivery -->
         <div class="card p-6">
           <div class="flex items-start justify-between mb-4">
             <div>
-              <h3 class="font-semibold text-text mb-1">阶段 ④ 测试</h3>
-              <p class="text-sm text-text-secondary">测试矩阵、程序化证据、E2E</p>
-            </div>
-            <span class="badge badge-l3">L3（v0.32 硬化）</span>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <h4 class="text-xs font-semibold text-text-muted uppercase tracking-wide mb-2">核心能力</h4>
-              <ul class="space-y-1 text-sm text-text-secondary">
-                <li>• test-strategy 10+1 种 design_method</li>
-                <li>• <code class="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded">tf test record</code> 程序化证据收集</li>
-                <li>• e2e AC 驱动 Playwright 测试</li>
-                <li>• test-merge 测试复利回写</li>
-              </ul>
-            </div>
-            <div>
-              <h4 class="text-xs font-semibold text-text-muted uppercase tracking-wide mb-2">产物与门禁</h4>
-              <ul class="space-y-1 text-sm text-text-secondary">
-                <li>• <code class="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded">test-matrix.md</code>（12 列字段）</li>
-                <li>• <code class="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded">docs/test-ledger/</code>（全局台账）</li>
-                <li class="font-medium text-text">门禁：矩阵门禁 + 只认程序化证据</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-
-        <!-- Phase 5: Delivery -->
-        <div class="card p-6">
-          <div class="flex items-start justify-between mb-4">
-            <div>
-              <h3 class="font-semibold text-text mb-1">阶段 ⑤ 交付</h3>
+              <h3 class="font-semibold text-text mb-1">阶段 ④ 交付</h3>
               <p class="text-sm text-text-secondary">合并、归档、全局文档回写</p>
             </div>
             <span class="badge badge-l2">L2-L3（到归档为止）</span>
@@ -469,11 +441,11 @@
           </div>
         </div>
 
-        <!-- Phase 6: Feedback & Compound -->
+        <!-- Phase 5: Feedback & Compound -->
         <div class="card p-6">
           <div class="flex items-start justify-between mb-4">
             <div>
-              <h3 class="font-semibold text-text mb-1">阶段 ⑥ 反馈与复利</h3>
+              <h3 class="font-semibold text-text mb-1">阶段 ⑤ 反馈与复利</h3>
               <p class="text-sm text-text-secondary">经验沉淀、问题记录、知识回流</p>
             </div>
             <span class="badge badge-l2">L2（贯穿层）</span>
@@ -576,7 +548,7 @@
               <div class="flex-shrink-0 w-20 text-sm font-medium text-text-muted">8/17 起</div>
               <div class="flex-1">
                 <div class="font-medium text-text mb-1">v0.35.x</div>
-                <p class="text-sm text-text-secondary">试点首迭代反馈批 + orchestrator 设计优化</p>
+                <p class="text-sm text-text-secondary">根据试点团队首批反馈修复插件问题 + 优化工作流编排体验</p>
               </div>
             </div>
           </div>
@@ -585,7 +557,7 @@
               <div class="flex-shrink-0 w-20 text-sm font-medium text-accent">10 月初</div>
               <div class="flex-1">
                 <div class="font-semibold text-text mb-1">v1.0.0 成熟版</div>
-                <p class="text-sm text-text-secondary">设计增强方案 v1.0 定稿 + orchestrator 优化 + 待办收尾 + 试点经验纳入</p>
+                <p class="text-sm text-text-secondary">插件正式稳定版发布：集成试点全部经验、完善核心工作流、达到全量推广质量标准</p>
               </div>
             </div>
           </div>
