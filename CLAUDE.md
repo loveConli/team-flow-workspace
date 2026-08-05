@@ -199,21 +199,39 @@ CLAUDE.md 和 AGENTS.md 中描述的工作流包含 architecture-design 门控�
 ## 插件迭代工作流（强制规则）
 
 ```
-P1 设计 → P2 实施 → P3 验证 → P4 提交
+P1 设计 → P2 实施 → P3 代码审查 → P4 验证 → P5 提交
 ```
 
 | 阶段        | 动作                                                                                                                                                                | 工具                     |
 | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
 | **P1 设计** | 更新设计增强方案 + LT 确认决策                                                                                                                                                | —                      |
 | **P2 实施** | 新 skill→`/plugin-dev:skill-development`；新 agent→`/plugin-dev:agent-development`；新 hook→`/plugin-dev:hook-development`；新 command→`/plugin-dev:command-development` | plugin-dev 技能集         |
-| **P3 验证** | ① plugin-validator ② skill-reviewer ③ `npm run check-versions` ④ `npm test`                                                                                       | plugin-dev agent + npm |
-| **P4 提交** | 子仓库 `npm version` + commit → `npm publish`（官方 registry）→ 父仓库 commit + 更新版本号                                                                            | 见 Git 管理规则 + 版本发布 Checklist |
+| **P3 代码审查** | 变更影响分析 + 跨文件一致性 + 设计-代码对齐（见下方详细规范）                                                                                                                          | —                      |
+| **P4 验证** | ① plugin-validator ② skill-reviewer ③ `npm run check-versions` ④ `npm test`                                                                                       | plugin-dev agent + npm |
+| **P5 提交** | 子仓库 `npm version` + commit → `npm publish`（官方 registry）→ 父仓库 commit + 更新版本号                                                                            | 见 Git 管理规则 + 版本发布 Checklist |
+
+**P3 代码审查规范**：
+
+实施完成后、自动化验证前，执行以下审查（人工 + 辅助工具）：
+
+1. **变更清单确认**：`git diff --stat` 列出所有改动文件，确认每个文件的改动都属于本次迭代范围（无遗漏、无越界）
+2. **上下游影响分析**：对每个改动文件，检查其消费者/依赖者是否需要同步修改。典型场景：
+   - SKILL.md 改了流程 → references/ 是否需要同步？
+   - agent frontmatter 改了 tools/skills → 子代理行为是否受影响？
+   - CLI 命令改了参数 → 帮助文本、测试用例是否同步？
+   - 新增导出函数 → 有无对应的 import 消费者？
+3. **跨文件一致性**：改动涉及多文件时，检查命名、术语、版本号、行号引用是否一致
+4. **设计-代码对齐**：实现是否与 P1 设计文档一致？偏差是否有记录？
+5. **横展检查**：本次改动解决的问题，是否在类似区域存在同类问题？（CLAUDE.md 已要求"对类似区域进行横展"）
+
+审查产出：确认通过 / 列出待修复项。待修复项全部解决后才能进 P4。
 
 **约束**：
 
 - P1 未完成（设计文档未更新 / LT 未确认）→ 不进 P2
-- P3 的 check-versions 和 plugin-validator 是门禁，不通过 → 不进 P4
-- P4 提交时 pre-commit hook 自动执行版本一致性检查和修复
+- P3 未通过（存在未修复的审查项）→ 不进 P4
+- P4 的 check-versions 和 plugin-validator 是门禁，不通过 → 不进 P5
+- P5 提交时 pre-commit hook 自动执行版本一致性检查和修复
 - 新 SKILL.md ≤150 行，详细内容进 references/（渐进式披露）
 
 **自动化同步（pre-commit hook）**：
