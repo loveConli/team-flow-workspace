@@ -41,6 +41,7 @@
 | v0.33.0 | **skills 注入恢复（frontmatter YAML 修复）** | frontmatter YAML 非法导致 skills: 预加载静默失效的修复（设计增强方案 v0.13 §54）：① 15 个 agent description 单句化（删除顶格 `<example>` 块——YAML 块标量断裂根因）→ 恢复 `skills:` 预加载与 `tools:` 限制 ② e2e/test-strategy 两个 SKILL.md frontmatter 裸冒号修复 ③ frontmatter-lint 长效门禁（js-yaml 严格解析全部 agents/skills/commands frontmatter + 必填字段 + skills 引用解析，进 npm test）；来源：C1 补救流程实证发现注入=0 + glaf4 对照组实证 + LT 决策（2026-08-03） | ✅ 2026-08-03 |
 | v0.34.1 | **工作空间支持** | conventions-generator 支持多子项目扫描（v0.34.1 新增） | ✅ 2026-08-04 |
 | v0.35.0 | **C1 workflow-feedback 根因修复** | 6 条 feedback 4 根因聚类（设计增强方案 §55）：① test-merge.mjs 自调用 bug 修复 ② revise 保留 reviews/ 目录（receipt 不随 hash 丢失）③ 新增 tf execution refresh-hash ④ 新增 tf deisolate（worktree 生命周期管理）⑤ build-executor BLOCKED 证据链 ⑥ 原子代理上下文水位例外条款 ⑦ release-archivist closing deisolate advisory；来源：vrm4teamflow workflow-feedback 2026-08-05 + 4 专家交叉验证 | ✅ 2026-08-05 |
+| v0.37.0 | **阶段同步 + 原型版本隔离** | ① 5 同步门禁点（S2冻结/ARCH完成/orchestrator结束/execution-contract完成/change closing，AskUserQuestion 三选项）② 统一命令 tf publish（复用 arch-merge 白名单 commit + 脏文件检测 + 写锁 + push 确认制）③ 原型版本 worktree 隔离（复用 ensure-branch/deisolate，隔离单位=PRD 版本，merge 时机=版本收尾）+ tf prototype branch 一键拉取 ④ 制品链路径版本化修正（spec-writer/contract-builder/build-executor/e2e/prototype-sync）；来源：LT 团队协作诉求 2026-08-05 + 设计增强方案 v0.15 §68 | ✅ 2026-08-05 |
 | v1.0.0  | **成熟版**             | ① 触发词去重（分层触发域，方案C） ② PreToolUse hook 执行期状态守护 ③ "ce-" 前缀正名（保留+文档化，方案C） ④ 设计增强方案 v1.0 全量定稿 ⑤ orchestrator 设计优化（反馈环路+增量入口） | 🔲 进行中（①②③已完成，④⑤待实施；⑥身份统一提前至 v0.23.0 ✅） |
 | v0.16.0+ | **原型生成体系升级**       | 学习 open-design 方法论，升级 prototype 设计能力。研究 ✅ v0.17.0；Wave 1+2 ✅ v0.18.0（合并实施）；Wave 3 待反馈决策 | ✅ Wave 1+2 已完成 |
 | v1.x    | **项目级差异化配置**       | 工作流编排 + 原型设计系统支持项目级差异化配置；配置优先级：项目级 > plugin 内置默认 | 🔲 规划中 |
@@ -59,6 +60,7 @@
 | P0-4 | 身份命名关系文档化：AGENTS.md 新增"身份与依赖关系"节，明确 team-flow（插件）包含 spec-superflow（npm 底座） | ✅ 2026-07-24 | v0.12.0 | 来源：v0.11.0 设计评审 C1 |
 | P0-5 | check-version-consistency.mjs 扩展：skill 计数校验 + npx 版本引用校验（正向+负向测试通过）        | ✅ 2026-07-24 | v0.12.0 | 来源：文档维护规范          |
 | P0-6 | 产品级架构设计增强（v0.14 §57-§66，v0.36.0）：architecture 阶段编排 + 产品级文档模板（6 产物）+ 变更级输入联动（路由分流）+ arch-merge 重构（当前态 upsert/生成式/冲突预检/并发安全 4 硬门禁）+ 旧项目逆向重建（arch-reverse-analyst）+ guard 门禁（arch-readiness/arch-snapshot + arch_baseline 豁免） | ✅ v0.36.0（2026-08-05） | v0.36.0 | 来源：LT 三诉求 2026-08-03 + 四专家评审 + 复利/change 级评估；设计增强方案 v0.14 |
+| P0-7 | 阶段同步 + 原型版本隔离（v0.15 §68，v0.37.0）：① 5 同步门禁点（G1-G5，AskUserQuestion 三选项：提交并推送/仅提交/暂不同步）② 统一命令 tf publish（复用 arch-merge 白名单 commit + 脏文件检测 + 写锁 + push 确认制）③ 原型版本 worktree 隔离（tf prototype branch，复用 ensure-branch/deisolate，隔离单位=PRD 版本，merge 时机=版本收尾）④ 制品链路径版本化修正（原型引用=语义相对+版本绑定，change-brief upstream_plan_ref 推导版本） | ✅ v0.37.0（2026-08-05） | v0.37.0 | 来源：LT 团队协作诉求 2026-08-05；设计增强方案 v0.15 §68 |
 
 ### P1（重要，两个版本内完成）
 

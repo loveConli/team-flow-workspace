@@ -26,6 +26,11 @@ ssf solutions index-gen                              # 重建复利索引
 ssf solutions inject --phase <p> --domain <d>        # 阶段感知注入（top-5）
 ssf solutions capture --phase <p> --domain <d> --type <t> --severity <s> --summary <text>  # 捕获经验
 ssf solutions promote <change-dir>                   # change→product 晋升
+
+# v0.37.0 新增 CLI 命令（tf 前缀）
+tf publish <--prd|--arch|--changes <dir>|--all> [--push] [--dry-run]   # 阶段产物白名单提交 + 可选推送（§68.3）
+tf prototype branch <prd-vN>                         # 原型版本 worktree 创建/复用（隔离 + 团队拉取，§68.4）
+tf prototype deisolate <prd-vN> [--merge] [--clean]  # 版本收尾：merge 回主干 + 清理（§68.4）
 ```
 
 ## 全局产物结构
