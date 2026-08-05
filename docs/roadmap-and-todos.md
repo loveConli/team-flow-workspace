@@ -58,7 +58,7 @@
 | P0-3 | plugin.json description "17 skills" → "20 skills"（含 .claude-plugin/ 副本）    | ✅ 2026-07-24 | v0.12.0 | 来源：v0.11.0 设计评审    |
 | P0-4 | 身份命名关系文档化：AGENTS.md 新增"身份与依赖关系"节，明确 team-flow（插件）包含 spec-superflow（npm 底座） | ✅ 2026-07-24 | v0.12.0 | 来源：v0.11.0 设计评审 C1 |
 | P0-5 | check-version-consistency.mjs 扩展：skill 计数校验 + npx 版本引用校验（正向+负向测试通过）        | ✅ 2026-07-24 | v0.12.0 | 来源：文档维护规范          |
-| P0-6 | 产品级架构设计增强（v0.14 §57-§66，v0.36.0）：architecture 阶段编排 + 产品级文档模板（6 产物）+ 变更级输入联动（路由分流）+ arch-merge 重构（当前态 upsert/生成式/冲突预检/并发安全 4 硬门禁）+ 旧项目逆向重建（arch-reverse-analyst）+ guard 门禁（arch-readiness/arch-snapshot + arch_baseline 豁免） | 🔲 实施中 | v0.35.0 | 来源：LT 三诉求 2026-08-03 + 四专家评审 + 复利/change 级评估；设计增强方案 v0.14 |
+| P0-6 | 产品级架构设计增强（v0.14 §57-§66，v0.36.0）：architecture 阶段编排 + 产品级文档模板（6 产物）+ 变更级输入联动（路由分流）+ arch-merge 重构（当前态 upsert/生成式/冲突预检/并发安全 4 硬门禁）+ 旧项目逆向重建（arch-reverse-analyst）+ guard 门禁（arch-readiness/arch-snapshot + arch_baseline 豁免） | ✅ v0.36.0（2026-08-05） | v0.36.0 | 来源：LT 三诉求 2026-08-03 + 四专家评审 + 复利/change 级评估；设计增强方案 v0.14 |
 
 ### P1（重要，两个版本内完成）
 
