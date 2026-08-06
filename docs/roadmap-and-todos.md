@@ -42,6 +42,7 @@
 | v0.34.1 | **工作空间支持** | conventions-generator 支持多子项目扫描（v0.34.1 新增） | ✅ 2026-08-04 |
 | v0.35.0 | **C1 workflow-feedback 根因修复** | 6 条 feedback 4 根因聚类（设计增强方案 §55）：① test-merge.mjs 自调用 bug 修复 ② revise 保留 reviews/ 目录（receipt 不随 hash 丢失）③ 新增 tf execution refresh-hash ④ 新增 tf deisolate（worktree 生命周期管理）⑤ build-executor BLOCKED 证据链 ⑥ 原子代理上下文水位例外条款 ⑦ release-archivist closing deisolate advisory；来源：vrm4teamflow workflow-feedback 2026-08-05 + 4 专家交叉验证 | ✅ 2026-08-05 |
 | v0.37.0 | **阶段同步 + 原型版本隔离** | ① 5 同步门禁点（S2冻结/ARCH完成/orchestrator结束/execution-contract完成/change closing，AskUserQuestion 三选项）② 统一命令 tf publish（复用 arch-merge 白名单 commit + 脏文件检测 + 写锁 + push 确认制）③ 原型版本 worktree 隔离（复用 ensure-branch/deisolate，隔离单位=PRD 版本，merge 时机=版本收尾）+ tf prototype branch 一键拉取 ④ 制品链路径版本化修正（spec-writer/contract-builder/build-executor/e2e/prototype-sync）；来源：LT 团队协作诉求 2026-08-05 + 设计增强方案 v0.15 §68 | ✅ 2026-08-05 |
+| v0.38.0 | **E2E case 记录与复利闭环 + test-merge 五 bug 修复** | ① test-matrix 支持 test_tier=e2e（实现补齐 v0.12 §42.4 三值承诺）+ contract-builder E2E 层评估 + spec-writer `##### E2E:` 标签 ② test-merge 复利回写 E2E 层级（INDEX e2e 统计）③ release-archivist Step 5b 下游 E2E 确认（AskUserQuestion 引导 /e2e）④ LLM 消费点 e2e 豁免（Step 2b/implementer/code-reviewer）⑤ test-merge 五 bug 修复（resolveDeferred 误删 / extractSummary bold 返回 0 / dry-run 真写 / 覆盖式失效 / 空列错位）⑥ tests/lib/test-merge.test.mjs 新增 11 用例（test-merge 此前全库唯一无测试覆盖核心 merge 命令）；来源：vrm4teamflow workflow-feedback 2026-08-05 + 2 独立 Explore agent 制品链交叉确认；设计增强方案 v0.16 §70/§71 | ✅ 2026-08-06 |
 | v1.0.0  | **成熟版**             | ① 触发词去重（分层触发域，方案C） ② PreToolUse hook 执行期状态守护 ③ "ce-" 前缀正名（保留+文档化，方案C） ④ 设计增强方案 v1.0 全量定稿 ⑤ orchestrator 设计优化（反馈环路+增量入口） | 🔲 进行中（①②③已完成，④⑤待实施；⑥身份统一提前至 v0.23.0 ✅） |
 | v0.16.0+ | **原型生成体系升级**       | 学习 open-design 方法论，升级 prototype 设计能力。研究 ✅ v0.17.0；Wave 1+2 ✅ v0.18.0（合并实施）；Wave 3 待反馈决策 | ✅ Wave 1+2 已完成 |
 | v1.x    | **项目级差异化配置**       | 工作流编排 + 原型设计系统支持项目级差异化配置；配置优先级：项目级 > plugin 内置默认 | 🔲 规划中 |
@@ -109,6 +110,7 @@
 | P1-45 | §54 frontmatter YAML 合法性事件设计写回：四轮实证证据链（诊断探针/行为探针/glaf4 对照/PyYAML 解析）+ 根因（非法 YAML → Claude Code 静默降级丢弃 skills:/tools: 元数据）+ 修复决策 + 教训（机制断言必须实证、静默降级是最危险失效模式、行为探针优于字符串内省） | ✅ v0.33.0（2026-08-03） | v0.33.0 | 来源：C1 补救流程发现 skills 注入=0；LT 决策（2026-08-03） |
 | P1-48 | 产品级架构事件建模深度：事件风暴模板 + 事件来源矩阵 + 聚合不变量反推启发式（v0.14 §64.2） | 🔲 待实施 | v0.36.0+ | 来源：v0.14 §64.2；DDD 评审 |
 | P1-49 | BC 依赖环检测工具化：domains/ 与 ARCHITECTURE.md §1 图论校验 | 🔲 待实施 | v0.36.0+ | 来源：v0.14 §64.2 |
+| P1-50 | test-merge 五 bug 修复 + E2E case 记录/复利/下游确认（v0.38.0，v0.16 §70/§71）：① resolveDeferred 误删 Current Cases ② extractSummary 遇 bold 返回 0 ③ dry-run 真写 ④ mergeExistingBaseline 覆盖式失效 ⑤ filter(Boolean) 空列错位 ⑥ test_tier=e2e 记录（test-strategy/contract-builder/spec-writer/test-matrix-export）+ 复利 E2E 层级（test-merge rewriteIndex）+ release-archivist Step 5b 下游 E2E 确认（AskUserQuestion 引导 /e2e）+ LLM 消费点 e2e 豁免 ⑦ tests/lib/test-merge.test.mjs 新增 11 用例 | ✅ v0.38.0（2026-08-06） | v0.38.0 | 来源：vrm4teamflow workflow-feedback 2026-08-05（P1-1~P1-4 + P2-1）+ 2 独立 Explore agent 制品链交叉确认 |
 
 ### P2（改善，按节奏推进）
 
