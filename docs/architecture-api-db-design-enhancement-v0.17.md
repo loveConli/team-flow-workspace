@@ -168,9 +168,9 @@ build-executor 修复 findings 后，workflow-start 必须：
 
 | 决策点 | 决策 | 版本 | 状态 |
 |---|---|---|---|
-| 编排模式 | workflow-start 主动串行编排 | v0.39.0 | 🔲 待实施 |
-| 通信机制 | build-executor SendMessage 通知 | v0.39.0 | 🔲 待实施 |
-| 逐 wave 审查 | 每个 wave 完成后立即审查 | v0.39.0 | 🔲 待实施 |
-| 产物所有权 | 主代理禁止直接修改子代理代码 | v0.39.0 | 🔲 待实施 |
-| 修复后 re-review | 修复后必须 re-review 确认修复有效 | v0.39.0 | 🔲 待实施 |
-| closing 前置条件 | review receipt 存在且 verdict=pass | v0.39.0 | 🔲 待实施 |
+| 编排模式 | workflow-start 主动串行编排 | v0.39.1 | ✅ 已实施 |
+| 通信机制 | build-executor SendMessage 通知 | v0.39.1 | ✅ 已实施 |
+| 逐 wave 审查 | 每个 wave 完成后立即审查 | v0.39.1 | ✅ 已实施 |
+| 产物所有权 | 主代理禁止直接修改子代理代码 | v0.39.1 | ✅ 已实施 |
+| 修复后 re-review | 修复后必须 re-review 确认修复有效 | v0.39.1 | ✅ 已实施 |
+| closing 前置条件 | review receipt 存在且 verdict=pass | v0.39.1 | ✅ 已实施 |
