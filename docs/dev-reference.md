@@ -45,7 +45,7 @@ changes/<name>/    变更级工作目录（S4 创建，项目根下，不是 .te
   ├── proposal.md / design.md / tasks.md / specs/ / execution-contract.md
   ├── .spec-superflow.yaml      # 变更级状态（v1.0.0 改名 .team-flow.yaml）
   └── .superpowers/sdd/         # 执行 overlay（plan/checkpoints/handoffs/reviews）
-prd/               PRD + 实施方案 + 原型审查记录（v1→v2，分支隔离）
+requirement/       PRD + 台账 + 实施方案 + 原型审查记录（v1→v2，分支隔离）
   └── vN/
       ├── prd.md              # 业务要件（ce-brainstorm 产出）
       ├── plan.md             # 实施方案（ce-plan 产出，产品级策略）
@@ -57,7 +57,7 @@ docs/
   ├── architecture/  全局架构锚点（ARCHITECTURE.md / DATABASE.md / <bc>/）
   └── solutions/     复利经验库（v0.11.0，三层索引）
       ├── INDEX.md   # L1 轻量索引（≤150行）
-      └── prd/ plan/ prototype/ spec/ build/ review/ cross-phase/
+      └── requirement/ plan/ prototype/ spec/ build/ review/ cross-phase/
 specs/<cap>/       每变更设计/任务/契约 + learnings.md（候选晋升）
 STRATEGY.md        策略文档
 CONCEPTS.md        领域词汇
